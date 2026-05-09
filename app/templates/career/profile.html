@@ -1,0 +1,1035 @@
+{% extends "base.html" %}
+{% block title %}用户中心{% endblock %}
+
+{% block body %}
+<div class="app-layout">
+    <aside class="sidebar">
+        <div class="sidebar-brand">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 2L2 7l10 5 10-5-10-5z" fill="#0066cc"/>
+                <path d="M2 17l10 5 10-5" stroke="#0066cc" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M2 12l10 5 10-5" stroke="#0066cc" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span>CareerAI</span>
+        </div>
+        
+        <div class="sidebar-section">
+            <a href="{{ url_for('career.chat') }}" class="sidebar-link new-chat-btn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 4v16m8-8H4"/>
+                </svg>
+                新建对话
+            </a>
+        </div>
+        
+        <div class="sidebar-section" style="flex: 1; overflow-y: auto;">
+            <div class="sidebar-section-title">对话历史</div>
+            <div class="chat-history-list">
+                {% for h in histories %}
+                <div class="chat-history-item" id="history-{{ h.conversation_id }}">
+                    <a href="{{ url_for('career.chat', id=h.conversation_id) }}" class="chat-history-link">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+                        </svg>
+                        <span class="chat-history-title">{{ h.title or '新对话' }}</span>
+                    </a>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        
+        <div class="sidebar-footer">
+            <a href="{{ url_for('career.profile') }}" class="sidebar-link active">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                </svg>
+                用户中心
+            </a>
+            <a href="{{ url_for('auth.logout') }}" class="sidebar-link">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+                </svg>
+                退出登录
+            </a>
+        </div>
+    </aside>
+    
+    <main class="main-content">
+        <div class="profile-header">
+            <div class="profile-cover"></div>
+            <div class="profile-info">
+                <div class="profile-avatar-wrapper" onclick="document.getElementById('avatarInput').click()">
+                    <div class="profile-avatar">
+                        {% if current_user.avatar %}
+                            <img src="{{ current_user.avatar }}" alt="头像" id="avatarImg">
+                        {% else %}
+                            <span id="avatarText">{{ current_user.username[0]|upper }}</span>
+                        {% endif %}
+                    </div>
+                    <div class="avatar-overlay">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" width="24" height="24">
+                            <path d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/>
+                            <circle cx="12" cy="13" r="3"/>
+                        </svg>
+                    </div>
+                    <input type="file" id="avatarInput" accept="image/*" style="display: none;" onchange="uploadAvatar(this)">
+                </div>
+                <div class="profile-meta">
+                    <h1>{{ current_user.username }}</h1>
+                    <p>{{ current_user.email }}</p>
+                </div>
+                <div class="profile-stats">
+                    <div class="stat-item">
+                        <span class="stat-number" id="statConversations">{{ histories|length }}</span>
+                        <span class="stat-label">总对话</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-number" id="statMessages">0</span>
+                        <span class="stat-label">消息数</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-number" id="statSkills">{{ current_user.profile.skills|length if current_user.profile and current_user.profile.skills else 0 }}</span>
+                        <span class="stat-label">技能</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-number">{{ current_user.profile.work_experience if current_user.profile else 0 }}年</span>
+                        <span class="stat-label">工作经验</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="profile-content">
+            <div class="collapse-section expanded" id="statsSection">
+                <div class="collapse-header" onclick="toggleCollapse('statsSection')">
+                    <div>
+                        <h2>使用统计</h2>
+                        <p>查看你的使用情况和数据分析</p>
+                    </div>
+                    <svg class="collapse-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M6 9l6 6 6-6"/>
+                    </svg>
+                </div>
+                <div class="collapse-content">
+                    <div class="stats-dashboard">
+                        <div class="stats-card">
+                            <div class="stats-card-header">
+                                <span class="stats-card-title">Agent使用分布</span>
+                            </div>
+                            <div class="stats-card-body" id="agentUsageChart">
+                                <div class="agent-bars"></div>
+                            </div>
+                        </div>
+                        <div class="stats-card">
+                            <div class="stats-card-header">
+                                <span class="stats-card-title">最近活跃</span>
+                            </div>
+                            <div class="stats-card-body" id="activityChart">
+                                <div class="activity-items"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="collapse-section" id="historySection">
+                <div class="collapse-header" onclick="toggleCollapse('historySection')">
+                    <div>
+                        <h2>对话历史</h2>
+                        <p>查看和管理你的对话记录</p>
+                    </div>
+                    <svg class="collapse-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M6 9l6 6 6-6"/>
+                    </svg>
+                </div>
+                <div class="collapse-content">
+                    <div class="history-list" id="historyList">
+                        {% for h in histories %}
+                        <div class="history-row" id="history-row-{{ h.conversation_id }}">
+                            <div class="history-info" onclick="location.href='/chat?id={{ h.conversation_id }}'">
+                                <span class="history-title">{{ h.title or '新对话' }}</span>
+                                <span class="history-meta">{{ h.updated_at.strftime('%m-%d %H:%M') if h.updated_at else h.created_at.strftime('%m-%d %H:%M') }} · {{ h.messages|length if h.messages else 0 }} 条消息</span>
+                            </div>
+                            <div class="history-actions">
+                                <span class="badge badge-primary">{{ h.agent_used }}</span>
+                                <button class="btn-icon" onclick="exportConversation('{{ h.conversation_id }}')" title="导出">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                                        <path d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                    </svg>
+                                </button>
+                                <button class="btn-icon btn-icon-danger" onclick="deleteHistoryItem('{{ h.conversation_id }}')" title="删除">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                                        <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="collapse-section" id="basicInfo">
+                <div class="collapse-header" onclick="toggleCollapse('basicInfo')">
+                    <div>
+                        <h2>基本信息</h2>
+                        <p>管理你的账号和个人资料</p>
+                    </div>
+                    <svg class="collapse-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M6 9l6 6 6-6"/>
+                    </svg>
+                </div>
+                <div class="collapse-content">
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <span class="info-label">用户名</span>
+                            <div class="info-value-row">
+                                <span class="info-value" id="usernameDisplay">{{ current_user.username }}</span>
+                                <button class="btn-link" onclick="showEditUsername()">修改</button>
+                            </div>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">邮箱</span>
+                            <span class="info-value">{{ current_user.email }}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">注册时间</span>
+                            <span class="info-value">{{ current_user.created_at.strftime('%Y年%m月%d日') if current_user.created_at else '未知' }}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">密码</span>
+                            <div class="info-value-row">
+                                <span class="info-value">********</span>
+                                <button class="btn-link" onclick="showEditPassword()">修改</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="collapse-section" id="careerProfile">
+                <div class="collapse-header" onclick="toggleCollapse('careerProfile')">
+                    <div>
+                        <h2>职业档案</h2>
+                        <p>完善信息让 AI 提供更精准的建议</p>
+                    </div>
+                    <svg class="collapse-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M6 9l6 6 6-6"/>
+                    </svg>
+                </div>
+                <div class="collapse-content">
+                    <form method="POST" class="profile-form">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">学历</label>
+                                <select name="education" class="form-select">
+                                    <option value="high_school" {% if current_user.profile and current_user.profile.education == 'high_school' %}selected{% endif %}>高中</option>
+                                    <option value="associate" {% if current_user.profile and current_user.profile.education == 'associate' %}selected{% endif %}>大专</option>
+                                    <option value="bachelor" {% if not current_user.profile or current_user.profile.education == 'bachelor' %}selected{% endif %}>本科</option>
+                                    <option value="master" {% if current_user.profile and current_user.profile.education == 'master' %}selected{% endif %}>硕士</option>
+                                    <option value="phd" {% if current_user.profile and current_user.profile.education == 'phd' %}selected{% endif %}>博士</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">专业</label>
+                                <input type="text" name="major" class="form-input" value="{{ current_user.profile.major if current_user.profile else '' }}" placeholder="例如：计算机科学">
+                            </div>
+                        </div>
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">工作年限</label>
+                                <input type="number" name="work_experience" class="form-input" value="{{ current_user.profile.work_experience if current_user.profile else 0 }}" min="0">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">当前职位</label>
+                                <input type="text" name="current_job_title" class="form-input" value="{{ current_user.profile.current_job_title if current_user.profile else '' }}" placeholder="例如：软件工程师">
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">技能</label>
+                            <input type="text" name="skills" class="form-input" value="{{ current_user.profile.skills|join(', ') if current_user.profile and current_user.profile.skills else '' }}" placeholder="用逗号分隔，例如：Python, JavaScript, 数据分析">
+                            <span class="form-hint">多个技能用逗号分隔</span>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">兴趣领域</label>
+                            <input type="text" name="interests" class="form-input" value="{{ current_user.profile.interests|join(', ') if current_user.profile and current_user.profile.interests else '' }}" placeholder="例如：技术, 金融, 创意">
+                        </div>
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">目标行业</label>
+                                <input type="text" name="target_industry" class="form-input" value="{{ current_user.profile.target_industry if current_user.profile else '' }}" placeholder="例如：互联网, 金融">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">偏好城市</label>
+                                <input type="text" name="location_preference" class="form-input" value="{{ current_user.profile.location_preference if current_user.profile else '' }}" placeholder="例如：北京, 上海">
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">职业目标</label>
+                            <textarea name="career_goals" class="form-input" rows="4" placeholder="描述你的职业目标，让 AI 更好地为你规划...">{{ current_user.profile.career_goals if current_user.profile else '' }}</textarea>
+                        </div>
+                        
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary">保存修改</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<div id="usernameModal" class="modal-overlay" style="display: none;">
+    <div class="modal-container">
+        <div class="modal-header">
+            <h3>修改用户名</h3>
+            <button class="modal-close" onclick="closeModal('usernameModal')">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label class="form-label">新用户名</label>
+                <input type="text" id="newUsername" class="form-input" value="{{ current_user.username }}" placeholder="请输入新用户名">
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeModal('usernameModal')">取消</button>
+            <button class="btn btn-primary" onclick="updateUsername()">确认修改</button>
+        </div>
+    </div>
+</div>
+
+<div id="passwordModal" class="modal-overlay" style="display: none;">
+    <div class="modal-container">
+        <div class="modal-header">
+            <h3>修改密码</h3>
+            <button class="modal-close" onclick="closeModal('passwordModal')">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label class="form-label">当前密码</label>
+                <input type="password" id="oldPassword" class="form-input" placeholder="请输入当前密码">
+            </div>
+            <div class="form-group">
+                <label class="form-label">新密码</label>
+                <input type="password" id="newPassword" class="form-input" placeholder="请输入新密码（至少6位）">
+            </div>
+            <div class="form-group">
+                <label class="form-label">确认新密码</label>
+                <input type="password" id="confirmPassword" class="form-input" placeholder="请再次输入新密码">
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeModal('passwordModal')">取消</button>
+            <button class="btn btn-primary" onclick="updatePassword()">确认修改</button>
+        </div>
+    </div>
+</div>
+
+<style>
+.profile-header {
+    position: relative;
+    margin: -2rem -2rem 0;
+    padding-bottom: 2rem;
+}
+
+.profile-cover {
+    height: 160px;
+    background: linear-gradient(135deg, #0ea5e9 0%, #6366f1 100%);
+}
+
+.profile-info {
+    position: relative;
+    padding: 0 2rem;
+    margin-top: -48px;
+}
+
+.profile-avatar-wrapper {
+    position: relative;
+    width: 96px;
+    height: 96px;
+    cursor: pointer;
+    margin-bottom: 1rem;
+}
+
+.profile-avatar {
+    width: 96px;
+    height: 96px;
+    border-radius: 50%;
+    background: white;
+    border: 4px solid white;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.profile-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.profile-avatar span {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: var(--accent);
+    line-height: 1;
+}
+
+.avatar-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.profile-avatar-wrapper:hover .avatar-overlay {
+    opacity: 1;
+}
+
+.profile-meta {
+    margin-bottom: 1.5rem;
+}
+
+.profile-meta h1 {
+    font-size: 1.75rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    margin-bottom: 0.25rem;
+    letter-spacing: -0.02em;
+}
+
+.profile-meta p {
+    font-size: 0.9375rem;
+    color: var(--text-secondary);
+}
+
+.profile-stats {
+    display: flex;
+    gap: 2.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border);
+}
+
+.stat-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+}
+
+.stat-number {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.stat-label {
+    font-size: 0.8125rem;
+    color: var(--text-tertiary);
+}
+
+.profile-content {
+    padding-top: 1.5rem;
+}
+
+.collapse-section {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    margin-bottom: 1rem;
+    overflow: hidden;
+    background: var(--bg-primary);
+}
+
+.collapse-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.25rem 1.5rem;
+    cursor: pointer;
+    transition: background var(--transition-fast);
+}
+
+.collapse-header:hover {
+    background: var(--bg-secondary);
+}
+
+.collapse-header h2 {
+    font-size: 1.0625rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 0.125rem;
+}
+
+.collapse-header p {
+    font-size: 0.8125rem;
+    color: var(--text-secondary);
+}
+
+.collapse-icon {
+    width: 20px;
+    height: 20px;
+    color: var(--text-tertiary);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    flex-shrink: 0;
+}
+
+.collapse-section.expanded .collapse-icon {
+    transform: rotate(180deg);
+}
+
+.collapse-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.collapse-section.expanded .collapse-content {
+    max-height: 1200px;
+}
+
+.collapse-section.expanded .collapse-header {
+    border-bottom: 1px solid var(--border);
+}
+
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1px;
+    background: var(--border);
+    margin: 1.5rem;
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+}
+
+.info-item {
+    padding: 1rem 1.25rem;
+    background: var(--bg-secondary);
+}
+
+.info-label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-tertiary);
+    margin-bottom: 0.375rem;
+}
+
+.info-value {
+    font-size: 0.9375rem;
+    color: var(--text-primary);
+    font-weight: 500;
+}
+
+.info-value-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.btn-link {
+    background: none;
+    border: none;
+    color: var(--accent);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    cursor: pointer;
+    padding: 0;
+}
+
+.btn-link:hover {
+    color: var(--accent-hover);
+    text-decoration: underline;
+}
+
+.profile-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    padding: 1.5rem;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.25rem;
+}
+
+.form-hint {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--text-tertiary);
+    margin-top: 0.375rem;
+}
+
+.form-actions {
+    display: flex;
+    justify-content: flex-end;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+}
+
+.stats-dashboard {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1px;
+    background: var(--border);
+    margin: 1.5rem;
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+}
+
+.stats-card {
+    background: var(--bg-secondary);
+}
+
+.stats-card-header {
+    padding: 0.875rem 1.25rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.stats-card-title {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
+.stats-card-body {
+    padding: 1.25rem;
+}
+
+.agent-bars {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.agent-bar-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.agent-bar-label {
+    font-size: 0.8125rem;
+    color: var(--text-secondary);
+    width: 80px;
+    flex-shrink: 0;
+}
+
+.agent-bar-track {
+    flex: 1;
+    height: 8px;
+    background: var(--bg-tertiary);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.agent-bar-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.5s ease;
+}
+
+.agent-bar-value {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    width: 30px;
+    text-align: right;
+}
+
+.activity-items {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.activity-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.5rem 0;
+}
+
+.activity-date {
+    font-size: 0.8125rem;
+    color: var(--text-secondary);
+}
+
+.activity-count {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--accent);
+}
+
+.history-list {
+    padding: 0.5rem 1.5rem 1.5rem;
+}
+
+.history-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.875rem 1rem;
+    border-radius: var(--radius-sm);
+    transition: background var(--transition-fast);
+}
+
+.history-row:hover {
+    background: var(--bg-secondary);
+}
+
+.history-info {
+    flex: 1;
+    cursor: pointer;
+    min-width: 0;
+}
+
+.history-title {
+    display: block;
+    font-size: 0.9375rem;
+    font-weight: 500;
+    color: var(--text-primary);
+    margin-bottom: 0.25rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.history-meta {
+    font-size: 0.75rem;
+    color: var(--text-tertiary);
+}
+
+.history-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-shrink: 0;
+}
+
+.btn-icon {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    color: var(--text-tertiary);
+    cursor: pointer;
+    border-radius: var(--radius-sm);
+    transition: all var(--transition-fast);
+}
+
+.btn-icon:hover {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+}
+
+.btn-icon-danger:hover {
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+}
+
+@media (max-width: 768px) {
+    .profile-stats {
+        gap: 1.5rem;
+    }
+    
+    .info-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+    
+    .stats-dashboard {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+
+<script>
+function toggleCollapse(id) {
+    document.getElementById(id).classList.toggle('expanded');
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('basicInfo').classList.add('expanded');
+    document.getElementById('careerProfile').classList.add('expanded');
+});
+
+function showEditUsername() {
+    const modal = document.getElementById('usernameModal');
+    modal.style.display = 'flex';
+    setTimeout(() => modal.classList.add('active'), 10);
+}
+
+function showEditPassword() {
+    const modal = document.getElementById('passwordModal');
+    modal.style.display = 'flex';
+    setTimeout(() => modal.classList.add('active'), 10);
+    document.getElementById('oldPassword').value = '';
+    document.getElementById('newPassword').value = '';
+}
+
+function closeModal(id) {
+    const modal = document.getElementById(id);
+    modal.classList.remove('active');
+    setTimeout(() => modal.style.display = 'none', 200);
+}
+
+async function updateUsername() {
+    const newUsername = document.getElementById('newUsername').value.trim();
+    if (!newUsername) {
+        modal.toast('请输入用户名', 'error');
+        return;
+    }
+    
+    try {
+        const res = await fetch('/api/user/update-username', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({username: newUsername})
+        });
+        const data = await res.json();
+        
+        if (data.code === 200) {
+            document.getElementById('usernameDisplay').textContent = newUsername;
+            document.querySelector('.profile-meta h1').textContent = newUsername;
+            closeModal('usernameModal');
+            modal.toast('用户名修改成功', 'success');
+        } else {
+            modal.toast(data.error || '修改失败', 'error');
+        }
+    } catch (e) {
+        modal.toast('请求失败', 'error');
+    }
+}
+
+async function updatePassword() {
+    const oldPassword = document.getElementById('oldPassword').value;
+    const newPassword = document.getElementById('newPassword').value;
+    const confirmPassword = document.getElementById('confirmPassword').value;
+    
+    if (!oldPassword) {
+        modal.toast('请输入当前密码', 'error');
+        return;
+    }
+    
+    if (!newPassword) {
+        modal.toast('请输入新密码', 'error');
+        return;
+    }
+    
+    if (newPassword.length < 6) {
+        modal.toast('新密码长度至少6位', 'error');
+        return;
+    }
+    
+    if (newPassword !== confirmPassword) {
+        modal.toast('两次输入的密码不一致', 'error');
+        return;
+    }
+    
+    if (oldPassword === newPassword) {
+        modal.toast('新密码不能与旧密码相同', 'error');
+        return;
+    }
+    
+    try {
+        const res = await fetch('/api/user/update-password', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({old_password: oldPassword, new_password: newPassword})
+        });
+        const data = await res.json();
+        
+        if (data.code === 200) {
+            closeModal('passwordModal');
+            modal.toast('密码修改成功', 'success');
+        } else {
+            modal.toast(data.error || '修改失败', 'error');
+        }
+    } catch (e) {
+        modal.toast('请求失败', 'error');
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadUserStats();
+});
+
+async function loadUserStats() {
+    try {
+        const res = await fetch('/api/user/stats');
+        const data = await res.json();
+        
+        if (data.code === 200) {
+            const stats = data.data;
+            
+            document.getElementById('statMessages').textContent = stats.total_messages;
+            
+            const agentUsage = stats.agent_usage;
+            const agentNames = {
+                'career': '职业规划',
+                'skill': '技能分析',
+                'side_job': '副业分析'
+            };
+            const agentColors = {
+                'career': '#0ea5e9',
+                'skill': '#8b5cf6',
+                'side_job': '#10b981'
+            };
+            
+            const maxCount = Math.max(...Object.values(agentUsage), 1);
+            const barsContainer = document.querySelector('.agent-bars');
+            if (barsContainer) {
+                let barsHtml = '';
+                for (const [agent, count] of Object.entries(agentUsage)) {
+                    const width = (count / maxCount) * 100;
+                    const name = agentNames[agent] || agent;
+                    const color = agentColors[agent] || '#6b7280';
+                    barsHtml += `
+                        <div class="agent-bar-item">
+                            <span class="agent-bar-label">${name}</span>
+                            <div class="agent-bar-track">
+                                <div class="agent-bar-fill" style="width: ${width}%; background: ${color};"></div>
+                            </div>
+                            <span class="agent-bar-value">${count}</span>
+                        </div>
+                    `;
+                }
+                barsContainer.innerHTML = barsHtml;
+            }
+            
+            const activityContainer = document.querySelector('.activity-items');
+            if (activityContainer && stats.daily_activity.length > 0) {
+                let activityHtml = '';
+                for (const item of stats.daily_activity) {
+                    activityHtml += `
+                        <div class="activity-item">
+                            <span class="activity-date">${item.date}</span>
+                            <span class="activity-count">${item.count} 次对话</span>
+                        </div>
+                    `;
+                }
+                activityContainer.innerHTML = activityHtml;
+            } else if (activityContainer) {
+                activityContainer.innerHTML = '<p style="font-size: 0.8125rem; color: var(--text-tertiary);">暂无活跃数据</p>';
+            }
+        }
+    } catch (e) {
+        console.error('加载统计失败:', e);
+    }
+}
+
+async function exportConversation(id) {
+    try {
+        const res = await fetch('/api/export/conversation/' + id);
+        const data = await res.json();
+        
+        if (data.code === 200) {
+            const blob = new Blob([data.data.content], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = (data.data.title || '对话记录') + '.txt';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            modal.toast('导出成功', 'success');
+        } else {
+            modal.toast('导出失败', 'error');
+        }
+    } catch (e) {
+        modal.toast('导出失败', 'error');
+    }
+}
+
+async function deleteHistoryItem(id) {
+    const confirmed = await modal.confirm('确定要删除这条对话记录吗？');
+    if (!confirmed) return;
+    
+    try {
+        const res = await fetch('/api/history/' + id, { method: 'DELETE' });
+        const data = await res.json();
+        
+        if (data.code === 200) {
+            const el = document.getElementById('history-row-' + id);
+            if (el) {
+                el.style.opacity = '0';
+                el.style.transform = 'translateX(20px)';
+                el.style.transition = 'all 0.3s ease';
+                setTimeout(() => el.remove(), 300);
+            }
+            modal.toast('已删除', 'success');
+        } else {
+            modal.toast('删除失败', 'error');
+        }
+    } catch (e) {
+        modal.toast('删除失败', 'error');
+    }
+}
+
+function uploadAvatar(input) {
+    const file = input.files[0];
+    if (!file) return;
+    
+    if (file.size > 2 * 1024 * 1024) {
+        modal.toast('图片大小不能超过2MB', 'error');
+        return;
+    }
+    
+    const reader = new FileReader();
+    reader.onload = async function(e) {
+        try {
+            const res = await fetch('/api/user/update-avatar', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({avatar: e.target.result})
+            });
+            const data = await res.json();
+            
+            if (data.code === 200) {
+                const avatarDiv = document.querySelector('.profile-avatar');
+                avatarDiv.innerHTML = `<img src="${data.avatar_url}" alt="头像" id="avatarImg">`;
+                modal.toast('头像更新成功', 'success');
+            } else {
+                modal.toast(data.error || '上传失败', 'error');
+            }
+        } catch (err) {
+            modal.toast('请求失败', 'error');
+        }
+    };
+    reader.readAsDataURL(file);
+}
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for category, message in messages %}
+            modal.toast('{{ message }}', '{{ "success" if category == "success" else "error" if category == "danger" else "info" }}');
+        {% endfor %}
+    {% endif %}
+{% endwith %}
+</script>
+{% endblock %}
