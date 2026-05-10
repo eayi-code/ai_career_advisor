@@ -9,11 +9,13 @@
 一个面向求职者和职场人群的智能化职业规划平台，通过AI智能体技术提供个性化的职业匹配、副业推荐、技能差距分析等服务。系统采用ReAct推理模式，具备工具调用、记忆管理、多Agent协作能力。
 
 ### 1.3 核心特性
-- 多智能体协作架构（职业规划、技能分析、副业分析）
+- 多智能体协作架构（职业规划、技能分析、副业分析、简历优化）
 - ReAct推理模式，推理过程可视化
 - 短期对话记忆 + 长期向量记忆（ChromaDB + Ollama）
+- 混合意图识别（关键词+LLM回退）
 - Apple设计语言落地页
 - 内部页面白色+蓝色主题
+- 对话气泡毛玻璃效果
 - 全中文界面
 - 对话状态保持，支持继续历史对话
 - 打断生成功能
@@ -43,8 +45,9 @@
 - **脚本**: 原生JavaScript (main.js, modal.js)
 - **字体**: Inter (Google Fonts) / SF Pro (Apple系统字体)
 - **设计风格**: 
-  - 落地页：Apple设计语言（黑白为主，单一蓝色强调）
+  - 落地页：CSS动画背景（浅色系流动渐变）
   - 内部页面：白色背景 + 蓝色主题 (#0066cc)
+  - 对话气泡：毛玻璃效果（backdrop-filter: blur）
 
 ### 2.4 开发环境
 - **Python版本**: 3.11 (Conda环境: career_advisor)
@@ -70,13 +73,14 @@ ai_career_advisor/
 │   │
 │   ├── agents/                 # 智能体模块
 │   │   ├── base_agent.py       # 智能体基类（ReAct推理）
-│   │   ├── career_agent.py     # 3个专业Agent定义
-│   │   └── orchestrator.py     # 多Agent编排器
+│   │   ├── career_agent.py     # 4个专业Agent定义
+│   │   └── orchestrator.py     # 多Agent编排器（混合意图识别）
 │   │
 │   ├── tools/                  # 工具模块
 │   │   ├── job_tools.py        # 职位搜索、薪资查询
 │   │   ├── skill_tools.py      # 技能差距分析、学习路径
-│   │   └── market_tools.py     # 副业搜索、ROI计算
+│   │   ├── market_tools.py     # 副业搜索、ROI计算
+│   │   └── resume_tools.py     # 简历解析、优化、ATS评分
 │   │
 │   ├── memory/                 # 记忆模块
 │   │   ├── short_term.py       # 短期记忆（对话窗口）
@@ -206,14 +210,31 @@ CREATE TABLE analysis_history (
 - CareerAgent: 职业规划，工具search_jobs、query_salary
 - SkillAgent: 技能分析，工具analyze_skill_gap、recommend_learning_path
 - SideJobAgent: 副业分析，工具search_side_jobs、calculate_side_job_roi
+- ResumeAgent: 简历优化，工具parse_resume、analyze_jd、optimize_resume、ats_score、generate_resume
 
 #### Orchestrator (app/agents/orchestrator.py)
 - 多Agent编排器
-- 根据用户输入自动选择Agent（意图识别）
+- 混合意图识别：关键词匹配（分层权重）+ LLM回退
+- 置信度阈值：0.6以上直接使用关键词结果，低于则调用LLM分类
 
 ### 5.2 工具系统
 
 工具从数据库读取数据（非硬编码），通过SQLAlchemy ORM查询。
+
+#### 工具列表
+| Agent | 工具 | 功能 |
+|-------|------|------|
+| CareerAgent | search_jobs | 搜索职位 |
+| CareerAgent | query_salary | 查询薪资 |
+| SkillAgent | analyze_skill_gap | 分析技能差距 |
+| SkillAgent | recommend_learning_path | 推荐学习路径 |
+| SideJobAgent | search_side_jobs | 搜索副业 |
+| SideJobAgent | calculate_side_job_roi | 计算副业ROI |
+| ResumeAgent | parse_resume | 解析简历 |
+| ResumeAgent | analyze_jd | 分析职位描述 |
+| ResumeAgent | optimize_resume | 优化简历 |
+| ResumeAgent | ats_score | ATS评分 |
+| ResumeAgent | generate_resume | 生成简历 |
 
 ### 5.3 记忆系统
 
@@ -327,21 +348,55 @@ flask db upgrade
 15. Toast消息提示系统
 16. 简洁确认弹窗
 
+### 2026-05-09 完成功能
+1. 聊天界面优化
+   - 消息复制按钮（hover显示，毛玻璃样式）
+   - 对话气泡毛玻璃效果（backdrop-filter: blur(40px)）
+   - 欢迎页面美化（功能卡片、图标）
+   - 快速问题按钮美化（胶囊形状、图标）
+   - Agent选择器添加"简历优化"选项
+2. 落地页动画优化
+   - CSS动画替代UnicornStudio
+   - 浅色系流动渐变背景
+   - CareerAI文字紫粉渐变
+   - 打字机效果（推理演示区域）
+   - 功能卡片hover效果
+3. 简历Agent实现（ResumeAgent）
+   - 5个工具：parse_resume、analyze_jd、optimize_resume、ats_score、generate_resume
+   - 专业系统提示词
+   - 前端入口（欢迎卡片、Agent选择器）
+4. 意图识别优化
+   - 混合方案：关键词匹配（分层权重）+ LLM回退
+   - 置信度阈值：0.6
+   - 支持4个Agent类型识别
+5. 对话保存Bug修复
+   - 问题：SQLAlchemy未检测到JSON字段变化
+   - 解决：使用flag_modified标记字段为已修改
+   - 修复多轮对话保存问题
+
 ---
 
 ## 九、设计规范
 
 ### 落地页
-- 颜色：黑白为主，蓝色强调 (#0066cc)
+- 颜色：浅色系为主，紫粉渐变强调
 - 字体：SF Pro / Inter
-- 动画：UnicornStudio背景
-- 布局：全宽区块交替
+- 动画：CSS流动渐变背景（替代UnicornStudio）
+- CareerAI文字：紫粉渐变，104-192px
+- 功能卡片：hover上浮效果
 
 ### 内部页面
 - 颜色：白色背景，蓝色主题 (#0066cc)
 - 字体：Inter
 - 侧边栏：固定左侧
 - 组件：Toast提示、简洁确认弹窗
+
+### 对话气泡
+- 毛玻璃效果：backdrop-filter: blur(40px) saturate(180%)
+- 用户消息：浅蓝色半透明背景
+- AI消息：白色半透明背景
+- 背景：彩色渐变光斑（蓝、紫、粉）
+- 复制按钮：hover显示，右下角，毛玻璃样式
 
 ### Logo
 - 名称：CareerAI
@@ -353,7 +408,8 @@ flask db upgrade
 ## 十、待办事项
 
 ### 10.1 功能扩展
-- [ ] 简历优化Agent（ResumeAgent）实现
+- [ ] 简历Agent前端完善（文件上传、简历预览、PDF导出）
+- [ ] 面试准备Agent（InterviewAgent）
 - [ ] 市场趋势分析功能
 - [ ] 数据可视化图表（Chart.js）
 - [ ] 暗色模式支持
@@ -390,7 +446,20 @@ flask db upgrade
 pip install cryptography
 ```
 
+### Q5: JSON字段保存后数据丢失
+SQLAlchemy未检测到JSON字段变化，需要使用flag_modified：
+```python
+from sqlalchemy.orm.attributes import flag_modified
+flag_modified(history, 'messages')
+db.session.commit()
+```
+
+### Q6: 简历解析依赖
+```bash
+pip install pypdf python-docx
+```
+
 ---
 
-**最后更新**: 2026-05-06
-**项目状态**: 基础功能完成，可用于演示
+**最后更新**: 2026-05-09
+**项目状态**: 核心功能完成，简历Agent已实现，可继续扩展

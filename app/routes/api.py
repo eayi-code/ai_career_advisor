@@ -5,6 +5,7 @@ import uuid
 import os
 import base64
 from werkzeug.utils import secure_filename
+from sqlalchemy.orm.attributes import flag_modified
 from app import db
 from app.models.user import User
 from app.models.history import AnalysisHistory
@@ -67,9 +68,9 @@ def agent_chat():
             history.input_data = {"message": message}
             history.result_data = {"output": result["output"]}
             history.reasoning_steps = result.get("intermediate_steps", [])
-            history.tools_used = list(set(
-                history.tools_used or [] + [s["action"] for s in result.get("intermediate_steps", [])]
-            ))
+            existing_tools = history.tools_used or []
+            new_tools = [s["action"] for s in result.get("intermediate_steps", [])]
+            history.tools_used = list(set(existing_tools + new_tools))
             history.agent_used = result.get("agent_used", history.agent_used)
 
         messages = history.messages or []
@@ -86,6 +87,11 @@ def agent_chat():
             "timestamp": datetime.utcnow().isoformat()
         })
         history.messages = messages
+        history.updated_at = datetime.utcnow()
+        
+        # 标记JSON字段为已修改，确保SQLAlchemy检测到变化
+        flag_modified(history, 'messages')
+        flag_modified(history, 'tools_used')
 
         db.session.commit()
 
@@ -106,10 +112,11 @@ def agent_chat():
 @api_bp.route('/history/<conversation_id>', methods=['GET'])
 @login_required
 def get_conversation(conversation_id):
+    # 获取该conversation_id的最新记录
     history = AnalysisHistory.query.filter_by(
         conversation_id=conversation_id,
         user_id=current_user.id
-    ).first()
+    ).order_by(AnalysisHistory.updated_at.desc()).first()
 
     if not history:
         return jsonify({"code": 404, "error": "对话不存在"}), 404
@@ -130,16 +137,29 @@ def get_conversation(conversation_id):
 @api_bp.route('/history', methods=['GET'])
 @login_required
 def get_history():
-    histories = AnalysisHistory.query.filter_by(user_id=current_user.id).order_by(
+    # 获取每个conversation_id的最新记录
+    from sqlalchemy import func
+    
+    # 先获取每个conversation_id的最大updated_at
+    subquery = db.session.query(
+        AnalysisHistory.conversation_id,
+        func.max(AnalysisHistory.updated_at).label('max_updated')
+    ).filter_by(user_id=current_user.id).group_by(
+        AnalysisHistory.conversation_id
+    ).subquery()
+    
+    # 获取完整的记录
+    histories = db.session.query(AnalysisHistory).join(
+        subquery,
+        db.and_(
+            AnalysisHistory.conversation_id == subquery.c.conversation_id,
+            AnalysisHistory.updated_at == subquery.c.max_updated
+        )
+    ).filter(
+        AnalysisHistory.user_id == current_user.id
+    ).order_by(
         AnalysisHistory.updated_at.desc()
-    ).distinct(AnalysisHistory.conversation_id).limit(50).all()
-
-    seen = set()
-    unique_histories = []
-    for h in histories:
-        if h.conversation_id not in seen:
-            seen.add(h.conversation_id)
-            unique_histories.append(h)
+    ).limit(50).all()
 
     return jsonify({
         "code": 200,
@@ -151,7 +171,7 @@ def get_history():
             "last_message": h.messages[-1]["content"][:50] if h.messages else "",
             "created_at": h.created_at.isoformat(),
             "updated_at": h.updated_at.isoformat() if h.updated_at else None
-        } for h in unique_histories]
+        } for h in histories]
     })
 
 
@@ -159,6 +179,7 @@ def get_history():
 @login_required
 def delete_conversation(conversation_id):
     try:
+        # 删除该conversation_id的所有记录
         count = AnalysisHistory.query.filter_by(
             conversation_id=conversation_id,
             user_id=current_user.id
