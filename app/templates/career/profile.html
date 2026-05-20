@@ -219,59 +219,221 @@
                 </div>
                 <div class="collapse-content">
                     <form method="POST" class="profile-form">
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label class="form-label">学历</label>
-                                <select name="education" class="form-select">
-                                    <option value="high_school" {% if current_user.profile and current_user.profile.education == 'high_school' %}selected{% endif %}>高中</option>
-                                    <option value="associate" {% if current_user.profile and current_user.profile.education == 'associate' %}selected{% endif %}>大专</option>
-                                    <option value="bachelor" {% if not current_user.profile or current_user.profile.education == 'bachelor' %}selected{% endif %}>本科</option>
-                                    <option value="master" {% if current_user.profile and current_user.profile.education == 'master' %}selected{% endif %}>硕士</option>
-                                    <option value="phd" {% if current_user.profile and current_user.profile.education == 'phd' %}selected{% endif %}>博士</option>
-                                </select>
+                        
+                        <!-- 基本信息 -->
+                        <div class="form-section">
+                            <h3 class="form-section-title">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                                基本信息
+                            </h3>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label">学历</label>
+                                    <select name="education" class="form-select">
+                                        <option value="high_school" {% if current_user.profile and current_user.profile.education == 'high_school' %}selected{% endif %}>高中</option>
+                                        <option value="associate" {% if current_user.profile and current_user.profile.education == 'associate' %}selected{% endif %}>大专</option>
+                                        <option value="bachelor" {% if not current_user.profile or current_user.profile.education == 'bachelor' %}selected{% endif %}>本科</option>
+                                        <option value="master" {% if current_user.profile and current_user.profile.education == 'master' %}selected{% endif %}>硕士</option>
+                                        <option value="phd" {% if current_user.profile and current_user.profile.education == 'phd' %}selected{% endif %}>博士</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">专业</label>
+                                    <input type="text" name="major" class="form-input" value="{{ current_user.profile.major if current_user.profile else '' }}" placeholder="例如：计算机科学">
+                                </div>
                             </div>
+                            
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label">工作年限</label>
+                                    <input type="number" name="work_experience" class="form-input" value="{{ current_user.profile.work_experience if current_user.profile else 0 }}" min="0">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">当前职位</label>
+                                    <input type="text" name="current_job_title" class="form-input" value="{{ current_user.profile.current_job_title if current_user.profile else '' }}" placeholder="例如：软件工程师">
+                                </div>
+                            </div>
+                            
                             <div class="form-group">
-                                <label class="form-label">专业</label>
-                                <input type="text" name="major" class="form-input" value="{{ current_user.profile.major if current_user.profile else '' }}" placeholder="例如：计算机科学">
+                                <label class="form-label">技能</label>
+                                <input type="text" name="skills" class="form-input" value="{{ current_user.profile.skills|join(', ') if current_user.profile and current_user.profile.skills else '' }}" placeholder="用逗号分隔，例如：Python, JavaScript, 数据分析">
+                                <span class="form-hint">多个技能用逗号分隔</span>
                             </div>
                         </div>
                         
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label class="form-label">工作年限</label>
-                                <input type="number" name="work_experience" class="form-input" value="{{ current_user.profile.work_experience if current_user.profile else 0 }}" min="0">
+                        <!-- 求职意向 -->
+                        <div class="form-section">
+                            <h3 class="form-section-title">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+                                求职意向
+                            </h3>
+                            
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label">目标岗位</label>
+                                    <input type="text" name="target_job_title" class="form-input" value="{{ current_user.profile.target_job_title if current_user.profile else '' }}" placeholder="例如：数据分析师">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">目标行业</label>
+                                    <input type="text" name="target_industry" class="form-input" value="{{ current_user.profile.target_industry if current_user.profile else '' }}" placeholder="例如：互联网, 金融">
+                                </div>
                             </div>
+                            
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label">目标薪资范围 (K)</label>
+                                    <div style="display: flex; gap: 8px; align-items: center;">
+                                        <input type="number" name="target_salary_min" class="form-input" value="{{ current_user.profile.target_salary_min|int if current_user.profile and current_user.profile.target_salary_min else '' }}" placeholder="最低" min="0" style="flex: 1;">
+                                        <span>-</span>
+                                        <input type="number" name="target_salary_max" class="form-input" value="{{ current_user.profile.target_salary_max|int if current_user.profile and current_user.profile.target_salary_max else '' }}" placeholder="最高" min="0" style="flex: 1;">
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">偏好城市</label>
+                                    <input type="text" name="location_preference" class="form-input" value="{{ current_user.profile.location_preference if current_user.profile else '' }}" placeholder="例如：北京, 上海">
+                                </div>
+                            </div>
+                            
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label">求职状态</label>
+                                    <select name="job_search_status" class="form-select">
+                                        <option value="observing" {% if not current_user.profile or current_user.profile.job_search_status == 'observing' %}selected{% endif %}>观望中</option>
+                                        <option value="employed" {% if current_user.profile and current_user.profile.job_search_status == 'employed' %}selected{% endif %}>在职看机会</option>
+                                        <option value="resigned" {% if current_user.profile and current_user.profile.job_search_status == 'resigned' %}selected{% endif %}>已离职</option>
+                                        <option value="fresh" {% if current_user.profile and current_user.profile.job_search_status == 'fresh' %}selected{% endif %}>应届生</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">工作偏好</label>
+                                    <select name="work_preference" class="form-select">
+                                        <option value="flexible" {% if not current_user.profile or current_user.profile.work_preference == 'flexible' %}selected{% endif %}>不限</option>
+                                        <option value="remote" {% if current_user.profile and current_user.profile.work_preference == 'remote' %}selected{% endif %}>远程</option>
+                                        <option value="onsite" {% if current_user.profile and current_user.profile.work_preference == 'onsite' %}selected{% endif %}>坐班</option>
+                                        <option value="hybrid" {% if current_user.profile and current_user.profile.work_preference == 'hybrid' %}selected{% endif %}>混合</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label">期望入职时间</label>
+                                    <select name="expected_join_time" class="form-select">
+                                        <option value="flexible" {% if not current_user.profile or current_user.profile.expected_join_time == 'flexible' %}selected{% endif %}>随时</option>
+                                        <option value="1month" {% if current_user.profile and current_user.profile.expected_join_time == '1month' %}selected{% endif %}>1个月内</option>
+                                        <option value="3months" {% if current_user.profile and current_user.profile.expected_join_time == '3months' %}selected{% endif %}>3个月内</option>
+                                        <option value="negotiable" {% if current_user.profile and current_user.profile.expected_join_time == 'negotiable' %}selected{% endif %}>可商量</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">公司类型偏好</label>
+                                    <select name="company_type_preference" class="form-select">
+                                        <option value="flexible" {% if not current_user.profile or current_user.profile.company_type_preference == 'flexible' %}selected{% endif %}>不限</option>
+                                        <option value="big_company" {% if current_user.profile and current_user.profile.company_type_preference == 'big_company' %}selected{% endif %}>大厂</option>
+                                        <option value="startup" {% if current_user.profile and current_user.profile.company_type_preference == 'startup' %}selected{% endif %}>创业公司</option>
+                                        <option value="foreign" {% if current_user.profile and current_user.profile.company_type_preference == 'foreign' %}selected{% endif %}>外企</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            {% if current_user.profile and current_user.profile.target_jobs %}
                             <div class="form-group">
-                                <label class="form-label">当前职位</label>
-                                <input type="text" name="current_job_title" class="form-input" value="{{ current_user.profile.current_job_title if current_user.profile else '' }}" placeholder="例如：软件工程师">
+                                <label class="form-label">历史目标岗位</label>
+                                <div class="target-jobs-list" style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px;">
+                                    {% for job in current_user.profile.target_jobs %}
+                                    <span class="tag" style="background: var(--bg-tertiary); padding: 4px 12px; border-radius: 16px; font-size: 0.8125rem;">
+                                        {{ job.title }}
+                                        <small style="color: var(--text-tertiary); margin-left: 4px;">{{ job.added_at[:10] }}</small>
+                                    </span>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- 项目经历 -->
+                        <div class="form-section">
+                            <h3 class="form-section-title">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
+                                项目经历
+                                <small style="color: var(--text-tertiary); font-weight: normal; font-size: 0.8125rem;">（可选，用于简历生成）</small>
+                            </h3>
+                            <div id="projectsContainer">
+                                {% if current_user.profile and current_user.profile.projects %}
+                                    {% for project in current_user.profile.projects %}
+                                    <div class="project-item" style="background: var(--bg-secondary); padding: 16px; border-radius: 8px; margin-bottom: 12px;">
+                                        <div class="form-row">
+                                            <div class="form-group">
+                                                <label class="form-label">项目名称</label>
+                                                <input type="text" name="project_name[]" class="form-input" value="{{ project.name }}" placeholder="项目名称">
+                                            </div>
+                                            <div class="form-group">
+                                                <label class="form-label">担任角色</label>
+                                                <input type="text" name="project_role[]" class="form-input" value="{{ project.role }}" placeholder="例如：前端负责人">
+                                            </div>
+                                        </div>
+                                        <div class="form-row">
+                                            <div class="form-group">
+                                                <label class="form-label">技术栈</label>
+                                                <input type="text" name="project_tech[]" class="form-input" value="{{ project.tech_stack }}" placeholder="例如：React, TypeScript, Node.js">
+                                            </div>
+                                            <div class="form-group">
+                                                <label class="form-label">项目成果</label>
+                                                <input type="text" name="project_achievement[]" class="form-input" value="{{ project.achievement }}" placeholder="例如：用户增长35%">
+                                            </div>
+                                        </div>
+                                        <button type="button" class="btn btn-sm btn-secondary" onclick="this.parentElement.remove()" style="margin-top: 8px;">删除</button>
+                                    </div>
+                                    {% endfor %}
+                                {% endif %}
+                            </div>
+                            <button type="button" class="btn btn-secondary" onclick="addProject()" style="margin-top: 8px;">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M12 4v16m8-8H4"/></svg>
+                                添加项目
+                            </button>
+                        </div>
+                        
+                        <!-- 证书资质 -->
+                        <div class="form-section">
+                            <h3 class="form-section-title">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/></svg>
+                                证书资质
+                                <small style="color: var(--text-tertiary); font-weight: normal; font-size: 0.8125rem;">（可选）</small>
+                            </h3>
+                            <div class="form-group">
+                                <input type="text" name="certifications" class="form-input" value="{{ current_user.profile.certifications|join(', ') if current_user.profile and current_user.profile.certifications else '' }}" placeholder="用逗号分隔，例如：PMP, CET-6, AWS认证">
+                                <span class="form-hint">多个证书用逗号分隔</span>
                             </div>
                         </div>
                         
-                        <div class="form-group">
-                            <label class="form-label">技能</label>
-                            <input type="text" name="skills" class="form-input" value="{{ current_user.profile.skills|join(', ') if current_user.profile and current_user.profile.skills else '' }}" placeholder="用逗号分隔，例如：Python, JavaScript, 数据分析">
-                            <span class="form-hint">多个技能用逗号分隔</span>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label class="form-label">兴趣领域</label>
-                            <input type="text" name="interests" class="form-input" value="{{ current_user.profile.interests|join(', ') if current_user.profile and current_user.profile.interests else '' }}" placeholder="例如：技术, 金融, 创意">
-                        </div>
-                        
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label class="form-label">目标行业</label>
-                                <input type="text" name="target_industry" class="form-input" value="{{ current_user.profile.target_industry if current_user.profile else '' }}" placeholder="例如：互联网, 金融">
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">偏好城市</label>
-                                <input type="text" name="location_preference" class="form-input" value="{{ current_user.profile.location_preference if current_user.profile else '' }}" placeholder="例如：北京, 上海">
+                        <!-- 副业信息 -->
+                        <div class="form-section">
+                            <h3 class="form-section-title">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+                                副业信息
+                                <small style="color: var(--text-tertiary); font-weight: normal; font-size: 0.8125rem;">（可选，用于副业推荐）</small>
+                            </h3>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label">每周可用时间（小时）</label>
+                                    <input type="number" name="available_hours_per_week" class="form-input" value="{{ current_user.profile.available_hours_per_week if current_user.profile and current_user.profile.available_hours_per_week else '' }}" placeholder="例如：10" min="0" max="168">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">副业月收入目标（元）</label>
+                                    <input type="number" name="side_job_income_target" class="form-input" value="{{ current_user.profile.side_job_income_target|int if current_user.profile and current_user.profile.side_job_income_target else '' }}" placeholder="例如：5000" min="0">
+                                </div>
                             </div>
                         </div>
                         
-                        <div class="form-group">
-                            <label class="form-label">职业目标</label>
-                            <textarea name="career_goals" class="form-input" rows="4" placeholder="描述你的职业目标，让 AI 更好地为你规划...">{{ current_user.profile.career_goals if current_user.profile else '' }}</textarea>
+                        <!-- 职业目标 -->
+                        <div class="form-section">
+                            <h3 class="form-section-title">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                                职业目标
+                            </h3>
+                            <div class="form-group">
+                                <textarea name="career_goals" class="form-input" rows="4" placeholder="描述你的职业目标，让 AI 更好地为你规划...">{{ current_user.profile.career_goals if current_user.profile else '' }}</textarea>
+                            </div>
                         </div>
                         
                         <div class="form-actions">
@@ -335,6 +497,7 @@
     position: relative;
     margin: -2rem -2rem 0;
     padding-bottom: 2rem;
+    flex-shrink: 0;
 }
 
 .profile-cover {
@@ -498,7 +661,7 @@
 }
 
 .collapse-section.expanded .collapse-content {
-    max-height: 1200px;
+    max-height: none;
 }
 
 .collapse-section.expanded .collapse-header {
@@ -770,6 +933,36 @@
 <script>
 function toggleCollapse(id) {
     document.getElementById(id).classList.toggle('expanded');
+}
+
+function addProject() {
+    const container = document.getElementById('projectsContainer');
+    const projectHtml = `
+        <div class="project-item" style="background: var(--bg-secondary); padding: 16px; border-radius: 8px; margin-bottom: 12px;">
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">项目名称</label>
+                    <input type="text" name="project_name[]" class="form-input" placeholder="项目名称">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">担任角色</label>
+                    <input type="text" name="project_role[]" class="form-input" placeholder="例如：前端负责人">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">技术栈</label>
+                    <input type="text" name="project_tech[]" class="form-input" placeholder="例如：React, TypeScript, Node.js">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">项目成果</label>
+                    <input type="text" name="project_achievement[]" class="form-input" placeholder="例如：用户增长35%">
+                </div>
+            </div>
+            <button type="button" class="btn btn-sm btn-secondary" onclick="this.parentElement.remove()" style="margin-top: 8px;">删除</button>
+        </div>
+    `;
+    container.insertAdjacentHTML('beforeend', projectHtml);
 }
 
 document.addEventListener('DOMContentLoaded', function() {

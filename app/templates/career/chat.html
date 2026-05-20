@@ -2,7 +2,7 @@
 {% block title %}智能对话{% endblock %}
 
 {% block body %}
-<div class="app-layout">
+<div class="app-layout chat-layout">
     <aside class="sidebar">
         <div class="sidebar-brand">
             <svg viewBox="0 0 24 24" width="20" height="20" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -60,8 +60,18 @@
         </div>
     </aside>
     
-    <main class="main-content" style="padding: 0; display: flex;">
-        <div class="chat-container" style="flex: 1;">
+    <main class="main-content">
+        <div class="chat-container">
+            <div class="chat-topbar">
+                <div class="chat-topbar-title" id="chatTitle">新对话</div>
+                <button class="toggle-panel-btn" onclick="toggleSidePanel()" title="推理详情">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/>
+                        <rect x="9" y="3" width="6" height="4" rx="1"/>
+                        <path d="M9 12h6"/><path d="M9 16h6"/>
+                    </svg>
+                </button>
+            </div>
             <div class="chat-messages" id="chatMessages">
                 <div class="welcome-container" id="welcomeMessage">
                     <div class="welcome-header">
@@ -136,9 +146,25 @@
                         <option value="skill">技能分析</option>
                         <option value="side_job">副业分析</option>
                         <option value="resume">简历优化</option>
+                        <option value="interview">面试教练</option>
                     </select>
+                    <input type="file" id="fileInput" accept=".pdf,.docx,.doc,.txt" style="display: none;">
+                    <button id="uploadBtn" class="btn btn-icon" title="上传简历文件" onclick="document.getElementById('fileInput').click()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+                            <path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/>
+                        </svg>
+                    </button>
                     <input type="text" id="chatInput" class="chat-input" placeholder="输入你的问题...">
                     <button id="sendBtn" class="btn btn-primary">发送</button>
+                </div>
+                <div id="filePreview" class="file-preview" style="display: none;">
+                    <div class="file-preview-info">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/><path d="M16 13H8"/><path d="M16 17H8"/><path d="M10 9H8"/>
+                        </svg>
+                        <span id="fileName"></span>
+                        <button class="file-remove" onclick="removeFile()">×</button>
+                    </div>
                 </div>
                 <div class="quick-questions">
                     <button class="btn" onclick="askQuestion('搜索数据分析师职位')">
@@ -163,7 +189,21 @@
             </div>
         </div>
         
-        <div style="width: 280px; background: var(--bg-secondary); border-left: 1px solid var(--border); padding: 1rem; overflow-y: auto;">
+        <div id="sidePanel" class="chat-side-panel reasoning-panel collapsed">
+            <div class="panel-header">
+                <span>推理详情</span>
+                <button class="panel-close" onclick="toggleSidePanel()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                        <path d="M18 6L6 18M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="panel-section">
+                <div class="panel-title">执行流程</div>
+                <div id="executionStepsPanel">
+                    <p style="font-size: 0.8125rem; color: var(--text-tertiary);">发送消息后展示</p>
+                </div>
+            </div>
             <div class="panel-section">
                 <div class="panel-title">推理过程</div>
                 <div id="reasoningPanel">
@@ -177,8 +217,33 @@
                 </div>
             </div>
         </div>
+        
+        <div id="resumePanel" class="chat-side-panel resume-panel collapsed">
+            <div class="panel-header">
+                <span>简历预览</span>
+                <button class="panel-close" onclick="closeResumePanel()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                        <path d="M18 6L6 18M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="panel-section" style="flex: 1; overflow: hidden; display: flex; flex-direction: column;">
+                <div id="resumePreviewContent" class="resume-preview-md" style="flex: 1; overflow: auto;"></div>
+            </div>
+            <div class="panel-actions" style="display: flex; gap: 8px;">
+                <button class="btn btn-primary" style="flex: 1;" onclick="downloadFromPanel('html')">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
+                    下载 HTML
+                </button>
+                <button class="btn btn-secondary" style="flex: 1;" onclick="downloadFromPanel('docx')">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
+                    下载 DOCX
+                </button>
+            </div>
+        </div>
     </main>
 </div>
+{% endblock %}
 
 {% block extra_js %}
 <script>
@@ -186,24 +251,83 @@ let currentConversationId = '{{ conversation_id or "" }}';
 const chatMessages = document.getElementById('chatMessages');
 const chatInput = document.getElementById('chatInput');
 const sendBtn = document.getElementById('sendBtn');
+const fileInput = document.getElementById('fileInput');
+const filePreview = document.getElementById('filePreview');
 let currentAbortController = null;
 let isProcessing = false;
+let uploadedFileContent = null;
+let uploadedFileName = null;
 
 document.addEventListener('DOMContentLoaded', function() {
     if (currentConversationId) {
         loadConversation(currentConversationId);
     }
+    
+    fileInput.addEventListener('change', async function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        const allowedExts = ['.pdf', '.docx', '.doc', '.txt'];
+        const ext = '.' + file.name.split('.').pop().toLowerCase();
+        if (!allowedExts.includes(ext)) {
+            modal.toast('不支持的文件格式，请上传PDF、DOCX或TXT文件', 'error');
+            fileInput.value = '';
+            return;
+        }
+        
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        try {
+            modal.toast('正在解析文件...', 'info');
+            const res = await fetch('/api/upload/resume', {
+                method: 'POST',
+                body: formData
+            });
+            const data = await res.json();
+            
+            if (data.code === 200) {
+                uploadedFileContent = data.data.content;
+                uploadedFileName = data.data.filename;
+                document.getElementById('fileName').textContent = uploadedFileName;
+                filePreview.style.display = 'block';
+                chatInput.placeholder = '输入优化要求，或直接发送以解析简历...';
+                modal.toast('文件解析成功', 'success');
+            } else {
+                modal.toast(data.error || '文件解析失败', 'error');
+                fileInput.value = '';
+            }
+        } catch (err) {
+            modal.toast('文件上传失败', 'error');
+            fileInput.value = '';
+        }
+    });
 });
+
+function removeFile() {
+    uploadedFileContent = null;
+    uploadedFileName = null;
+    fileInput.value = '';
+    filePreview.style.display = 'none';
+    chatInput.placeholder = '输入你的问题...';
+}
 
 async function loadConversation(id) {
     try {
         const res = await fetch('/api/history/' + id);
         const data = await res.json();
-if (data.code === 200 && data.data.messages && data.data.messages.length > 0) {
-                document.getElementById('welcomeMessage')?.remove();
-                data.data.messages.forEach(msg => addMessage(msg.content, msg.role === 'user', msg.agent, msg.steps));
-                chatMessages.scrollTop = chatMessages.scrollHeight;
+        if (data.code === 200 && data.data.messages && data.data.messages.length > 0) {
+            document.getElementById('welcomeMessage')?.remove();
+            data.data.messages.forEach(msg => {
+                // 对于历史消息，steps可能在execution_steps字段中
+                const steps = msg.steps || msg.execution_steps || [];
+                addMessage(msg.content, msg.role === 'user', msg.agent, steps);
+            });
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+            if (data.data.title) {
+                document.getElementById('chatTitle').textContent = data.data.title;
             }
+        }
     } catch (e) { console.error(e); }
 }
 
@@ -246,14 +370,303 @@ function addMessage(content, isUser, agent, steps) {
         '<button class="msg-copy-btn" onclick="copyMessage(this)" title="复制">' +
             '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>' +
         '</button>';
+    
+    const isResume = !isUser && detectResumeContent(content, agent);
+    
+    // 简历内容：气泡只显示回复文字，简历通过卡片操作
+    let displayContent = content;
+    let previewCard = '';
+    let showCopyBtn = copyBtn;
+    
+    if (isResume) {
+        const resumeOnly = extractResumeContent(content);
+        if (resumeOnly) {
+            displayContent = content.split('<!--RESUME_START-->')[0].trim() || '已为您生成简历';
+            const contentId = 'resume-content-' + Date.now();
+            window[contentId] = resumeOnly;
+            previewCard = buildResumePreviewCard(contentId);
+            showCopyBtn = ''; // 简历消息隐藏复制按钮
+        }
+    }
+    
+    // 构建推理步骤容器
+    let reasoningContainer = '';
+    if (!isUser && steps && steps.length > 0) {
+        reasoningContainer = buildReasoningTimeline(steps);
+    }
+    
     div.innerHTML = '<div class="message-avatar">' + (isUser ? '我' : 'AI') + '</div>' +
         '<div class="message-bubble">' +
-            '<div class="message-content">' + content.replace(/\n/g, '<br>') + '</div>' +
-            copyBtn +
+            reasoningContainer +
+            '<div class="message-content">' + formatMessageContent(displayContent) + '</div>' +
+            previewCard +
+            showCopyBtn +
         '</div>';
     chatMessages.appendChild(div);
     chatMessages.scrollTop = chatMessages.scrollHeight;
     if (steps?.length) updateReasoning(steps);
+    
+    // 自动打开预览面板
+    if (isResume && previewCard) {
+        const contentId = Object.keys(window).filter(k => k.startsWith('resume-content-')).pop();
+        if (contentId) setTimeout(() => showResumeInPanel(contentId), 500);
+    }
+}
+
+function formatMessageContent(content) {
+    let html = content;
+    
+    // 标题
+    html = html.replace(/^### (.*?)$/gm, '<h3 style="font-size:0.9375rem;font-weight:600;margin:0.5rem 0 0.25rem;color:var(--accent);">$1</h3>');
+    html = html.replace(/^## (.*?)$/gm, '<h2 style="font-size:1rem;font-weight:600;margin:0.75rem 0 0.5rem;color:var(--accent);">$1</h2>');
+    html = html.replace(/^# (.*?)$/gm, '<h1 style="font-size:1.125rem;font-weight:700;margin:0.5rem 0;padding-bottom:0.5rem;border-bottom:2px solid var(--accent);">$1</h1>');
+    
+    // 加粗和斜体
+    html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
+    
+    // 行内代码
+    html = html.replace(/`(.*?)`/g, '<code style="background:var(--bg-tertiary);padding:0.125rem 0.375rem;border-radius:0.25rem;font-family:var(--font-mono);font-size:0.875em;">$1</code>');
+    
+    // 无序列表
+    html = html.replace(/^- (.*?)$/gm, '<li style="margin:0.25rem 0;padding-left:0.5rem;">$1</li>');
+    html = html.replace(/(<li.*?<\/li>)/gs, '<ul style="padding-left:1.5rem;margin:0.5rem 0;">$1</ul>');
+    
+    // 有序列表
+    html = html.replace(/^\d+\. (.*?)$/gm, '<li style="margin:0.25rem 0;padding-left:0.5rem;">$1</li>');
+    
+    // 表格支持
+    html = html.replace(/\|(.+)\|/g, function(match) {
+        if (match.includes('---')) return '';
+        const cells = match.split('|').filter(c => c.trim());
+        return '<tr>' + cells.map(c => '<td style="padding:0.375rem 0.75rem;border:1px solid var(--border);">' + c.trim() + '</td>').join('') + '</tr>';
+    });
+    
+    // 换行
+    html = html.replace(/\n/g, '<br>');
+    
+    // 清理多余的br
+    html = html.replace(/<br><br><br>/g, '<br><br>');
+    
+    return html;
+}
+
+function extractResumeContent(content) {
+    // 提取标记内的简历内容
+    const startTag = '<!--RESUME_START-->';
+    const endTag = '<!--RESUME_END-->';
+    
+    const startIdx = content.indexOf(startTag);
+    const endIdx = content.indexOf(endTag);
+    
+    if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
+        return content.substring(startIdx + startTag.length, endIdx).trim();
+    }
+    
+    // 无标记时，尝试检测HTML简历结构
+    if (content.includes('<!DOCTYPE html>') || content.includes('<html')) {
+        // 提取完整的HTML代码
+        const htmlStart = content.indexOf('<!DOCTYPE html>') !== -1 ? content.indexOf('<!DOCTYPE html>') : content.indexOf('<html');
+        const htmlEnd = content.lastIndexOf('</html>');
+        if (htmlStart !== -1 && htmlEnd !== -1) {
+            return content.substring(htmlStart, htmlEnd + 7).trim();
+        }
+    }
+    
+    // 无标记时，尝试检测Markdown简历结构
+    const resumeKeywords = ['## 个人简介', '## 工作经验', '## 教育背景', '## 技能', '## 项目经历'];
+    const hasKeywords = resumeKeywords.some(kw => content.includes(kw));
+    
+    if (hasKeywords && content.length > 300) {
+        // 尝试提取从第一个 ## 开始的内容
+        const firstH2 = content.indexOf('## ');
+        if (firstH2 !== -1) {
+            return content.substring(firstH2).trim();
+        }
+    }
+    
+    return null;
+}
+
+function detectResumeContent(content, agent) {
+    // 方式1：包含标记
+    if (content.includes('<!--RESUME_START-->')) return true;
+    
+    // 方式2：Agent类型匹配
+    if (agent === '简历优化专家' && content.length > 200) return true;
+    
+    // 方式3：检测HTML简历结构
+    if (content.includes('<!DOCTYPE html>') && content.includes('tailwindcss')) return true;
+    if (content.includes('<html') && content.includes('bg-primary')) return true;
+    
+    // 方式4：内容关键词检测（Markdown格式）
+    const resumeKeywords = ['## 个人简介', '## 工作经验', '## 教育背景', '## 技能', '## 项目经历'];
+    const hasKeywords = resumeKeywords.some(kw => content.includes(kw));
+    
+    return hasKeywords && content.length > 300;
+}
+
+function buildResumePreviewCard(contentId) {
+    return '<div class="resume-preview-card">' +
+        '<div class="resume-preview-header">' +
+            '<span class="resume-preview-title">📄 简历已生成</span>' +
+            '<div class="resume-preview-actions">' +
+                '<button class="btn btn-secondary" onclick="showResumeInPanel(\'' + contentId + '\')">' +
+                    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>' +
+                    '预览' +
+                '</button>' +
+                '<button class="btn btn-primary" onclick="downloadResume(\'' + contentId + '\', \'html\')">' +
+                    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>' +
+                    '下载' +
+                '</button>' +
+            '</div>' +
+        '</div>' +
+    '</div>';
+}
+
+function renderResumeContent(content) {
+    // 检测是否为HTML格式
+    if (content.includes('<!DOCTYPE html>') || content.includes('<html') || content.includes('tailwindcss')) {
+        // 直接返回HTML内容，在iframe中渲染
+        return content;
+    }
+    
+    // 否则使用Markdown渲染
+    let html = content;
+    html = html.replace(/^### (.*?)$/gm, '<h3>$1</h3>');
+    html = html.replace(/^## (.*?)$/gm, '<h2>$1</h2>');
+    html = html.replace(/^# (.*?)$/gm, '<h1>$1</h1>');
+    html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    html = html.replace(/^- (.*?)$/gm, '<li>$1</li>');
+    html = html.replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>');
+    html = html.replace(/\n\n/g, '</p><p>');
+    html = html.replace(/\n/g, '<br>');
+    html = '<p>' + html + '</p>';
+    return html;
+}
+
+let currentResumeContent = null;
+
+function showResumeInPanel(contentId) {
+    const content = window[contentId];
+    if (!content) return;
+    
+    currentResumeContent = content;
+    
+    // 检测是否为HTML格式
+    const isHTML = content.includes('<!DOCTYPE html>') || content.includes('<html') || content.includes('tailwindcss');
+    
+    if (isHTML) {
+        // 使用iframe渲染HTML简历
+        const iframe = document.createElement('iframe');
+        iframe.style.width = '100%';
+        iframe.style.height = '100%';
+        iframe.style.minHeight = '600px';
+        iframe.style.border = 'none';
+        iframe.style.background = 'white';
+        iframe.style.borderRadius = '8px';
+        
+        const previewContainer = document.getElementById('resumePreviewContent');
+        previewContainer.innerHTML = '';
+        previewContainer.style.height = '100%';
+        previewContainer.appendChild(iframe);
+        
+        // 写入HTML内容
+        iframe.srcdoc = content;
+    } else {
+        // 使用Markdown渲染
+        const previewContainer = document.getElementById('resumePreviewContent');
+        previewContainer.style.height = 'auto';
+        previewContainer.innerHTML = renderResumeContent(content);
+    }
+    
+    const panel = document.getElementById('resumePanel');
+    if (!panel.classList.contains('expanded')) {
+        panel.classList.add('expanded');
+        panel.classList.remove('collapsed');
+    }
+}
+
+function closeResumePanel() {
+    const panel = document.getElementById('resumePanel');
+    panel.classList.remove('expanded');
+    panel.classList.add('collapsed');
+    currentResumeContent = null;
+}
+
+function toggleSidePanel() {
+    const panel = document.getElementById('sidePanel');
+    if (panel.classList.contains('expanded')) {
+        panel.classList.remove('expanded');
+        panel.classList.add('collapsed');
+    } else {
+        panel.classList.add('expanded');
+        panel.classList.remove('collapsed');
+    }
+}
+
+async function downloadFromPanel(format = 'html') {
+    if (!currentResumeContent) return;
+    
+    // 检测是否为HTML格式
+    const isHTML = currentResumeContent.includes('<!DOCTYPE html>') || currentResumeContent.includes('<html') || currentResumeContent.includes('tailwindcss');
+    
+    try {
+        const res = await fetch('/api/download/resume', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ content: currentResumeContent, filename: 'resume', format: format })
+        });
+        
+        if (res.ok) {
+            const blob = await res.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'resume.' + format;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+            modal.toast('下载成功', 'success');
+        } else {
+            const data = await res.json();
+            modal.toast(data.error || '下载失败', 'error');
+        }
+    } catch (err) {
+        modal.toast('下载失败', 'error');
+    }
+}
+
+async function downloadResume(contentId, format = 'html') {
+    const content = window[contentId];
+    if (!content) return;
+    
+    try {
+        const res = await fetch('/api/download/resume', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ content: content, filename: 'resume', format: format })
+        });
+        
+        if (res.ok) {
+            const blob = await res.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'resume.' + format;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+            modal.toast('下载成功', 'success');
+        } else {
+            const data = await res.json();
+            modal.toast(data.error || '下载失败', 'error');
+        }
+    } catch (err) {
+        modal.toast('下载失败', 'error');
+    }
 }
 
 function copyMessage(btn) {
@@ -266,6 +679,133 @@ function copyMessage(btn) {
             btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>';
         }, 2000);
     });
+}
+
+function buildReasoningTimeline(steps) {
+    const iconMap = {
+        'intent_analysis': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>',
+        'agent_call': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M12 2a4 4 0 014 4v2a4 4 0 01-8 0V6a4 4 0 014-4z"/><path d="M6 10v8a6 6 0 0012 0v-8"/></svg>',
+        'task_split': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M16 3h5v5"/><path d="M8 3H3v5"/><path d="M12 22v-8.3a4 4 0 00-1.172-2.872L3 3"/><path d="m15 9 6-6"/></svg>',
+        'quality_check': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>',
+        'result_merge': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M8 6h13"/><path d="M8 12h13"/><path d="M8 18h13"/><path d="M3 6h.01"/><path d="M3 12h.01"/><path d="M3 18h.01"/></svg>',
+        'parallel_start': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>',
+        'execution_start': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polygon points="5 3 19 12 5 21 5 3"/></svg>',
+        'error_recovery': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M21 12a9 9 0 11-6.219-8.56"/><path d="M21 3v5h-5"/></svg>',
+        'tool': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>'
+    };
+
+    const typeClassMap = {
+        'intent_analysis': 'intent',
+        'agent_call': 'agent',
+        'task_split': 'split',
+        'quality_check': 'check',
+        'result_merge': 'merge',
+        'parallel_start': 'parallel',
+        'execution_start': 'parallel',
+        'error_recovery': 'recovery',
+        'tool': 'tool'
+    };
+
+    let html = '<div class="reasoning-timeline">';
+    html += '<div class="reasoning-header" onclick="toggleReasoningTimeline(this)">';
+    html += '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6"/><path d="M9 16h6"/></svg>';
+    html += '<span>推理过程</span>';
+    html += '<svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M6 9l6 6 6-6"/></svg>';
+    html += '</div>';
+    html += '<div class="reasoning-body">';
+    
+    steps.forEach((step, index) => {
+        // 处理两种不同的数据结构
+        const stepType = step.type || (step.action ? 'tool' : 'intent_analysis');
+        const stepTitle = step.title || step.action || '处理中';
+        const stepDetail = step.detail || step.output || '';
+        const stepStatus = step.status || 'completed';
+        
+        const icon = iconMap[stepType] || '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>';
+        const typeClass = typeClassMap[stepType] || 'intent';
+        
+        html += '<div class="timeline-step">';
+        if (index < steps.length - 1) {
+            html += '<div class="timeline-line"></div>';
+        }
+        html += '<div class="timeline-dot ' + typeClass + ' ' + stepStatus + '">';
+        html += icon;
+        html += '</div>';
+        html += '<div class="timeline-content">';
+        html += '<div class="timeline-title">' + stepTitle + '</div>';
+        
+        // 显示详情（如果是工具调用，显示截断的输出）
+        if (stepDetail) {
+            const truncatedDetail = stepDetail.length > 150 ? stepDetail.substring(0, 150) + '...' : stepDetail;
+            html += '<div class="timeline-detail">' + truncatedDetail + '</div>';
+        }
+        
+        // 显示额外信息（置信度、时长、质量分数）
+        let extraInfo = '';
+        if (step.confidence) {
+            const confidencePercent = Math.round(step.confidence * 100);
+            const confidenceClass = confidencePercent >= 80 ? 'high' : confidencePercent >= 60 ? 'medium' : 'low';
+            extraInfo += `<span class="confidence-badge ${confidenceClass}">${confidencePercent}%</span>`;
+        }
+        if (step.duration) {
+            extraInfo += `<span class="duration-badge">${step.duration.toFixed(1)}s</span>`;
+        }
+        if (step.quality_score !== undefined) {
+            const scoreClass = step.quality_score >= 80 ? 'high' : step.quality_score >= 60 ? 'medium' : 'low';
+            extraInfo += `<span class="score-badge ${scoreClass}">${step.quality_score}</span>`;
+        }
+        
+        if (extraInfo) {
+            html += '<div class="timeline-meta">' + extraInfo + '</div>';
+        }
+        
+        // 工具调用详情
+        if (step.tool_calls && step.tool_calls.length > 0) {
+            html += '<div class="tool-calls">';
+            step.tool_calls.forEach(tc => {
+                html += '<div class="tool-call">';
+                html += '<div class="tool-name">' + (tc.name || tc.action) + '</div>';
+                if (tc.args) {
+                    html += '<div class="tool-args">' + JSON.stringify(tc.args).substring(0, 100) + '</div>';
+                }
+                if (tc.output) {
+                    html += '<div class="tool-output">' + tc.output.substring(0, 80) + '</div>';
+                }
+                html += '</div>';
+            });
+            html += '</div>';
+        }
+        
+        // Agent标签
+        if (step.agent) {
+            html += '<div class="timeline-agent">';
+            html += '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="10" height="10"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
+            html += getAgentName(step.agent);
+            html += '</div>';
+        }
+        
+        html += '</div>';
+        html += '</div>';
+    });
+    
+    html += '</div>';
+    html += '</div>';
+    
+    return html;
+}
+
+function toggleReasoningTimeline(header) {
+    const timeline = header.parentElement;
+    const body = timeline.querySelector('.reasoning-body');
+    const chevron = header.querySelector('.chevron');
+    
+    if (body.style.display === 'none') {
+        body.style.display = 'block';
+        chevron.style.transform = 'rotate(0deg)';
+    } else {
+        body.style.display = 'none';
+        chevron.style.transform = 'rotate(-90deg)';
+    }
 }
 
 function updateReasoning(steps) {
@@ -281,63 +821,423 @@ function updateTools(tools) {
         '<p style="font-size: 0.8125rem; color: var(--text-tertiary);">未使用</p>';
 }
 
+function updateExecutionSteps(steps) {
+    if (!steps || steps.length === 0) {
+        document.getElementById('executionStepsPanel').innerHTML = 
+            '<p style="font-size: 0.8125rem; color: var(--text-tertiary);">无执行步骤</p>';
+        return;
+    }
+
+    const iconMap = {
+        'intent_analysis': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>',
+        'agent_call': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M12 2a4 4 0 014 4v2a4 4 0 01-8 0V6a4 4 0 014-4z"/><path d="M6 10v8a6 6 0 0012 0v-8"/></svg>',
+        'task_split': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M16 3h5v5"/><path d="M8 3H3v5"/><path d="M12 22v-8.3a4 4 0 00-1.172-2.872L3 3"/><path d="m15 9 6-6"/></svg>',
+        'quality_check': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>',
+        'result_merge': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M8 6h13"/><path d="M8 12h13"/><path d="M8 18h13"/><path d="M3 6h.01"/><path d="M3 12h.01"/><path d="M3 18h.01"/></svg>',
+        'parallel_start': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>',
+        'execution_start': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polygon points="5 3 19 12 5 21 5 3"/></svg>',
+        'error_recovery': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M21 12a9 9 0 11-6.219-8.56"/><path d="M21 3v5h-5"/></svg>'
+    };
+
+    const typeClassMap = {
+        'intent_analysis': 'intent',
+        'agent_call': 'agent',
+        'task_split': 'split',
+        'quality_check': 'check',
+        'result_merge': 'merge',
+        'parallel_start': 'parallel',
+        'execution_start': 'parallel',
+        'error_recovery': 'recovery'
+    };
+
+    let html = '';
+    steps.forEach((step, index) => {
+        const icon = iconMap[step.type] || '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>';
+        const typeClass = typeClassMap[step.type] || 'intent';
+        const statusClass = step.status || 'completed';
+        
+        // 额外信息
+        let extraInfo = '';
+        if (step.confidence) {
+            const confidencePercent = Math.round(step.confidence * 100);
+            const confidenceClass = confidencePercent >= 80 ? 'high' : confidencePercent >= 60 ? 'medium' : 'low';
+            extraInfo += `<span class="confidence-badge ${confidenceClass}">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="10" height="10"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                ${confidencePercent}%
+            </span>`;
+        }
+        if (step.duration) {
+            extraInfo += `<span class="duration-badge">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="10" height="10"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                ${step.duration.toFixed(1)}s
+            </span>`;
+        }
+        if (step.score !== undefined) {
+            const scoreClass = step.score >= 80 ? 'high' : step.score >= 60 ? 'medium' : 'low';
+            extraInfo += `<span class="score-badge ${scoreClass}">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="10" height="10"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                ${step.score}
+            </span>`;
+        }
+        
+        // 子任务列表（任务拆分时）
+        let subtasksHtml = '';
+        if (step.subtasks && step.subtasks.length > 0) {
+            subtasksHtml = '<div class="subtasks-list">';
+            step.subtasks.forEach(st => {
+                const dependsText = st.depends_on && st.depends_on.length > 0 ? ` (依赖: ${st.depends_on.join(', ')})` : '';
+                subtasksHtml += `<div class="subtask-item">
+                    <span class="subtask-agent">${getAgentName(st.agent)}</span>
+                    <span class="subtask-task">${st.task}</span>
+                    ${dependsText ? `<span class="subtask-depends">${dependsText}</span>` : ''}
+                </div>`;
+            });
+            subtasksHtml += '</div>';
+        }
+        
+        html += `
+            <div class="execution-step">
+                <div class="execution-step-icon ${typeClass} ${statusClass}">
+                    ${icon}
+                </div>
+                <div class="execution-step-content">
+                    <div class="execution-step-title">${step.title}</div>
+                    <div class="execution-step-detail">${step.detail}</div>
+                    ${step.user_intent_summary ? `<div class="execution-step-intent">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+                        ${step.user_intent_summary}
+                    </div>` : ''}
+                    ${step.reasoning ? `<div class="execution-step-reasoning">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+                        ${step.reasoning}
+                    </div>` : ''}
+                    ${subtasksHtml}
+                    <div class="execution-step-meta">
+                        ${step.agent ? `<span class="agent-badge">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="10" height="10"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                            ${getAgentName(step.agent)}
+                        </span>` : ''}
+                        ${extraInfo}
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        if (index < steps.length - 1) {
+            html += '<div class="execution-step-connector"></div>';
+        }
+    });
+
+    document.getElementById('executionStepsPanel').innerHTML = html;
+    
+    // 自动展开侧边栏
+    const panel = document.getElementById('sidePanel');
+    if (!panel.classList.contains('expanded')) {
+        panel.classList.add('expanded');
+        panel.classList.remove('collapsed');
+    }
+}
+
+function getAgentName(agentKey) {
+    const nameMap = {
+        'career': '职业规划顾问',
+        'skill': '技能发展顾问',
+        'side_job': '副业规划专家',
+        'resume': '简历优化专家',
+        'interview': '面试教练'
+    };
+    return nameMap[agentKey] || agentKey;
+}
+
 sendBtn.onclick = sendMessage;
 chatInput.onkeypress = e => { if (e.key === 'Enter' && !isProcessing) sendMessage(); };
 
 async function sendMessage() {
     const msg = chatInput.value.trim();
-    if (!msg || isProcessing) return;
+    if ((!msg && !uploadedFileContent) || isProcessing) return;
+    
+    let finalMessage = msg;
+    if (uploadedFileContent) {
+        const fileContext = `[已上传简历文件: ${uploadedFileName}]\n\n简历内容:\n${uploadedFileContent}`;
+        finalMessage = msg ? `${msg}\n\n${fileContext}` : `请帮我优化这份简历\n\n${fileContext}`;
+        removeFile();
+    }
+    
     chatInput.value = '';
     
     document.getElementById('welcomeMessage')?.remove();
-    addMessage(msg, true);
+    addMessage(finalMessage, true);
     
     setProcessingState(true);
     
-    currentAbortController = new AbortController();
-    
+    // 创建AI消息容器
     const load = document.createElement('div');
     load.className = 'message message-agent';
     load.id = 'loading';
-    load.innerHTML = '<div class="message-avatar">AI</div><div class="message-content"><div class="loading-dots"><span></span><span></span><span></span></div></div>';
+    load.innerHTML = '<div class="message-avatar">AI</div><div class="message-bubble">' +
+        '<div class="reasoning-timeline" id="liveReasoning">' +
+            '<div class="reasoning-header">' +
+                '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6"/><path d="M9 16h6"/></svg>' +
+                '<span id="liveProgress">正在思考中...</span>' +
+                '<div class="loading-dots" style="margin: 0;"><span></span><span></span><span></span></div>' +
+            '</div>' +
+            '<div class="reasoning-body" id="liveStepsBody"></div>' +
+        '</div>' +
+        '<div class="message-content" id="loadingContent">' +
+            '<div class="progress-indicator">' +
+                '<div class="loading-dots"><span></span><span></span><span></span></div>' +
+                '<span class="progress-text">正在思考中...</span>' +
+            '</div>' +
+        '</div>' +
+    '</div>';
     chatMessages.appendChild(load);
     chatMessages.scrollTop = chatMessages.scrollHeight;
     
     try {
-        const res = await fetch('/api/agent/chat', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ message: msg, agent_type: agentType.value, conversation_id: currentConversationId }),
-            signal: currentAbortController.signal
-        });
+        // 使用SSE流式API
+        await streamAgentChat(finalMessage, agentType.value);
         
-        if (res.ok) {
-            const data = await res.json();
-            document.getElementById('loading')?.remove();
-            if (data.code === 200) {
-                currentConversationId = data.data.conversation_id;
-                addMessage(data.data.response, false, data.data.agent_used, data.data.reasoning_steps);
-                updateTools(data.data.tools_used);
-                
-                if (!document.querySelector('.chat-history-item.active')) {
-                    addConversationToList(currentConversationId, msg);
-                }
-            }
-        }
     } catch (e) {
-        if (e.name === 'AbortError') {
-            console.log('请求已取消');
-        } else {
-            document.getElementById('loading')?.remove();
-            addMessage('请求失败', false);
+        const errorEl = document.getElementById('loading');
+        if (errorEl) {
+            errorEl.querySelector('.message-content').innerHTML = `<span style="color: var(--error);">请求失败: ${e.message}</span>`;
+            errorEl.removeAttribute('id');
         }
     } finally {
         setProcessingState(false);
     }
 }
 
+async function streamAgentChat(message, agentType) {
+    const response = await fetch('/api/agent/chat/stream', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ 
+            message: message, 
+            agent_type: agentType, 
+            conversation_id: currentConversationId 
+        })
+    });
+
+    if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let finalResult = null;
+    let allSteps = [];
+
+    while (true) {
+        const { done, value } = await reader.read();
+        
+        if (done) break;
+        
+        buffer += decoder.decode(value, { stream: true });
+        
+        // 解析SSE事件
+        const lines = buffer.split('\n');
+        buffer = lines.pop(); // 保留不完整的行
+        
+        let eventType = null;
+        for (const line of lines) {
+            if (line.startsWith('event: ')) {
+                eventType = line.slice(7).trim();
+            } else if (line.startsWith('data: ')) {
+                const data = line.slice(6);
+                try {
+                    const parsed = JSON.parse(data);
+                    handleSSEEvent(eventType, parsed, allSteps);
+                    
+                    if (eventType === 'done') {
+                        finalResult = parsed;
+                    } else if (eventType === 'error') {
+                        throw new Error(parsed.error || '执行失败');
+                    }
+                } catch (e) {
+                    if (eventType === 'error') {
+                        throw e;
+                    }
+                    console.error('解析SSE数据失败:', e);
+                }
+                eventType = null;
+            }
+        }
+    }
+
+    // 处理最终结果
+    if (finalResult) {
+        await handleTaskCompleted(finalResult, message);
+    }
+}
+
+function handleSSEEvent(eventType, data, allSteps) {
+    switch (eventType) {
+        case 'start':
+            currentConversationId = data.conversation_id;
+            break;
+            
+        case 'progress':
+            const progressEl = document.getElementById('liveProgress');
+            if (progressEl) {
+                progressEl.textContent = data.message;
+            }
+            break;
+            
+        case 'step':
+            // 添加步骤到列表
+            const existingIndex = allSteps.findIndex(s => 
+                s.type === data.type && s.title === data.title
+            );
+            
+            if (existingIndex >= 0) {
+                // 更新现有步骤
+                allSteps[existingIndex] = data;
+            } else {
+                // 添加新步骤
+                allSteps.push(data);
+            }
+            
+            // 更新UI
+            updateLiveSteps(allSteps);
+            break;
+            
+        case 'done':
+            // 最终结果
+            break;
+            
+        case 'error':
+            throw new Error(data.error || '执行失败');
+    }
+}
+
+function updateLiveSteps(steps) {
+    const body = document.getElementById('liveStepsBody');
+    if (!body) return;
+    
+    const iconMap = {
+        'intent_analysis': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>',
+        'agent_call': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M12 2a4 4 0 014 4v2a4 4 0 01-8 0V6a4 4 0 014-4z"/><path d="M6 10v8a6 6 0 0012 0v-8"/></svg>',
+        'task_split': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M16 3h5v5"/><path d="M8 3H3v5"/><path d="M12 22v-8.3a4 4 0 00-1.172-2.872L3 3"/><path d="m15 9 6-6"/></svg>',
+        'quality_check': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>',
+        'result_merge': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M8 6h13"/><path d="M8 12h13"/><path d="M8 18h13"/><path d="M3 6h.01"/><path d="M3 12h.01"/><path d="M3 18h.01"/></svg>',
+        'tool': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>'
+    };
+    
+    const typeClassMap = {
+        'intent_analysis': 'intent',
+        'agent_call': 'agent',
+        'task_split': 'split',
+        'quality_check': 'check',
+        'result_merge': 'merge',
+        'tool': 'tool'
+    };
+    
+    let html = '';
+    steps.forEach((step, index) => {
+        const stepType = step.type || (step.action ? 'tool' : 'intent_analysis');
+        const stepTitle = step.title || step.action || '处理中';
+        const stepDetail = step.detail || step.output || '';
+        const stepStatus = step.status || 'completed';
+        
+        const icon = iconMap[stepType] || iconMap['tool'];
+        const typeClass = typeClassMap[stepType] || 'intent';
+        
+        const statusClass = stepStatus === 'running' ? 'running' : '';
+        
+        html += '<div class="timeline-step" style="animation: fadeInUp 0.3s ease-out;">';
+        if (index < steps.length - 1) {
+            html += '<div class="timeline-line"></div>';
+        }
+        html += `<div class="timeline-dot ${typeClass} ${statusClass}">${icon}</div>`;
+        html += '<div class="timeline-content">';
+        html += `<div class="timeline-title">${stepTitle}</div>`;
+        
+        if (stepDetail) {
+            const truncated = stepDetail.length > 100 ? stepDetail.substring(0, 100) + '...' : stepDetail;
+            html += `<div class="timeline-detail">${truncated}</div>`;
+        }
+        
+        html += '</div></div>';
+    });
+    
+    body.innerHTML = html;
+    
+    // 自动滚动到最新步骤
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+async function handleTaskCompleted(result, originalMessage) {
+    const doneEl = document.getElementById('loading');
+    if (!doneEl) return;
+    
+    // 重置按钮状态
+    setProcessingState(false);
+    
+    doneEl.removeAttribute('id');
+    
+    // 获取最终的执行步骤
+    const executionSteps = result.steps || result.execution_steps || [];
+    const intermediateSteps = result.intermediate_steps || [];
+    const agentUsed = result.agent_used || '';
+    
+    // 合并所有步骤用于最终显示
+    const allSteps = [...executionSteps, ...intermediateSteps];
+    
+    // 更新右侧面板
+    if (executionSteps.length > 0) {
+        updateExecutionSteps(executionSteps);
+    }
+    
+    // 替换实时推理时间线为最终版本
+    const liveReasoning = document.getElementById('liveReasoning');
+    if (liveReasoning && allSteps.length > 0) {
+        const finalTimeline = buildReasoningTimeline(allSteps);
+        liveReasoning.outerHTML = finalTimeline;
+    } else if (liveReasoning) {
+        liveReasoning.remove();
+    }
+    
+    // 处理回复内容
+    const fullContent = result.output || '';
+    const isResume = detectResumeContent(fullContent, agentUsed);
+    
+    if (isResume) {
+        const resumeOnly = extractResumeContent(fullContent);
+        if (resumeOnly) {
+            const displayContent = fullContent.split('<!--RESUME_START-->')[0].trim() || '已为您生成简历';
+            const contentId = 'resume-content-' + Date.now();
+            window[contentId] = resumeOnly;
+            doneEl.querySelector('.message-content').innerHTML = formatMessageContent(displayContent) + buildResumePreviewCard(contentId);
+            setTimeout(() => showResumeInPanel(contentId), 500);
+        } else {
+            doneEl.querySelector('.message-content').innerHTML = formatMessageContent(fullContent);
+        }
+    } else {
+        doneEl.querySelector('.message-content').innerHTML = formatMessageContent(fullContent);
+    }
+    
+    // 添加到对话列表（如果是新对话）
+    const existingItem = document.getElementById('history-' + currentConversationId);
+    if (!existingItem && currentConversationId) {
+        const title = originalMessage ? originalMessage.substring(0, 30) : '对话';
+        addConversationToList(currentConversationId, title);
+        document.getElementById('chatTitle').textContent = title;
+    }
+}
+
+function askQuestion(q) { chatInput.value = q; sendMessage(); }
+
 function addConversationToList(id, firstMsg) {
     const list = document.querySelector('.chat-history-list');
+    if (!list) return;
+    
+    // 移除其他对话的active状态
+    document.querySelectorAll('.chat-history-item.active').forEach(item => {
+        item.classList.remove('active');
+    });
+    
     const div = document.createElement('div');
     div.className = 'chat-history-item active';
     div.id = 'history-' + id;
@@ -351,8 +1251,6 @@ function addConversationToList(id, firstMsg) {
         </button>`;
     list.insertBefore(div, list.firstChild);
 }
-
-function askQuestion(q) { chatInput.value = q; sendMessage(); }
 
 async function deleteConversation(id, e) {
     e.stopPropagation();
@@ -446,5 +1344,4 @@ async function deleteConversation(id, e) {
     }
 }
 </script>
-{% endblock %}
 {% endblock %}

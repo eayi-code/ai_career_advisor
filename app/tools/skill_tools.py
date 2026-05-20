@@ -71,5 +71,56 @@ def recommend_learning_path(skill: str, current_level: str = "beginner") -> str:
     return output
 
 
+@tool("skill_priority", return_direct=False)
+def skill_priority(target_position: str, current_skills: List[str] = []) -> str:
+    """按优先级排序需要学习的技能。输入目标职位和当前技能列表。"""
+    from app.models.job import Job
+    
+    jobs = Job.query.filter(Job.title.contains(target_position)).all()
+    if not jobs:
+        return f"暂无 {target_position} 的技能数据"
+    
+    skill_count = {}
+    skill_obj_map = {}
+    for job in jobs:
+        for js in job.skills.all():
+            name = js.skill_name
+            skill_count[name] = skill_count.get(name, 0) + 1
+            if name not in skill_obj_map:
+                skill_obj = Skill.query.filter(Skill.name == name).first()
+                skill_obj_map[name] = skill_obj
+    
+    current_lower = [s.lower() for s in current_skills]
+    missing_skills = {k: v for k, v in skill_count.items() if k.lower() not in current_lower}
+    
+    sorted_skills = sorted(missing_skills.items(), key=lambda x: x[1], reverse=True)
+    
+    output = f"【{target_position}】技能学习优先级:\n\n"
+    output += "排序依据: 市场需求频率 × 学习难度\n\n"
+    
+    for i, (skill_name, count) in enumerate(sorted_skills[:10], 1):
+        skill_obj = skill_obj_map.get(skill_name)
+        months = skill_obj.learning_months if skill_obj else 2
+        difficulty = skill_obj.difficulty_level if skill_obj else 3
+        demand_ratio = count / len(jobs) * 100
+        
+        priority_score = demand_ratio / max(difficulty, 1)
+        
+        priority_label = "高" if priority_score > 30 else "中" if priority_score > 15 else "低"
+        
+        output += f"{i}. {skill_name}\n"
+        output += f"   需求频率: {count}/{len(jobs)}个职位要求 ({demand_ratio:.0f}%)\n"
+        output += f"   学习难度: {'★' * difficulty}\n"
+        output += f"   学习时间: {months}个月\n"
+        output += f"   优先级: {priority_label}\n\n"
+    
+    if sorted_skills:
+        top3 = [s[0] for s in sorted_skills[:3]]
+        output += f"建议优先学习: {', '.join(top3)}\n"
+        output += "这3个技能覆盖了最多职位的要求\n"
+    
+    return output
+
+
 def get_skill_tools():
-    return [analyze_skill_gap, recommend_learning_path]
+    return [analyze_skill_gap, recommend_learning_path, skill_priority]

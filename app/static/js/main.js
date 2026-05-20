@@ -341,8 +341,10 @@ function animateNumbers() {
 
 // ===== 初始化 =====
 document.addEventListener('DOMContentLoaded', () => {
-    // 初始化聊天
-    new ChatManager();
+    // 初始化聊天（仅在非聊天页面）
+    if (!document.getElementById('chatMessages')?.closest('.chat-layout')) {
+        new ChatManager();
+    }
     
     // 初始化数字动画
     const statsSection = document.querySelector('.stats');

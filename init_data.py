@@ -288,6 +288,267 @@ def init_jobs():
             "is_hot": False, "growth_potential": "中", "difficulty_level": 3,
             "skills": ["财务分析", "Excel", "SQL", "Python", "会计知识", "财务建模"]
         },
+        {
+            "title": "全栈开发工程师", "industry": "互联网", "city": "北京",
+            "description": "负责前后端全栈开发",
+            "responsibilities": ["前端开发", "后端开发", "数据库设计", "系统架构"],
+            "salary_min": 20000, "salary_max": 45000, "salary_avg": 32500,
+            "experience_years": 3, "education_requirement": "本科",
+            "is_hot": True, "growth_potential": "高", "difficulty_level": 4,
+            "skills": ["JavaScript", "React", "Node.js", "MongoDB", "Docker", "Git"]
+        },
+        {
+            "title": "Go开发工程师", "industry": "互联网", "city": "深圳",
+            "description": "使用Go语言进行后端开发",
+            "responsibilities": ["Go开发", "微服务架构", "性能优化", "技术调研"],
+            "salary_min": 20000, "salary_max": 45000, "salary_avg": 32500,
+            "experience_years": 2, "education_requirement": "本科",
+            "is_hot": True, "growth_potential": "高", "difficulty_level": 4,
+            "skills": ["Go", "微服务", "Docker", "Kubernetes", "gRPC", "MySQL"]
+        },
+        {
+            "title": "Rust开发工程师", "industry": "互联网", "city": "北京",
+            "description": "使用Rust进行系统级开发",
+            "responsibilities": ["Rust开发", "系统编程", "性能优化", "安全审计"],
+            "salary_min": 25000, "salary_max": 55000, "salary_avg": 40000,
+            "experience_years": 2, "education_requirement": "本科",
+            "is_hot": True, "growth_potential": "极高", "difficulty_level": 5,
+            "skills": ["Rust", "C/C++", "系统编程", "Linux", "数据结构", "算法"]
+        },
+        {
+            "title": "大数据工程师", "industry": "互联网", "city": "上海",
+            "description": "负责大数据平台搭建和数据处理",
+            "responsibilities": ["数据平台搭建", "ETL开发", "数据治理", "性能优化"],
+            "salary_min": 25000, "salary_max": 50000, "salary_avg": 37500,
+            "experience_years": 3, "education_requirement": "本科",
+            "is_hot": True, "growth_potential": "高", "difficulty_level": 4,
+            "skills": ["Hadoop", "Spark", "Flink", "Hive", "Kafka", "Python"]
+        },
+        {
+            "title": "数据仓库工程师", "industry": "互联网", "city": "杭州",
+            "description": "负责数据仓库设计和建设",
+            "responsibilities": ["数仓设计", "ETL开发", "数据建模", "数据质量"],
+            "salary_min": 20000, "salary_max": 45000, "salary_avg": 32500,
+            "experience_years": 3, "education_requirement": "本科",
+            "is_hot": True, "growth_potential": "高", "difficulty_level": 4,
+            "skills": ["SQL", "Hive", "Spark", "数仓建模", "ETL", "Python"]
+        },
+        {
+            "title": "推荐算法工程师", "industry": "互联网", "city": "北京",
+            "description": "负责推荐系统算法研发",
+            "responsibilities": ["推荐算法开发", "模型优化", "特征工程", "A/B测试"],
+            "salary_min": 30000, "salary_max": 60000, "salary_avg": 45000,
+            "experience_years": 3, "education_requirement": "硕士",
+            "is_hot": True, "growth_potential": "极高", "difficulty_level": 5,
+            "skills": ["Python", "推荐系统", "深度学习", "TensorFlow", "Spark", "SQL"]
+        },
+        {
+            "title": "搜索算法工程师", "industry": "互联网", "city": "深圳",
+            "description": "负责搜索引擎算法研发",
+            "responsibilities": ["搜索算法开发", "排序优化", "NLP应用", "性能优化"],
+            "salary_min": 30000, "salary_max": 60000, "salary_avg": 45000,
+            "experience_years": 3, "education_requirement": "硕士",
+            "is_hot": True, "growth_potential": "极高", "difficulty_level": 5,
+            "skills": ["Python", "NLP", "Elasticsearch", "深度学习", "信息检索", "C++"]
+        },
+        {
+            "title": "风控算法工程师", "industry": "金融", "city": "上海",
+            "description": "负责金融风控模型开发",
+            "responsibilities": ["风控模型开发", "特征工程", "模型监控", "策略优化"],
+            "salary_min": 25000, "salary_max": 50000, "salary_avg": 37500,
+            "experience_years": 2, "education_requirement": "硕士",
+            "is_hot": True, "growth_potential": "高", "difficulty_level": 5,
+            "skills": ["Python", "机器学习", "风控模型", "SQL", "统计学", "金融知识"]
+        },
+        {
+            "title": "量化交易工程师", "industry": "金融", "city": "北京",
+            "description": "负责量化交易策略开发",
+            "responsibilities": ["策略开发", "回测系统", "交易系统", "数据分析"],
+            "salary_min": 30000, "salary_max": 80000, "salary_avg": 55000,
+            "experience_years": 2, "education_requirement": "硕士",
+            "is_hot": True, "growth_potential": "极高", "difficulty_level": 5,
+            "skills": ["Python", "C++", "量化策略", "统计学", "金融知识", "机器学习"]
+        },
+        {
+            "title": "嵌入式开发工程师", "industry": "物联网", "city": "深圳",
+            "description": "负责嵌入式系统开发",
+            "responsibilities": ["嵌入式开发", "驱动开发", "系统调试", "硬件对接"],
+            "salary_min": 15000, "salary_max": 35000, "salary_avg": 25000,
+            "experience_years": 2, "education_requirement": "本科",
+            "is_hot": False, "growth_potential": "中", "difficulty_level": 4,
+            "skills": ["C/C++", "嵌入式Linux", "单片机", "RTOS", "硬件接口", "调试工具"]
+        },
+        {
+            "title": "机器人工程师", "industry": "人工智能", "city": "北京",
+            "description": "负责机器人系统开发",
+            "responsibilities": ["机器人开发", "算法实现", "系统集成", "测试调试"],
+            "salary_min": 20000, "salary_max": 45000, "salary_avg": 32500,
+            "experience_years": 2, "education_requirement": "硕士",
+            "is_hot": True, "growth_potential": "高", "difficulty_level": 5,
+            "skills": ["C++", "ROS", "SLAM", "计算机视觉", "控制理论", "Python"]
+        },
+        {
+            "title": "自动驾驶工程师", "industry": "人工智能", "city": "北京",
+            "description": "负责自动驾驶算法开发",
+            "responsibilities": ["感知算法", "规划算法", "控制算法", "系统集成"],
+            "salary_min": 30000, "salary_max": 70000, "salary_avg": 50000,
+            "experience_years": 3, "education_requirement": "硕士",
+            "is_hot": True, "growth_potential": "极高", "difficulty_level": 5,
+            "skills": ["C++", "Python", "计算机视觉", "深度学习", "SLAM", "控制理论"]
+        },
+        {
+            "title": "GIS开发工程师", "industry": "互联网", "city": "武汉",
+            "description": "负责地理信息系统开发",
+            "responsibilities": ["GIS开发", "地图服务", "空间分析", "数据可视化"],
+            "salary_min": 15000, "salary_max": 30000, "salary_avg": 22500,
+            "experience_years": 2, "education_requirement": "本科",
+            "is_hot": False, "growth_potential": "中", "difficulty_level": 3,
+            "skills": ["JavaScript", "GIS", "PostGIS", "Mapbox", "Leaflet", "Python"]
+        },
+        {
+            "title": "音视频开发工程师", "industry": "互联网", "city": "深圳",
+            "description": "负责音视频相关技术开发",
+            "responsibilities": ["音视频开发", "编解码", "流媒体", "性能优化"],
+            "salary_min": 25000, "salary_max": 50000, "salary_avg": 37500,
+            "experience_years": 3, "education_requirement": "本科",
+            "is_hot": True, "growth_potential": "高", "difficulty_level": 5,
+            "skills": ["C++", "FFmpeg", "WebRTC", "音视频编解码", "流媒体协议", "OpenGL"]
+        },
+        {
+            "title": "自然语言处理工程师", "industry": "人工智能", "city": "北京",
+            "description": "负责NLP相关算法研发",
+            "responsibilities": ["NLP算法开发", "文本分析", "对话系统", "模型优化"],
+            "salary_min": 30000, "salary_max": 60000, "salary_avg": 45000,
+            "experience_years": 2, "education_requirement": "硕士",
+            "is_hot": True, "growth_potential": "极高", "difficulty_level": 5,
+            "skills": ["Python", "NLP", "Transformer", "BERT", "PyTorch", "TensorFlow"]
+        },
+        {
+            "title": "语音识别工程师", "industry": "人工智能", "city": "深圳",
+            "description": "负责语音识别算法研发",
+            "responsibilities": ["语音识别", "声学模型", "语言模型", "模型优化"],
+            "salary_min": 25000, "salary_max": 50000, "salary_avg": 37500,
+            "experience_years": 2, "education_requirement": "硕士",
+            "is_hot": True, "growth_potential": "高", "difficulty_level": 5,
+            "skills": ["Python", "语音识别", "深度学习", "信号处理", "Kaldi", "PyTorch"]
+        },
+        {
+            "title": "知识图谱工程师", "industry": "人工智能", "city": "北京",
+            "description": "负责知识图谱构建和应用",
+            "responsibilities": ["知识图谱构建", "实体抽取", "关系抽取", "图数据库"],
+            "salary_min": 25000, "salary_max": 50000, "salary_avg": 37500,
+            "experience_years": 2, "education_requirement": "硕士",
+            "is_hot": True, "growth_potential": "高", "difficulty_level": 5,
+            "skills": ["Python", "NLP", "Neo4j", "知识图谱", "信息抽取", "图计算"]
+        },
+        {
+            "title": "强化学习工程师", "industry": "人工智能", "city": "北京",
+            "description": "负责强化学习算法研发",
+            "responsibilities": ["强化学习算法", "环境建模", "策略优化", "仿真系统"],
+            "salary_min": 30000, "salary_max": 60000, "salary_avg": 45000,
+            "experience_years": 3, "education_requirement": "博士",
+            "is_hot": True, "growth_potential": "极高", "difficulty_level": 5,
+            "skills": ["Python", "强化学习", "PyTorch", "数学", "仿真", "C++"]
+        },
+        {
+            "title": "AIGC工程师", "industry": "人工智能", "city": "北京",
+            "description": "负责AIGC相关技术开发",
+            "responsibilities": ["大模型应用", "Prompt工程", "模型微调", "产品落地"],
+            "salary_min": 30000, "salary_max": 60000, "salary_avg": 45000,
+            "experience_years": 2, "education_requirement": "硕士",
+            "is_hot": True, "growth_potential": "极高", "difficulty_level": 5,
+            "skills": ["Python", "LLM", "Prompt工程", "LangChain", "RAG", "Fine-tuning"]
+        },
+        {
+            "title": "数据标注师", "industry": "人工智能", "city": "成都",
+            "description": "负责数据标注和质量控制",
+            "responsibilities": ["数据标注", "质量检查", "标注规范制定", "工具使用"],
+            "salary_min": 6000, "salary_max": 12000, "salary_avg": 9000,
+            "experience_years": 0, "education_requirement": "大专",
+            "is_hot": False, "growth_potential": "低", "difficulty_level": 1,
+            "skills": ["数据标注", "细心", "耐心", "Office", "沟通能力"]
+        },
+        {
+            "title": "AI产品经理", "industry": "人工智能", "city": "北京",
+            "description": "负责AI产品规划和设计",
+            "responsibilities": ["AI产品设计", "需求分析", "项目管理", "数据分析"],
+            "salary_min": 25000, "salary_max": 50000, "salary_avg": 37500,
+            "experience_years": 3, "education_requirement": "本科",
+            "is_hot": True, "growth_potential": "高", "difficulty_level": 4,
+            "skills": ["AI产品设计", "需求分析", "数据分析", "项目管理", "技术理解", "商业思维"]
+        },
+        {
+            "title": "技术总监", "industry": "互联网", "city": "北京",
+            "description": "负责技术团队管理和技术战略",
+            "responsibilities": ["技术战略", "团队管理", "架构设计", "技术选型"],
+            "salary_min": 50000, "salary_max": 100000, "salary_avg": 75000,
+            "experience_years": 10, "education_requirement": "本科",
+            "is_hot": True, "growth_potential": "极高", "difficulty_level": 5,
+            "skills": ["技术管理", "架构设计", "团队管理", "技术视野", "商业思维", "沟通能力"]
+        },
+        {
+            "title": "架构师", "industry": "互联网", "city": "上海",
+            "description": "负责系统架构设计和技术选型",
+            "responsibilities": ["架构设计", "技术选型", "性能优化", "技术规范"],
+            "salary_min": 40000, "salary_max": 80000, "salary_avg": 60000,
+            "experience_years": 8, "education_requirement": "本科",
+            "is_hot": True, "growth_potential": "极高", "difficulty_level": 5,
+            "skills": ["架构设计", "微服务", "分布式系统", "高并发", "技术视野", "沟通能力"]
+        },
+        {
+            "title": "CTO", "industry": "互联网", "city": "深圳",
+            "description": "负责公司技术战略和团队管理",
+            "responsibilities": ["技术战略", "团队建设", "技术选型", "业务支持"],
+            "salary_min": 80000, "salary_max": 200000, "salary_avg": 140000,
+            "experience_years": 15, "education_requirement": "本科",
+            "is_hot": True, "growth_potential": "极高", "difficulty_level": 5,
+            "skills": ["技术管理", "战略规划", "团队建设", "商业思维", "行业洞察", "领导力"]
+        },
+        {
+            "title": "游戏策划", "industry": "游戏", "city": "上海",
+            "description": "负责游戏玩法设计和策划",
+            "responsibilities": ["玩法设计", "数值策划", "文案策划", "系统设计"],
+            "salary_min": 12000, "salary_max": 30000, "salary_avg": 21000,
+            "experience_years": 1, "education_requirement": "本科",
+            "is_hot": False, "growth_potential": "中", "difficulty_level": 3,
+            "skills": ["游戏设计", "数值分析", "文案写作", "沟通能力", "创意能力", "项目管理"]
+        },
+        {
+            "title": "游戏美术", "industry": "游戏", "city": "上海",
+            "description": "负责游戏美术资源制作",
+            "responsibilities": ["角色设计", "场景设计", "UI设计", "特效制作"],
+            "salary_min": 12000, "salary_max": 30000, "salary_avg": 21000,
+            "experience_years": 1, "education_requirement": "本科",
+            "is_hot": False, "growth_potential": "中", "difficulty_level": 3,
+            "skills": ["原画", "3D建模", "Photoshop", "Maya", "ZBrush", "审美能力"]
+        },
+        {
+            "title": "供应链经理", "industry": "电商", "city": "杭州",
+            "description": "负责供应链管理和优化",
+            "responsibilities": ["供应链管理", "供应商管理", "成本控制", "流程优化"],
+            "salary_min": 20000, "salary_max": 40000, "salary_avg": 30000,
+            "experience_years": 5, "education_requirement": "本科",
+            "is_hot": False, "growth_potential": "高", "difficulty_level": 4,
+            "skills": ["供应链管理", "数据分析", "项目管理", "沟通能力", "ERP系统", "谈判能力"]
+        },
+        {
+            "title": "跨境电商运营", "industry": "电商", "city": "深圳",
+            "description": "负责跨境电商业务运营",
+            "responsibilities": ["店铺运营", "选品分析", "物流管理", "营销推广"],
+            "salary_min": 12000, "salary_max": 30000, "salary_avg": 21000,
+            "experience_years": 2, "education_requirement": "本科",
+            "is_hot": True, "growth_potential": "高", "difficulty_level": 3,
+            "skills": ["跨境电商", "英语", "数据分析", "营销推广", "物流管理", "选品能力"]
+        },
+        {
+            "title": "直播运营", "industry": "电商", "city": "杭州",
+            "description": "负责直播业务运营",
+            "responsibilities": ["直播策划", "主播管理", "数据分析", "活动策划"],
+            "salary_min": 10000, "salary_max": 25000, "salary_avg": 17500,
+            "experience_years": 1, "education_requirement": "本科",
+            "is_hot": True, "growth_potential": "中", "difficulty_level": 3,
+            "skills": ["直播运营", "数据分析", "活动策划", "沟通能力", "营销推广", "内容策划"]
+        },
     ]
 
     for job_data in jobs_data:
@@ -408,6 +669,178 @@ def init_skills():
         {"name": "数据分析思维", "category": "软技能", "difficulty": 3, "demand": "高", "months": 2,
          "resources": [
              {"title": "《数据化运营》", "type": "书籍", "difficulty": "中级", "duration": "30小时"},
+         ]},
+        {"name": "TypeScript", "category": "编程语言", "difficulty": 2, "demand": "高", "months": 1,
+         "resources": [
+             {"title": "TypeScript官方文档", "type": "文档", "difficulty": "入门", "duration": "20小时"},
+             {"title": "《TypeScript编程》", "type": "书籍", "difficulty": "中级", "duration": "30小时"},
+         ]},
+        {"name": "Go", "category": "编程语言", "difficulty": 3, "demand": "高", "months": 3,
+         "resources": [
+             {"title": "Go官方文档", "type": "文档", "difficulty": "入门", "duration": "20小时"},
+             {"title": "《Go语言圣经》", "type": "书籍", "difficulty": "中级", "duration": "50小时"},
+         ]},
+        {"name": "Rust", "category": "编程语言", "difficulty": 5, "demand": "中", "months": 6,
+         "resources": [
+             {"title": "Rust官方文档", "type": "文档", "difficulty": "中级", "duration": "40小时"},
+             {"title": "《Rust程序设计语言》", "type": "书籍", "difficulty": "高级", "duration": "80小时"},
+         ]},
+        {"name": "C++", "category": "编程语言", "difficulty": 4, "demand": "高", "months": 6,
+         "resources": [
+             {"title": "《C++ Primer》", "type": "书籍", "difficulty": "入门", "duration": "80小时"},
+         ]},
+        {"name": "Swift", "category": "编程语言", "difficulty": 3, "demand": "中", "months": 3,
+         "resources": [
+             {"title": "Swift官方文档", "type": "文档", "difficulty": "入门", "duration": "20小时"},
+         ]},
+        {"name": "Kotlin", "category": "编程语言", "difficulty": 3, "demand": "中", "months": 3,
+         "resources": [
+             {"title": "Kotlin官方文档", "type": "文档", "difficulty": "入门", "duration": "20小时"},
+         ]},
+        {"name": "Flutter", "category": "前端开发", "difficulty": 3, "demand": "高", "months": 3,
+         "resources": [
+             {"title": "Flutter官方文档", "type": "文档", "difficulty": "入门", "duration": "30小时"},
+         ]},
+        {"name": "微信小程序", "category": "前端开发", "difficulty": 2, "demand": "高", "months": 2,
+         "resources": [
+             {"title": "微信小程序官方文档", "type": "文档", "difficulty": "入门", "duration": "20小时"},
+         ]},
+        {"name": "Node.js", "category": "后端开发", "difficulty": 3, "demand": "高", "months": 2,
+         "resources": [
+             {"title": "Node.js官方文档", "type": "文档", "difficulty": "入门", "duration": "20小时"},
+             {"title": "《Node.js实战》", "type": "书籍", "difficulty": "中级", "duration": "40小时"},
+         ]},
+        {"name": "Spring Boot", "category": "后端开发", "difficulty": 3, "demand": "高", "months": 3,
+         "resources": [
+             {"title": "Spring Boot官方文档", "type": "文档", "difficulty": "入门", "duration": "30小时"},
+         ]},
+        {"name": "Django", "category": "后端开发", "difficulty": 3, "demand": "高", "months": 2,
+         "resources": [
+             {"title": "Django官方文档", "type": "文档", "difficulty": "入门", "duration": "30小时"},
+         ]},
+        {"name": "Flask", "category": "后端开发", "difficulty": 2, "demand": "高", "months": 1,
+         "resources": [
+             {"title": "Flask官方文档", "type": "文档", "difficulty": "入门", "duration": "15小时"},
+         ]},
+        {"name": "MongoDB", "category": "后端开发", "difficulty": 2, "demand": "高", "months": 1,
+         "resources": [
+             {"title": "MongoDB官方文档", "type": "文档", "difficulty": "入门", "duration": "15小时"},
+         ]},
+        {"name": "PostgreSQL", "category": "后端开发", "difficulty": 2, "demand": "高", "months": 2,
+         "resources": [
+             {"title": "PostgreSQL官方文档", "type": "文档", "difficulty": "入门", "duration": "20小时"},
+         ]},
+        {"name": "Elasticsearch", "category": "后端开发", "difficulty": 3, "demand": "高", "months": 2,
+         "resources": [
+             {"title": "Elasticsearch官方文档", "type": "文档", "difficulty": "中级", "duration": "30小时"},
+         ]},
+        {"name": "Kafka", "category": "后端开发", "difficulty": 3, "demand": "高", "months": 2,
+         "resources": [
+             {"title": "Kafka官方文档", "type": "文档", "difficulty": "中级", "duration": "25小时"},
+         ]},
+        {"name": "Nginx", "category": "运维", "difficulty": 2, "demand": "高", "months": 1,
+         "resources": [
+             {"title": "Nginx官方文档", "type": "文档", "difficulty": "入门", "duration": "10小时"},
+         ]},
+        {"name": "Linux", "category": "运维", "difficulty": 2, "demand": "极高", "months": 2,
+         "resources": [
+             {"title": "《鸟哥的Linux私房菜》", "type": "书籍", "difficulty": "入门", "duration": "40小时"},
+         ]},
+        {"name": "Shell", "category": "运维", "difficulty": 2, "demand": "高", "months": 1,
+         "resources": [
+             {"title": "《Shell脚本学习指南》", "type": "书籍", "difficulty": "入门", "duration": "20小时"},
+         ]},
+        {"name": "AWS", "category": "运维", "difficulty": 3, "demand": "高", "months": 3,
+         "resources": [
+             {"title": "AWS官方文档", "type": "文档", "difficulty": "中级", "duration": "50小时"},
+         ]},
+        {"name": "Hadoop", "category": "数据科学", "difficulty": 4, "demand": "高", "months": 3,
+         "resources": [
+             {"title": "Hadoop官方文档", "type": "文档", "difficulty": "中级", "duration": "40小时"},
+         ]},
+        {"name": "Spark", "category": "数据科学", "difficulty": 4, "demand": "高", "months": 3,
+         "resources": [
+             {"title": "Spark官方文档", "type": "文档", "difficulty": "中级", "duration": "40小时"},
+         ]},
+        {"name": "Flink", "category": "数据科学", "difficulty": 4, "demand": "高", "months": 3,
+         "resources": [
+             {"title": "Flink官方文档", "type": "文档", "difficulty": "中级", "duration": "40小时"},
+         ]},
+        {"name": "数据可视化", "category": "数据科学", "difficulty": 3, "demand": "高", "months": 2,
+         "resources": [
+             {"title": "《数据可视化实战》", "type": "书籍", "difficulty": "中级", "duration": "30小时"},
+         ]},
+        {"name": "Tableau", "category": "数据科学", "difficulty": 2, "demand": "高", "months": 1,
+         "resources": [
+             {"title": "Tableau官方教程", "type": "文档", "difficulty": "入门", "duration": "15小时"},
+         ]},
+        {"name": "Power BI", "category": "数据科学", "difficulty": 2, "demand": "高", "months": 1,
+         "resources": [
+             {"title": "Power BI官方教程", "type": "文档", "difficulty": "入门", "duration": "15小时"},
+         ]},
+        {"name": "Prompt工程", "category": "人工智能", "difficulty": 2, "demand": "极高", "months": 1,
+         "resources": [
+             {"title": "Prompt Engineering Guide", "type": "文档", "difficulty": "入门", "duration": "10小时"},
+         ]},
+        {"name": "LangChain", "category": "人工智能", "difficulty": 3, "demand": "高", "months": 2,
+         "resources": [
+             {"title": "LangChain官方文档", "type": "文档", "difficulty": "中级", "duration": "30小时"},
+         ]},
+        {"name": "RAG", "category": "人工智能", "difficulty": 3, "demand": "高", "months": 2,
+         "resources": [
+             {"title": "RAG技术详解", "type": "文档", "difficulty": "中级", "duration": "20小时"},
+         ]},
+        {"name": "LLM微调", "category": "人工智能", "difficulty": 4, "demand": "高", "months": 3,
+         "resources": [
+             {"title": "LLM微调实战", "type": "文档", "difficulty": "高级", "duration": "40小时"},
+         ]},
+        {"name": "用户研究", "category": "产品", "difficulty": 3, "demand": "高", "months": 2,
+         "resources": [
+             {"title": "《用户体验要素》", "type": "书籍", "difficulty": "入门", "duration": "15小时"},
+         ]},
+        {"name": "原型设计", "category": "产品", "difficulty": 2, "demand": "高", "months": 1,
+         "resources": [
+             {"title": "Axure官方教程", "type": "文档", "difficulty": "入门", "duration": "10小时"},
+         ]},
+        {"name": "敏捷开发", "category": "软技能", "difficulty": 2, "demand": "高", "months": 1,
+         "resources": [
+             {"title": "《敏捷软件开发》", "type": "书籍", "difficulty": "中级", "duration": "30小时"},
+         ]},
+        {"name": "沟通能力", "category": "软技能", "difficulty": 2, "demand": "极高", "months": 0,
+         "resources": [
+             {"title": "《非暴力沟通》", "type": "书籍", "difficulty": "入门", "duration": "10小时"},
+         ]},
+        {"name": "团队管理", "category": "软技能", "difficulty": 4, "demand": "高", "months": 6,
+         "resources": [
+             {"title": "《格鲁夫给经理人的第一课》", "type": "书籍", "difficulty": "中级", "duration": "20小时"},
+         ]},
+        {"name": "商业思维", "category": "软技能", "difficulty": 3, "demand": "高", "months": 3,
+         "resources": [
+             {"title": "《商业模式新生代》", "type": "书籍", "difficulty": "入门", "duration": "15小时"},
+         ]},
+        {"name": "产品设计", "category": "产品", "difficulty": 3, "demand": "高", "months": 3,
+         "resources": [
+             {"title": "《启示录》", "type": "书籍", "difficulty": "中级", "duration": "25小时"},
+         ]},
+        {"name": "增长黑客", "category": "产品", "difficulty": 3, "demand": "高", "months": 2,
+         "resources": [
+             {"title": "《增长黑客》", "type": "书籍", "difficulty": "中级", "duration": "20小时"},
+         ]},
+        {"name": "A/B测试", "category": "数据科学", "difficulty": 3, "demand": "高", "months": 1,
+         "resources": [
+             {"title": "A/B测试实战指南", "type": "文档", "difficulty": "中级", "duration": "15小时"},
+         ]},
+        {"name": "信息流广告", "category": "产品", "difficulty": 3, "demand": "中", "months": 2,
+         "resources": [
+             {"title": "信息流广告投放实战", "type": "文档", "difficulty": "中级", "duration": "20小时"},
+         ]},
+        {"name": "SEO", "category": "产品", "difficulty": 2, "demand": "中", "months": 2,
+         "resources": [
+             {"title": "SEO实战指南", "type": "文档", "difficulty": "入门", "duration": "15小时"},
+         ]},
+        {"name": "SEM", "category": "产品", "difficulty": 2, "demand": "中", "months": 2,
+         "resources": [
+             {"title": "SEM投放指南", "type": "文档", "difficulty": "入门", "duration": "15小时"},
          ]},
     ]
 
@@ -604,6 +1037,171 @@ def init_side_jobs():
             "getting_started": ["确定教学科目", "准备教学资料", "注册平台", "通过面试"],
             "pros": ["时间灵活", "收入稳定", "有意义"],
             "cons": ["需要专业能力", "可能占用周末", "需要耐心"]
+        },
+        {
+            "title": "AI绘画接单", "category": "创意",
+            "description": "使用Midjourney、Stable Diffusion等工具创作AI绘画作品",
+            "income_min": 3000, "income_max": 20000, "hours_per_week": 10,
+            "startup_cost": 500, "difficulty_level": 2,
+            "platforms": ["淘宝", "小红书", "闲鱼", "Fiverr"],
+            "skills_required": ["AI绘画", "审美", "Prompt", "后期处理"],
+            "getting_started": ["学习AI绘画工具", "积累作品", "注册平台", "推广获客"],
+            "pros": ["新兴领域", "收入可观", "时间灵活"],
+            "cons": ["需要审美", "竞争加剧", "技术变化快"]
+        },
+        {
+            "title": "AI写作", "category": "内容创作",
+            "description": "使用AI工具辅助写作，提供文案、文章等服务",
+            "income_min": 2000, "income_max": 15000, "hours_per_week": 8,
+            "startup_cost": 200, "difficulty_level": 2,
+            "platforms": ["淘宝", "猪八戒", "公众号", "知乎"],
+            "skills_required": ["写作", "AI工具", "Prompt", "编辑"],
+            "getting_started": ["学习AI写作工具", "确定写作方向", "积累案例", "推广获客"],
+            "pros": ["效率高", "门槛低", "需求大"],
+            "cons": ["质量把控", "竞争激烈", "AI检测"]
+        },
+        {
+            "title": "跨境电商代购", "category": "电商",
+            "description": "为国内消费者代购海外商品",
+            "income_min": 5000, "income_max": 30000, "hours_per_week": 15,
+            "startup_cost": 10000, "difficulty_level": 3,
+            "platforms": ["淘宝", "微信", "小红书", "朋友圈"],
+            "skills_required": ["选品", "物流", "客服", "营销"],
+            "getting_started": ["了解代购流程", "确定商品方向", "建立供应链", "推广获客"],
+            "pros": ["收入可观", "市场需求大", "可发展为事业"],
+            "cons": ["资金压力", "物流风险", "政策风险"]
+        },
+        {
+            "title": "社群运营", "category": "运营",
+            "description": "运营付费社群，提供价值内容和社交服务",
+            "income_min": 3000, "income_max": 20000, "hours_per_week": 10,
+            "startup_cost": 0, "difficulty_level": 2,
+            "platforms": ["微信", "知识星球", "飞书", "Discord"],
+            "skills_required": ["运营", "内容创作", "社群管理", "活动策划"],
+            "getting_started": ["确定社群定位", "搭建社群", "输出价值内容", "探索变现"],
+            "pros": ["可积累人脉", "时间灵活", "被动收入"],
+            "cons": ["需要持续运营", "前期积累慢", "需要专业能力"]
+        },
+        {
+            "title": "直播带货", "category": "电商",
+            "description": "通过直播平台销售商品",
+            "income_min": 5000, "income_max": 100000, "hours_per_week": 20,
+            "startup_cost": 5000, "difficulty_level": 3,
+            "platforms": ["抖音", "快手", "淘宝直播", "视频号"],
+            "skills_required": ["直播", "销售", "选品", "互动"],
+            "getting_started": ["确定带货品类", "学习直播技巧", "搭建直播间", "积累粉丝"],
+            "pros": ["收入上限高", "可发展为事业", "市场需求大"],
+            "cons": ["需要持续更新", "竞争激烈", "需要投入设备"]
+        },
+        {
+            "title": "虚拟助理", "category": "服务",
+            "description": "为企业或个人提供远程助理服务",
+            "income_min": 3000, "income_max": 10000, "hours_per_week": 15,
+            "startup_cost": 0, "difficulty_level": 2,
+            "platforms": ["Upwork", "Fiverr", "LinkedIn", "招聘网站"],
+            "skills_required": ["沟通能力", "组织能力", "Office", "时间管理"],
+            "getting_started": ["提升办公技能", "准备简历", "注册平台", "从小单开始"],
+            "pros": ["门槛低", "时间灵活", "可远程工作"],
+            "cons": ["收入有限", "工作琐碎", "需要耐心"]
+        },
+        {
+            "title": "音频主播", "category": "内容创作",
+            "description": "在喜马拉雅、荔枝等平台录制有声内容",
+            "income_min": 2000, "income_max": 15000, "hours_per_week": 10,
+            "startup_cost": 1000, "difficulty_level": 2,
+            "platforms": ["喜马拉雅", "荔枝", "蜻蜓FM", "小宇宙"],
+            "skills_required": ["声音", "表达能力", "内容创作", "录音"],
+            "getting_started": ["提升声音质量", "确定内容方向", "录制样片", "发布并推广"],
+            "pros": ["时间灵活", "可积累粉丝", "被动收入"],
+            "cons": ["需要好声音", "竞争激烈", "前期积累慢"]
+        },
+        {
+            "title": "手工制作", "category": "创意",
+            "description": "制作手工艺品并在网上销售",
+            "income_min": 2000, "income_max": 15000, "hours_per_week": 15,
+            "startup_cost": 2000, "difficulty_level": 2,
+            "platforms": ["淘宝", "闲鱼", "小红书", "Etsy"],
+            "skills_required": ["手工", "设计", "审美", "营销"],
+            "getting_started": ["确定手工品类", "学习制作技巧", "制作样品", "上架销售"],
+            "pros": ["可发展为事业", "时间灵活", "有成就感"],
+            "cons": ["产量有限", "需要技能", "收入不稳定"]
+        },
+        {
+            "title": "股票投资", "category": "投资",
+            "description": "通过股票市场进行投资理财",
+            "income_min": 0, "income_max": 100000, "hours_per_week": 5,
+            "startup_cost": 50000, "difficulty_level": 4,
+            "platforms": ["雪球", "同花顺", "东方财富", "券商APP"],
+            "skills_required": ["财务分析", "市场分析", "风险控制", "心理素质"],
+            "getting_started": ["学习投资知识", "开立证券账户", "小额试水", "逐步加仓"],
+            "pros": ["收益潜力大", "时间灵活", "可被动收入"],
+            "cons": ["风险高", "需要本金", "需要学习"]
+        },
+        {
+            "title": "基金投资", "category": "投资",
+            "description": "通过基金进行投资理财",
+            "income_min": 0, "income_max": 50000, "hours_per_week": 2,
+            "startup_cost": 10000, "difficulty_level": 2,
+            "platforms": ["支付宝", "天天基金", "蛋卷基金", "且慢"],
+            "skills_required": ["基金知识", "风险评估", "资产配置"],
+            "getting_started": ["学习基金知识", "评估风险承受能力", "选择基金", "定期定投"],
+            "pros": ["门槛低", "风险分散", "专业管理"],
+            "cons": ["收益有限", "需要长期持有", "有手续费"]
+        },
+        {
+            "title": "房产投资", "category": "投资",
+            "description": "通过房产进行投资理财",
+            "income_min": 0, "income_max": 200000, "hours_per_week": 5,
+            "startup_cost": 500000, "difficulty_level": 4,
+            "platforms": ["链家", "贝壳", "安居客", "本地中介"],
+            "skills_required": ["市场分析", "财务知识", "谈判能力", "法律知识"],
+            "getting_started": ["学习房产知识", "了解市场行情", "实地考察", "谨慎投资"],
+            "pros": ["收益稳定", "可出租", "可增值"],
+            "cons": ["资金门槛高", "流动性差", "政策风险"]
+        },
+        {
+            "title": "宠物寄养", "category": "服务",
+            "description": "为宠物主人提供寄养服务",
+            "income_min": 3000, "income_max": 10000, "hours_per_week": 20,
+            "startup_cost": 2000, "difficulty_level": 1,
+            "platforms": ["小红书", "闲鱼", "朋友圈", "本地社群"],
+            "skills_required": ["宠物护理", "耐心", "责任心", "沟通"],
+            "getting_started": ["准备寄养环境", "了解宠物护理", "发布服务信息", "积累客户"],
+            "pros": ["门槛低", "时间灵活", "有爱心"],
+            "cons": ["需要空间", "责任大", "收入有限"]
+        },
+        {
+            "title": "上门维修", "category": "服务",
+            "description": "提供家电、电脑等上门维修服务",
+            "income_min": 5000, "income_max": 20000, "hours_per_week": 20,
+            "startup_cost": 3000, "difficulty_level": 2,
+            "platforms": ["58同城", "美团", "闪修侠", "本地社群"],
+            "skills_required": ["维修技能", "沟通能力", "服务意识"],
+            "getting_started": ["学习维修技能", "准备工具", "注册平台", "接单服务"],
+            "pros": ["需求稳定", "收入可观", "技能可复用"],
+            "cons": ["需要技能", "体力消耗", "时间不灵活"]
+        },
+        {
+            "title": "代驾服务", "category": "服务",
+            "description": "为酒后或疲劳驾驶者提供代驾服务",
+            "income_min": 5000, "income_max": 15000, "hours_per_week": 15,
+            "startup_cost": 0, "difficulty_level": 1,
+            "platforms": ["e代驾", "滴滴代驾", "微代驾"],
+            "skills_required": ["驾驶技术", "沟通能力", "服务意识"],
+            "getting_started": ["考取驾照", "注册代驾平台", "熟悉路线", "接单服务"],
+            "pros": ["门槛低", "时间灵活", "收入稳定"],
+            "cons": ["体力消耗", "夜间工作", "安全风险"]
+        },
+        {
+            "title": "收纳整理", "category": "服务",
+            "description": "为家庭或企业提供收纳整理服务",
+            "income_min": 5000, "income_max": 20000, "hours_per_week": 15,
+            "startup_cost": 1000, "difficulty_level": 2,
+            "platforms": ["小红书", "58同城", "美团", "朋友圈"],
+            "skills_required": ["收纳技巧", "沟通能力", "审美", "体力"],
+            "getting_started": ["学习收纳技巧", "考取相关证书", "积累案例", "推广获客"],
+            "pros": ["新兴行业", "需求增长", "收入可观"],
+            "cons": ["体力消耗", "需要技能", "季节性波动"]
         },
     ]
 

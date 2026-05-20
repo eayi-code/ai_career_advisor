@@ -8,6 +8,14 @@ class Config:
     SECRET_KEY = os.getenv('SECRET_KEY', 'dev-secret-key')
     SQLALCHEMY_DATABASE_URI = os.getenv('DATABASE_URL', 'mysql+pymysql://root:password@localhost/career_advisor')
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+    
+    # 数据库连接池配置
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        'pool_size': 10,
+        'pool_recycle': 3600,
+        'pool_pre_ping': True,
+        'max_overflow': 20,
+    }
 
     OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
     OPENAI_BASE_URL = os.getenv('OPENAI_BASE_URL')
