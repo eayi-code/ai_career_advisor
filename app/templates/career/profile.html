@@ -79,6 +79,17 @@
                     <p>{{ current_user.email }}</p>
                 </div>
                 <div class="profile-stats">
+                    <div class="stat-item" style="align-items: center;">
+                        <div class="completion-ring" id="completionRing">
+                            <svg viewBox="0 0 100 100">
+                                <circle class="ring-bg" cx="50" cy="50" r="42"/>
+                                <circle class="ring-fill" cx="50" cy="50" r="42" 
+                                        stroke-dasharray="0 264" id="completionCircle"/>
+                            </svg>
+                            <span class="completion-text" id="completionText">0%</span>
+                        </div>
+                        <span class="stat-label">档案完善度</span>
+                    </div>
                     <div class="stat-item">
                         <span class="stat-number" id="statConversations">{{ histories|length }}</span>
                         <span class="stat-label">总对话</span>
@@ -100,71 +111,115 @@
         </div>
 
         <div class="profile-content">
-            <div class="collapse-section expanded" id="statsSection">
-                <div class="collapse-header" onclick="toggleCollapse('statsSection')">
-                    <div>
-                        <h2>使用统计</h2>
-                        <p>查看你的使用情况和数据分析</p>
+            <!-- AI-Native Dashboard布局 -->
+            <div class="dashboard-grid">
+                <!-- 左侧：AI记忆管理 -->
+                <div class="dashboard-card">
+                    <div class="dashboard-card-header">
+                        <span class="dashboard-card-title">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M12 2a4 4 0 014 4v2a4 4 0 01-8 0V6a4 4 0 014-4z"/><path d="M6 10v8a6 6 0 0012 0v-8"/></svg>
+                            技能标签
+                        </span>
                     </div>
-                    <svg class="collapse-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M6 9l6 6 6-6"/>
-                    </svg>
+                    <div class="dashboard-card-body">
+                        <div class="skill-tags" id="skillTags">
+                            {% if current_user.profile and current_user.profile.skills %}
+                                {% for skill in current_user.profile.skills %}
+                                <span class="skill-tag {% if skill is mapping and skill.auto_extracted %}auto-extracted{% endif %} {% if skill is mapping and skill.emphasized %}emphasized{% endif %}">
+                                    {{ skill.name if skill is mapping else skill }}
+                                    {% if skill is mapping and skill.auto_extracted %}
+                                    <button class="tag-action" onclick="denySkill('{{ skill.name }}')" title="这不是我的技能">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                                    </button>
+                                    {% endif %}
+                                </span>
+                                {% endfor %}
+                            {% endif %}
+                            <button class="skill-tag-add" onclick="addSkill()">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M12 4v16m8-8H4"/></svg>
+                                添加
+                            </button>
+                        </div>
+                    </div>
                 </div>
-                <div class="collapse-content">
-                    <div class="stats-dashboard">
-                        <div class="stats-card">
-                            <div class="stats-card-header">
-                                <span class="stats-card-title">Agent使用分布</span>
+                
+                <!-- 决策锚点 -->
+                <div class="dashboard-card">
+                    <div class="dashboard-card-header">
+                        <span class="dashboard-card-title">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+                            决策锚点
+                        </span>
+                    </div>
+                    <div class="dashboard-card-body">
+                        <div class="anchor-cards">
+                            <div class="anchor-card" onclick="editAnchor('target_job_title')">
+                                <span class="anchor-label">目标岗位</span>
+                                <span class="anchor-value">{{ current_user.profile.target_job_title or '未设定' }}</span>
+                                <span class="anchor-hint">点击修改</span>
                             </div>
-                            <div class="stats-card-body" id="agentUsageChart">
-                                <div class="agent-bars"></div>
+                            <div class="anchor-card" onclick="editAnchor('salary')">
+                                <span class="anchor-label">期望薪资</span>
+                                <span class="anchor-value">{% if current_user.profile and current_user.profile.target_salary_min %}{{ current_user.profile.target_salary_min|int }}-{{ current_user.profile.target_salary_max|int }}K{% else %}未设定{% endif %}</span>
+                                <span class="anchor-hint">点击修改</span>
+                            </div>
+                            <div class="anchor-card" onclick="editAnchor('location')">
+                                <span class="anchor-label">意向城市</span>
+                                <span class="anchor-value">{{ current_user.profile.location_preference or '不限' }}</span>
+                                <span class="anchor-hint">点击修改</span>
+                            </div>
+                            <div class="anchor-card" onclick="editAnchor('work_pref')">
+                                <span class="anchor-label">工作方式</span>
+                                <span class="anchor-value">{% if current_user.profile %}{% if current_user.profile.work_preference == 'remote' %}远程{% elif current_user.profile.work_preference == 'onsite' %}坐班{% elif current_user.profile.work_preference == 'hybrid' %}混合{% else %}不限{% endif %}{% else %}不限{% endif %}</span>
+                                <span class="anchor-hint">点击修改</span>
                             </div>
                         </div>
-                        <div class="stats-card">
-                            <div class="stats-card-header">
-                                <span class="stats-card-title">最近活跃</span>
+                    </div>
+                </div>
+                
+                <!-- 决策里程碑 -->
+                <div class="dashboard-card">
+                    <div class="dashboard-card-header">
+                        <span class="dashboard-card-title">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            决策里程碑
+                        </span>
+                    </div>
+                    <div class="dashboard-card-body">
+                        <div class="milestones" id="milestones">
+                            {% for h in histories[:10] %}
+                            <div class="milestone" onclick="location.href='/chat?id={{ h.conversation_id }}'">
+                                <span class="milestone-date">{{ h.updated_at.strftime('%m-%d') if h.updated_at else h.created_at.strftime('%m-%d') }}</span>
+                                <span class="milestone-icon">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+                                </span>
+                                <span class="milestone-title">{{ h.title or '进行了对话' }}</span>
                             </div>
-                            <div class="stats-card-body" id="activityChart">
-                                <div class="activity-items"></div>
-                            </div>
+                            {% endfor %}
                         </div>
                     </div>
                 </div>
-            </div>
-
-            <div class="collapse-section" id="historySection">
-                <div class="collapse-header" onclick="toggleCollapse('historySection')">
-                    <div>
-                        <h2>对话历史</h2>
-                        <p>查看和管理你的对话记录</p>
+                
+                <!-- Next Action -->
+                <div class="dashboard-card">
+                    <div class="dashboard-card-header">
+                        <span class="dashboard-card-title">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+                            建议行动
+                        </span>
                     </div>
-                    <svg class="collapse-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M6 9l6 6 6-6"/>
-                    </svg>
-                </div>
-                <div class="collapse-content">
-                    <div class="history-list" id="historyList">
-                        {% for h in histories %}
-                        <div class="history-row" id="history-row-{{ h.conversation_id }}">
-                            <div class="history-info" onclick="location.href='/chat?id={{ h.conversation_id }}'">
-                                <span class="history-title">{{ h.title or '新对话' }}</span>
-                                <span class="history-meta">{{ h.updated_at.strftime('%m-%d %H:%M') if h.updated_at else h.created_at.strftime('%m-%d %H:%M') }} · {{ h.messages|length if h.messages else 0 }} 条消息</span>
-                            </div>
-                            <div class="history-actions">
-                                <span class="badge badge-primary">{{ h.agent_used }}</span>
-                                <button class="btn-icon" onclick="exportConversation('{{ h.conversation_id }}')" title="导出">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
-                                        <path d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                                    </svg>
-                                </button>
-                                <button class="btn-icon btn-icon-danger" onclick="deleteHistoryItem('{{ h.conversation_id }}')" title="删除">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
-                                        <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                                    </svg>
-                                </button>
+                    <div class="dashboard-card-body">
+                        <div class="next-actions" id="nextActions">
+                            <div class="next-action" onclick="location.href='/chat'">
+                                <div class="next-action-icon">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" width="18" height="18"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+                                </div>
+                                <div class="next-action-content">
+                                    <div class="next-action-title">开始新对话</div>
+                                    <div class="next-action-desc">与AI顾问聊聊你的职业困惑</div>
+                                </div>
                             </div>
                         </div>
-                        {% endfor %}
                     </div>
                 </div>
             </div>
@@ -1069,6 +1124,7 @@ async function updatePassword() {
 
 document.addEventListener('DOMContentLoaded', function() {
     loadUserStats();
+    loadProfileCompletion();
 });
 
 async function loadUserStats() {
@@ -1224,5 +1280,106 @@ function uploadAvatar(input) {
         {% endfor %}
     {% endif %}
 {% endwith %}
+
+// 加载档案完善度
+async function loadProfileCompletion() {
+    try {
+        const res = await fetch('/api/profile/completion');
+        const data = await res.json();
+        
+        if (data.code === 200) {
+            const completion = data.data.completion;
+            // 更新环形图
+            const completionText = document.getElementById('completionText');
+            const completionCircle = document.getElementById('completionCircle');
+            
+            if (completionText) {
+                completionText.textContent = completion + '%';
+            }
+            if (completionCircle) {
+                // 计算stroke-dasharray: 百分比 * 周长 / 100
+                const circumference = 2 * Math.PI * 42; // 约264
+                const dashArray = (completion / 100) * circumference;
+                completionCircle.style.strokeDasharray = `${dashArray} ${circumference}`;
+            }
+        }
+    } catch (e) {
+        console.error('加载档案完善度失败:', e);
+    }
+}
+
+// 编辑锚点
+function editAnchor(field) {
+    const fieldLabels = {
+        'target_job_title': '目标岗位',
+        'salary': '期望薪资(K)',
+        'location': '意向城市',
+        'work_pref': '工作方式'
+    };
+    
+    const label = fieldLabels[field] || field;
+    const value = prompt(`请输入${label}:`);
+    
+    if (value !== null && value.trim()) {
+        updateAnchorField(field, value.trim());
+    }
+}
+
+// 更新锚点字段
+async function updateAnchorField(field, value) {
+    try {
+        const res = await fetch('/api/profile/update', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({field: field, value: value})
+        });
+        
+        const data = await res.json();
+        if (data.code === 200) {
+            modal.toast('更新成功', 'success');
+            location.reload();
+        } else {
+            modal.toast(data.error || '更新失败', 'error');
+        }
+    } catch (e) {
+        modal.toast('请求失败', 'error');
+    }
+}
+
+// 添加技能
+function addSkill() {
+    const skill = prompt('请输入技能名称:');
+    if (skill && skill.trim()) {
+        updateSkill(skill.trim(), 'add');
+    }
+}
+
+// 删除技能
+function denySkill(skill) {
+    if (confirm(`确定要移除技能"${skill}"吗？`)) {
+        updateSkill(skill, 'remove');
+    }
+}
+
+// 更新技能
+async function updateSkill(skill, action) {
+    try {
+        const res = await fetch('/api/profile/update', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({field: 'skills', value: skill, action: action})
+        });
+        
+        const data = await res.json();
+        if (data.code === 200) {
+            modal.toast('更新成功', 'success');
+            location.reload();
+        } else {
+            modal.toast(data.error || '更新失败', 'error');
+        }
+    } catch (e) {
+        modal.toast('请求失败', 'error');
+    }
+}
 </script>
 {% endblock %}

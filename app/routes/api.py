@@ -998,3 +998,200 @@ def download_resume():
     
     except Exception as e:
         return jsonify({"code": 500, "error": f"生成文件失败: {str(e)}"}), 500
+
+
+@api_bp.route('/profile/completion', methods=['GET'])
+@login_required
+def get_profile_completion():
+    """计算档案完善度"""
+    from app.models.profile import UserProfile
+    
+    try:
+        db.session.rollback()
+    except Exception:
+        pass
+    
+    profile = UserProfile.query.filter_by(user_id=current_user.id).first()
+    
+    # 字段权重
+    field_weights = {
+        'education': 5,
+        'major': 5,
+        'work_experience': 5,
+        'current_job_title': 5,
+        'skills': 10,
+        'target_job_title': 10,
+        'target_industry': 5,
+        'target_salary_min': 5,
+        'location_preference': 5,
+        'job_search_status': 5,
+        'work_preference': 5,
+        'company_type_preference': 5,
+        'projects': 10,
+        'certifications': 5,
+        'career_goals': 5,
+    }
+    
+    total = sum(field_weights.values())
+    filled = 0
+    missing_fields = []
+    
+    if profile:
+        for field, weight in field_weights.items():
+            value = getattr(profile, field, None)
+            is_filled = False
+            
+            if value is not None:
+                if isinstance(value, list) and len(value) > 0:
+                    is_filled = True
+                elif isinstance(value, str) and value.strip():
+                    is_filled = True
+                elif isinstance(value, (int, float)) and value > 0:
+                    is_filled = True
+            
+            if is_filled:
+                filled += weight
+            else:
+                missing_fields.append(field)
+    
+    completion = int(filled / total * 100)
+    
+    return jsonify({
+        "code": 200,
+        "data": {
+            "completion": completion,
+            "filled": filled,
+            "total": total,
+            "missing_fields": missing_fields
+        }
+    })
+
+
+@api_bp.route('/profile/milestones', methods=['GET'])
+@login_required
+def get_milestones():
+    """获取决策里程碑（对话成果）"""
+    try:
+        db.session.rollback()
+    except Exception:
+        pass
+    
+    histories = AnalysisHistory.query.filter_by(
+        user_id=current_user.id
+    ).order_by(AnalysisHistory.updated_at.desc()).limit(20).all()
+    
+    milestones = []
+    for h in histories:
+        achievements = _extract_achievements(h)
+        if achievements:
+            milestones.append({
+                "conversation_id": h.conversation_id,
+                "date": h.updated_at.strftime('%m-%d') if h.updated_at else h.created_at.strftime('%m-%d'),
+                "agent": h.agent_used,
+                "title": achievements[0],
+                "achievements": achievements
+            })
+    
+    return jsonify({
+        "code": 200,
+        "data": milestones
+    })
+
+
+@api_bp.route('/profile/update', methods=['POST'])
+@login_required
+def update_profile():
+    """更新用户档案字段"""
+    from app.models.profile import UserProfile
+    
+    data = request.get_json()
+    field = data.get('field')
+    value = data.get('value')
+    action = data.get('action', 'set')  # set, add, remove
+    
+    if not field:
+        return jsonify({"code": 400, "error": "缺少field参数"}), 400
+    
+    try:
+        db.session.rollback()
+    except Exception:
+        pass
+    
+    profile = UserProfile.query.filter_by(user_id=current_user.id).first()
+    if not profile:
+        profile = UserProfile(user_id=current_user.id)
+        db.session.add(profile)
+    
+    # 字段映射
+    field_map = {
+        'target_job_title': 'target_job_title',
+        'target_salary_min': 'target_salary_min',
+        'target_salary_max': 'target_salary_max',
+        'location_preference': 'location_preference',
+        'work_preference': 'work_preference',
+        'skills': 'skills',
+    }
+    
+    db_field = field_map.get(field)
+    if not db_field:
+        return jsonify({"code": 400, "error": f"不支持的字段: {field}"}), 400
+    
+    try:
+        if field == 'skills':
+            # 技能特殊处理
+            current_skills = profile.skills or []
+            if action == 'add' and value:
+                if value not in current_skills:
+                    current_skills.append(value)
+            elif action == 'remove' and value:
+                current_skills = [s for s in current_skills if s != value]
+            elif action == 'set':
+                current_skills = value if isinstance(value, list) else [value]
+            profile.skills = current_skills
+            flag_modified(profile, 'skills')
+        elif 'salary' in field:
+            # 薪资转数字
+            try:
+                setattr(profile, db_field, float(value) if value else None)
+            except ValueError:
+                return jsonify({"code": 400, "error": "薪资必须是数字"}), 400
+        else:
+            setattr(profile, db_field, value if value else None)
+        
+        profile.updated_at = datetime.utcnow()
+        db.session.commit()
+        
+        return jsonify({"code": 200, "message": "更新成功"})
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"code": 500, "error": str(e)}), 500
+
+
+def _extract_achievements(history):
+    """从对话记录中提取成果标签"""
+    achievements = []
+    agent = history.agent_used or ''
+    output = (history.result_data or {}).get('output', '')
+    
+    if agent == 'resume' or '简历' in output:
+        if 'RESUME_START' in output or '个人简介' in output:
+            achievements.append('生成了简历')
+    if agent == 'skill' or '技能' in output:
+        if '差距' in output or '学习路径' in output:
+            achievements.append('完成了技能分析')
+    if agent == 'career' or '职位' in output:
+        if '目标岗位' in output or 'save_target_job' in str(history.reasoning_steps):
+            achievements.append('确定了目标岗位')
+        elif '薪资' in output:
+            achievements.append('查询了薪资')
+        elif '搜索' in output or '职位' in output:
+            achievements.append('搜索了职位')
+    if agent == 'interview' or '面试' in output:
+        if '面试题' in output or '自我介绍' in output:
+            achievements.append('获取了面试指导')
+    if agent == 'side_job' or '副业' in output:
+        if '推荐' in output or '匹配' in output:
+            achievements.append('探索了副业机会')
+    
+    return achievements if achievements else [history.title or '进行了对话']
