@@ -126,7 +126,7 @@ class ResumeService:
                     # 在head中添加字体样式
                     html_content = html_content.replace(
                         '<head>',
-                        '<head><style>@page {{ size: A4; margin: 2cm; }} body {{ font-family: "Microsoft YaHei", "SimSun", "STSong", Arial, sans-serif; }}</style>'
+                        '<head><style>@page { size: A4; margin: 2cm; } body { font-family: "Microsoft YaHei", "SimSun", "STSong", Arial, sans-serif; }</style>'
                     )
                 
                 buffer = io.BytesIO()
