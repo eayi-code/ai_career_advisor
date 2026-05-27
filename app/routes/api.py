@@ -962,87 +962,30 @@ def download_resume():
                 )
         
         elif file_format == 'pdf':
-            # 生成PDF格式 - 使用fpdf2以获得更好的中文支持
-            from fpdf import FPDF
+            # 生成PDF格式 - 使用weasyprint保留HTML样式
+            from weasyprint import HTML
             import re
             
-            # 创建PDF类，支持中文
-            class ResumePDF(FPDF):
-                def __init__(self):
-                    super().__init__()
-                    # 添加中文字体
-                    import os
-                    font_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'static', 'fonts')
-                    
-                    # 尝试使用系统中文字体
-                    try:
-                        # Windows系统字体路径
-                        win_font = 'C:/Windows/Fonts/msyh.ttc'  # 微软雅黑
-                        if os.path.exists(win_font):
-                            self.add_font('Chinese', '', win_font, uni=True)
-                            self.add_font('Chinese', 'B', win_font, uni=True)
-                            self.chinese_font = 'Chinese'
-                        else:
-                            self.chinese_font = 'Helvetica'
-                    except:
-                        self.chinese_font = 'Helvetica'
-                
-                def header(self):
-                    pass
-                
-                def footer(self):
-                    pass
-            
-            pdf = ResumePDF()
-            pdf.add_page()
-            pdf.set_auto_page_break(auto=True, margin=15)
-            
-            # 提取文本内容
             if is_html:
-                # 从HTML中提取文本
-                text_content = re.sub(r'<script[^>]*>.*?</script>', '', content, flags=re.DOTALL)
-                text_content = re.sub(r'<style[^>]*>.*?</style>', '', text_content, flags=re.DOTALL)
-                text_content = re.sub(r'<br\s*/?>', '\n', text_content)
-                text_content = re.sub(r'<h[1-6][^>]*>(.*?)</h[1-6]>', r'\1\n', text_content, flags=re.DOTALL)
-                text_content = re.sub(r'<p[^>]*>(.*?)</p>', r'\1\n', text_content, flags=re.DOTALL)
-                text_content = re.sub(r'<li[^>]*>(.*?)</li>', r'• \1\n', text_content, flags=re.DOTALL)
-                text_content = re.sub(r'<[^>]+>', '', text_content)
-                text_content = re.sub(r'&nbsp;', ' ', text_content)
-                text_content = re.sub(r'&amp;', '&', text_content)
-                text_content = re.sub(r'&lt;', '<', text_content)
-                text_content = re.sub(r'&gt;', '>', text_content)
-                text_content = re.sub(r'\n\s*\n', '\n\n', text_content)
-                text_content = text_content.strip()
+                html_content = content
             else:
-                text_content = content
-            
-            # 设置字体
-            pdf.set_font(pdf.chinese_font, '', 11)
-            page_width = pdf.w - pdf.l_margin - pdf.r_margin
-            
-            # 按行处理内容
-            lines = text_content.split('\n')
-            for line in lines:
-                line = line.strip()
-                if not line:
-                    pdf.ln(5)
-                    continue
-                
-                # 检测标题（简单启发式）
-                if len(line) < 50 and (line.isupper() or line.endswith('：') or line.endswith(':')):
-                    pdf.set_font(pdf.chinese_font, 'B', 14)
-                    pdf.multi_cell(page_width, 10, line)
-                    pdf.set_font(pdf.chinese_font, '', 11)
-                elif line.startswith('• ') or line.startswith('- '):
-                    # 列表项 - 用x偏移实现缩进
-                    pdf.set_x(pdf.l_margin + 6)
-                    pdf.multi_cell(page_width - 6, 7, line)
-                else:
-                    # 普通文本
-                    pdf.multi_cell(page_width, 7, line)
+                # Markdown转HTML，保留基本样式
+                html_content = content
+                html_content = re.sub(r'^# (.+)$', r'<h1 style="font-size:20px;color:#333;border-bottom:2px solid #4285f4;padding-bottom:8px;">\1</h1>', html_content, flags=re.MULTILINE)
+                html_content = re.sub(r'^## (.+)$', r'<h2 style="font-size:16px;color:#4285f4;margin-top:20px;">\1</h2>', html_content, flags=re.MULTILINE)
+                html_content = re.sub(r'^### (.+)$', r'<h3 style="font-size:14px;color:#555;">\1</h3>', html_content, flags=re.MULTILINE)
+                html_content = re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', html_content)
+                html_content = re.sub(r'^- (.+)$', r'<li style="margin:4px 0;">\1</li>', html_content, flags=re.MULTILINE)
+                html_content = re.sub(r'(<li.*?</li>)', r'<ul style="padding-left:20px;">\1</ul>', html_content, flags=re.DOTALL)
+                html_content = html_content.replace('\n', '<br>')
+                html_content = f'''<!DOCTYPE html>
+<html><head><meta charset="utf-8"></head>
+<body style="font-family:'Microsoft YaHei','SimSun',Arial,sans-serif;font-size:12pt;line-height:1.8;padding:20px;color:#333;">
+{html_content}
+</body></html>'''
             
             buffer = io.BytesIO()
-            pdf.output(buffer)
+            HTML(string=html_content).write_pdf(buffer)
             buffer.seek(0)
             
             return send_file(
