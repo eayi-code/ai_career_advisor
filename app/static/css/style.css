@@ -1089,12 +1089,13 @@ textarea.form-input {
 }
 
 .chat-layout .chat-input-area {
-    padding: 1rem 2rem;
-    background: transparent;
+    padding: 1.25rem 2rem;
+    background: var(--bg-secondary);
+    border-top: 1px solid var(--border);
     flex-shrink: 0;
-    max-width: 800px;
+    max-width: none;
     width: 100%;
-    margin: 0 auto;
+    margin: 0;
 }
 
 .chat-layout .main-content {
@@ -1374,6 +1375,19 @@ body.resume-open .chat-layout .chat-container {
     padding: 12px 24px;
     background: var(--bg-primary);
     border-bottom: 1px solid var(--border);
+}
+
+.chat-input-wrapper {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+    background: var(--bg-primary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xl);
+    padding: 0.25rem 0.5rem;
+    align-items: center;
+    box-shadow: var(--shadow-sm);
+    transition: box-shadow var(--transition-fast);
 }
 
 .chat-input-wrapper:focus-within {
