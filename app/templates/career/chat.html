@@ -76,7 +76,7 @@
                 <div class="welcome-container" id="welcomeMessage">
                     <div class="welcome-header">
                         <h2 style="font-size: 2.25rem; font-weight: 500; color: var(--text-primary); margin-bottom: 0.5rem; font-family: 'Google Sans', sans-serif;">
-                            <span style="background: -webkit-linear-gradient(45deg, #4285f4, #ea4335, #fbbc05, #34a853); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">你好，</span>{{ current_user.username }}
+                            <span style="color: var(--text-primary);">你好，</span>{{ current_user.username }}
                         </h2>
                         <p style="font-size: 1.5rem; color: var(--text-tertiary); font-weight: 400; font-family: 'Google Sans', sans-serif;">今天我能帮你做什么？</p>
                     </div>
@@ -1460,7 +1460,7 @@ async function deleteConversation(id, e) {
                 chatMessages.innerHTML = `
                     <div class="welcome-container" id="welcomeMessage">
                         <div class="welcome-header">
-                            <h2 style="font-size: 2.25rem; font-weight: 500; color: var(--text-primary); margin-bottom: 0.5rem; font-family: 'Google Sans', sans-serif;"><span style="background: -webkit-linear-gradient(45deg, #4285f4, #ea4335, #fbbc05, #34a853); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">你好，</span>{{ current_user.username }}</h2>
+                            <h2 style="font-size: 2.25rem; font-weight: 500; color: var(--text-primary); margin-bottom: 0.5rem; font-family: 'Google Sans', sans-serif;"><span style="color: var(--text-primary);">你好，</span>{{ current_user.username }}</h2>
                             <p style="font-size: 1.5rem; color: var(--text-tertiary); font-weight: 400; font-family: 'Google Sans', sans-serif;">今天我能帮你做什么？</p>
                         </div>
                         <div class="welcome-cards">
