@@ -1089,13 +1089,14 @@ textarea.form-input {
 }
 
 .chat-layout .chat-input-area {
-    padding: 1.25rem 2rem;
-    background: var(--bg-secondary);
-    border-top: 1px solid var(--border);
+    padding: 1rem 2rem 1.5rem;
+    background: transparent;
     flex-shrink: 0;
     max-width: none;
     width: 100%;
     margin: 0;
+    position: relative;
+    z-index: 10;
 }
 
 .chat-layout .main-content {
@@ -1197,6 +1198,28 @@ textarea.form-input {
     border-radius: 0;
     border-left: 1px solid var(--border);
     box-shadow: -10px 0 30px rgba(0,0,0,0.05);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.chat-layout .resume-panel .panel-section {
+    flex: 1;
+    max-height: none;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.chat-layout .resume-panel .resume-preview-md {
+    flex: 1;
+    overflow-y: auto;
+}
+
+.chat-layout .resume-panel .panel-actions {
+    flex-shrink: 0;
+    padding: 1rem;
+    border-top: 1px solid var(--border);
 }
 
 .chat-layout .resume-panel.collapsed {
