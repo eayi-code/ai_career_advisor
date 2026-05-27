@@ -80,8 +80,8 @@ class ResumeService:
                 }
             
             elif file_format == 'pdf':
-                # 生成PDF格式 - 使用weasyprint保留HTML样式
-                from weasyprint import HTML
+                # 生成PDF格式 - 使用xhtml2pdf（纯Python，无需系统依赖）
+                from xhtml2pdf import pisa
                 
                 if is_html:
                     html_content = content
@@ -121,8 +121,20 @@ class ResumeService:
 {html_content}
 </body></html>'''
                 
+                # 确保HTML包含中文字体声明
+                if '<style' not in html_content:
+                    # 在head中添加字体样式
+                    html_content = html_content.replace(
+                        '<head>',
+                        '<head><style>@page {{ size: A4; margin: 2cm; }} body {{ font-family: "Microsoft YaHei", "SimSun", "STSong", Arial, sans-serif; }}</style>'
+                    )
+                
                 buffer = io.BytesIO()
-                HTML(string=html_content).write_pdf(buffer)
+                pisa_status = pisa.CreatePDF(html_content, dest=buffer, encoding='utf-8')
+                
+                if pisa_status.err:
+                    return {"success": False, "error": "PDF生成失败"}
+                
                 buffer.seek(0)
                 
                 return {
