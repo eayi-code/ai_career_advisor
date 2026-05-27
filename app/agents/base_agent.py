@@ -1,4 +1,4 @@
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from langchain.agents import create_agent
 from langchain.tools import BaseTool
 from flask import current_app
@@ -7,17 +7,18 @@ from app.memory.long_term import LongTermMemory
 
 
 class BaseAgent:
-    """智能体基类，实现ReAct推理模式"""
+    """智能体基类，实现ReAct推理模式 - 增强版"""
 
     def __init__(self, agent_name: str, llm=None, on_tool_callback=None):
         self.agent_name = agent_name
         self.llm = llm
         self.tools: List[BaseTool] = []
-        self.short_term_memory = ShortTermMemory(window_size=10)
+        self.short_term_memory = ShortTermMemory(window_size=15)  # 增加窗口大小
         self.long_term_memory = LongTermMemory()
         self.agent = None
         self.max_retries = 2
-        self.on_tool_callback = on_tool_callback  # 工具调用回调函数
+        self.on_tool_callback = on_tool_callback
+        self._last_output = ""  # 记住上一次输出，用于上下文
 
     def _get_llm(self):
         if self.llm:
@@ -31,20 +32,36 @@ class BaseAgent:
         )
 
     def _build_system_prompt(self) -> str:
+        """构建系统提示词 - 子类应重写此方法"""
         return f"""你是一个专业的{self.agent_name}。
 
-回复要求:
-1. 用自然流畅的中文回复，像朋友对话一样
-2. 回答要简洁有条理，分段落但不用符号标记
-3. 基于工具返回的数据给出实用建议
-4. 如果没有数据就直接说明
+## 角色定位
+你是一位经验丰富的专业人士，擅长为用户提供精准、实用的建议。
 
-多轮对话规则:
+## 回复规范
+1. **语言风格**：用自然流畅的中文回复，专业但不晦涩
+2. **结构清晰**：使用Markdown格式（标题、列表、加粗）组织内容
+3. **数据驱动**：基于工具返回的真实数据给出建议
+4. **可操作性**：每条建议都要具体、可执行
+5. **长度适中**：回复控制在300-800字，重点突出
+
+## 输出格式要求
+使用Markdown格式，结构如下：
+- **核心结论**：1-2句话总结核心观点
+- **详细分析**：分点列出，每点用加粗标题
+- **行动建议**：具体可执行的步骤
+- **注意事项**：风险提示或补充说明
+
+## 多轮对话规则
 1. 记住用户之前的问题和你的回答
-2. 如果用户说"修改XX"或"换个说法"，只修改指定部分，其他保持不变
-3. 如果用户说"详细说说"或"展开讲讲"，对上一个话题进行深入
-4. 如果用户追问，基于之前的回答进行补充，不要重复
-5. 支持局部修改：用户可以指定修改某一段或某一点"""
+2. 如果用户说"修改XX"或"换个说法"，只修改指定部分
+3. 如果用户说"详细说说"或"展开讲讲"，对上一个话题深入
+4. 支持局部修改：用户可以指定修改某一段或某一点
+5. 保持连贯性：新回复要与之前的对话衔接
+
+## 错误处理
+- 如果工具调用失败，给出替代建议而非简单报错
+- 如果数据不足，说明限制并给出基于经验的建议"""
 
     def build_agent(self):
         self.agent = create_agent(
@@ -55,8 +72,8 @@ class BaseAgent:
         return self.agent
 
     def _build_context(self, user_id: int, user_input: str) -> str:
-        """构建上下文信息"""
-        context = ""
+        """构建上下文信息 - 增强版"""
+        context_parts = []
         
         # 获取用户档案信息
         from app.models.profile import UserProfile
@@ -74,31 +91,35 @@ class BaseAgent:
             # 基本信息
             if profile.current_job_title:
                 profile_info.append(f"当前职位: {profile.current_job_title}")
-            if profile.work_experience:
+            if profile.work_experience is not None and profile.work_experience > 0:
                 profile_info.append(f"工作年限: {profile.work_experience}年")
             if profile.education:
-                edu_map = {"bachelor": "本科", "master": "硕士", "doctorate": "博士", "associate": "大专", "high_school": "高中"}
+                edu_map = {"bachelor": "本科", "master": "硕士", "phd": "博士", "doctorate": "博士", 
+                          "associate": "大专", "high_school": "高中"}
                 profile_info.append(f"学历: {edu_map.get(profile.education, profile.education)}")
             if profile.major:
                 profile_info.append(f"专业: {profile.major}")
-            if profile.skills:
-                profile_info.append(f"技能: {', '.join(profile.skills)}")
+            if profile.skills and len(profile.skills) > 0:
+                profile_info.append(f"技能: {', '.join(profile.skills[:10])}")  # 限制长度
             
             # 求职意向
             if profile.target_job_title:
-                profile_info.append(f"当前选中目标岗位: {profile.target_job_title}")
+                profile_info.append(f"目标岗位: {profile.target_job_title}")
             if profile.target_jobs and len(profile.target_jobs) > 1:
-                jobs_list = ", ".join([j.get("title", "") for j in profile.target_jobs])
-                profile_info.append(f"所有目标岗位: {jobs_list}")
+                jobs_list = ", ".join([j.get("title", "") for j in profile.target_jobs[:5]])
+                profile_info.append(f"历史目标岗位: {jobs_list}")
             if profile.target_industry:
                 profile_info.append(f"目标行业: {profile.target_industry}")
             if profile.location_preference:
                 profile_info.append(f"意向城市: {profile.location_preference}")
             if profile.target_salary_min or profile.target_salary_max:
-                salary_info = f"目标薪资: {profile.target_salary_min or 0}k-{profile.target_salary_max or 0}k"
-                profile_info.append(salary_info)
+                salary_min = int(profile.target_salary_min) if profile.target_salary_min else 0
+                salary_max = int(profile.target_salary_max) if profile.target_salary_max else 0
+                if salary_min > 0 or salary_max > 0:
+                    profile_info.append(f"目标薪资: {salary_min}k-{salary_max}k")
             if profile.job_search_status:
-                status_map = {"observing": "观望中", "employed": "在职看机会", "resigned": "已离职", "fresh": "应届生"}
+                status_map = {"observing": "观望中", "employed": "在职看机会", 
+                             "resigned": "已离职", "fresh": "应届生"}
                 profile_info.append(f"求职状态: {status_map.get(profile.job_search_status, profile.job_search_status)}")
             if profile.work_preference:
                 pref_map = {"remote": "远程", "onsite": "坐班", "hybrid": "混合", "flexible": "不限"}
@@ -107,10 +128,10 @@ class BaseAgent:
                 type_map = {"big_company": "大厂", "startup": "创业公司", "foreign": "外企", "flexible": "不限"}
                 profile_info.append(f"公司类型偏好: {type_map.get(profile.company_type_preference, profile.company_type_preference)}")
             
-            # 项目经历
-            if profile.projects:
+            # 项目经历（只取前3个）
+            if profile.projects and len(profile.projects) > 0:
                 projects_desc = []
-                for p in profile.projects:
+                for p in profile.projects[:3]:
                     desc = p.get("name", "")
                     if p.get("role"):
                         desc += f"（{p['role']}）"
@@ -120,45 +141,142 @@ class BaseAgent:
                     profile_info.append(f"项目经历: {'; '.join(projects_desc)}")
             
             # 证书
-            if profile.certifications:
-                profile_info.append(f"证书: {', '.join(profile.certifications)}")
+            if profile.certifications and len(profile.certifications) > 0:
+                profile_info.append(f"证书: {', '.join(profile.certifications[:5])}")
             
             # 副业信息
             if profile.available_hours_per_week:
                 profile_info.append(f"每周可用时间: {profile.available_hours_per_week}小时")
             if profile.side_job_income_target:
-                profile_info.append(f"副业月收入目标: {profile.side_job_income_target}元")
+                profile_info.append(f"副业月收入目标: {int(profile.side_job_income_target)}元")
             
-            # 职业目标
+            # 职业目标（截取前100字）
             if profile.career_goals:
-                profile_info.append(f"职业目标: {profile.career_goals}")
+                goals = profile.career_goals[:100] + "..." if len(profile.career_goals) > 100 else profile.career_goals
+                profile_info.append(f"职业目标: {goals}")
             
             if profile_info:
-                context = "用户档案:\n" + "\n".join(profile_info)
+                context_parts.append("【用户档案】\n" + "\n".join(profile_info))
 
-        # 获取长期记忆
+        # 获取长期记忆（限制长度）
         long_term_context = self.long_term_memory.retrieve(user_id, user_input)
         if long_term_context:
-            context = f"{context}\n\n相关历史记录:\n{long_term_context}" if context else f"相关历史记录:\n{long_term_context}"
+            long_term_context = long_term_context[:500] + "..." if len(long_term_context) > 500 else long_term_context
+            context_parts.append(f"【相关历史】\n{long_term_context}")
 
-        # 获取短期对话历史
+        # 获取短期对话历史（最近5轮）
         history_context = self.short_term_memory.get_context_string(user_id)
         if history_context:
-            context = f"{context}\n\n近期对话:\n{history_context}" if context else f"近期对话:\n{history_context}"
+            history_context = history_context[:500] + "..." if len(history_context) > 500 else history_context
+            context_parts.append(f"【近期对话】\n{history_context}")
         
-        return context
+        # 添加上一次输出摘要（如果有）
+        if self._last_output:
+            last_summary = self._last_output[:200] + "..." if len(self._last_output) > 200 else self._last_output
+            context_parts.append(f"【上次回复摘要】\n{last_summary}")
+        
+        return "\n\n".join(context_parts) if context_parts else ""
 
-    def _validate_output(self, output: str) -> bool:
-        """验证输出质量"""
-        if not output or len(output) < 10:
-            return False
-        # 检查是否包含错误关键词
-        error_keywords = ["抱歉", "无法", "失败", "错误"]
-        if any(kw in output for kw in error_keywords) and len(output) < 50:
-            return False
-        return True
+    def _validate_output(self, output: str) -> Dict[str, Any]:
+        """验证输出质量 - 增强版，返回详细信息"""
+        if not output:
+            return {"ok": False, "score": 0, "issues": ["empty_output"]}
+        
+        issues = []
+        score = 50  # 基础分
+        
+        # 长度检查
+        if len(output) < 20:
+            issues.append("too_short")
+            score -= 30
+        elif len(output) < 50:
+            score -= 10
+        elif len(output) > 100:
+            score += 10
+        elif len(output) > 300:
+            score += 15
+        
+        # 错误关键词检查（短回复中的错误关键词扣分更多）
+        error_keywords = ["抱歉", "无法", "失败", "错误", "不支持", "暂不支持"]
+        error_count = sum(1 for kw in error_keywords if kw in output)
+        if error_count > 0:
+            if len(output) < 50:
+                issues.append("contains_errors")
+                score -= 25
+            elif len(output) < 100:
+                score -= 10
+        
+        # 格式化检查（Markdown格式加分）
+        format_indicators = ["**", "- ", "1. ", "##", "###", "|"]
+        format_count = sum(1 for indicator in format_indicators if indicator in output)
+        if format_count > 0:
+            score += min(format_count * 5, 20)
+        
+        # 内容相关性检查
+        relevance_keywords = ["建议", "推荐", "分析", "总结", "方案", "策略", "路径", "方案"]
+        relevance_count = sum(1 for kw in relevance_keywords if kw in output)
+        if relevance_count > 0:
+            score += min(relevance_count * 5, 15)
+        
+        # 限制分数范围
+        score = max(0, min(100, score))
+        
+        return {
+            "ok": score >= 35,
+            "score": score,
+            "issues": issues
+        }
+
+    def _format_output(self, output: str) -> str:
+        """格式化输出 - 确保使用Markdown格式"""
+        if not output:
+            return output
+        
+        # 如果输出已经包含Markdown格式，直接返回
+        if any(marker in output for marker in ["**", "- ", "1. ", "##", "###"]):
+            return output
+        
+        # 尝试添加基本格式
+        lines = output.split("\n")
+        formatted_lines = []
+        
+        for line in lines:
+            line = line.strip()
+            if not line:
+                formatted_lines.append("")
+                continue
+            
+            # 检测是否是标题行（以冒号结尾的短行）
+            if line.endswith("：") or line.endswith(":") and len(line) < 30:
+                formatted_lines.append(f"**{line}**")
+            # 检测是否是列表项（以数字开头）
+            elif line[0].isdigit() and len(line) > 2 and line[1] in [".", "、", "）"]:
+                formatted_lines.append(line)
+            # 检测是否是列表项（以符号开头）
+            elif line[0] in ["•", "·", "●", "○", "▪", "▫", "■", "□"]:
+                formatted_lines.append(f"- {line[1:].strip()}")
+            else:
+                formatted_lines.append(line)
+        
+        return "\n".join(formatted_lines)
+
+    def _get_friendly_error(self, error: str) -> str:
+        """获取友好的错误提示"""
+        error_str = str(error).lower()
+        
+        if "timeout" in error_str or "超时" in error_str:
+            return "处理超时，请稍后重试。如果问题持续存在，可以尝试简化您的问题。"
+        elif "rate_limit" in error_str or "限流" in error_str:
+            return "当前请求较多，请稍后重试。"
+        elif "connection" in error_str or "连接" in error_str:
+            return "网络连接出现问题，请检查网络后重试。"
+        elif "authentication" in error_str or "认证" in error_str:
+            return "认证失败，请重新登录后重试。"
+        else:
+            return f"处理过程中遇到问题，请稍后重试。如果问题持续存在，请尝试换个方式描述您的需求。"
 
     def run(self, user_input: str, user_id: int = None) -> Dict[str, Any]:
+        """执行Agent - 增强版"""
         if not self.agent:
             self.build_agent()
 
@@ -168,11 +286,12 @@ class BaseAgent:
 
         full_input = user_input
         if context:
-            full_input = f"背景信息:\n{context}\n\n用户问题: {user_input}"
+            full_input = f"【背景信息】\n{context}\n\n【用户问题】\n{user_input}"
         
         print(f"[BaseAgent] {self.agent_name} 开始执行，输入长度: {len(full_input)}")
 
         # 重试机制
+        last_error = None
         for attempt in range(self.max_retries + 1):
             try:
                 print(f"[BaseAgent] {self.agent_name} 尝试 {attempt + 1}/{self.max_retries + 1}")
@@ -181,8 +300,8 @@ class BaseAgent:
                 if self.on_tool_callback:
                     self.on_tool_callback({
                         "type": "tool",
-                        "title": f"{self.agent_name}正在执行",
-                        "detail": "正在调用工具...",
+                        "title": f"{self.agent_name}正在思考",
+                        "detail": f"第{attempt + 1}次尝试..." if attempt > 0 else "正在分析问题...",
                         "status": "running"
                     })
                 
@@ -208,7 +327,7 @@ class BaseAgent:
                             if self.on_tool_callback:
                                 self.on_tool_callback({
                                     "type": "tool",
-                                    "title": f"工具调用: {msg.name if hasattr(msg, 'name') else 'tool'}",
+                                    "title": f"调用工具: {msg.name if hasattr(msg, 'name') else 'tool'}",
                                     "detail": (msg.content[:100] if msg.content else "执行完成") + "...",
                                     "status": "completed"
                                 })
@@ -224,28 +343,42 @@ class BaseAgent:
                 print(f"[BaseAgent] {self.agent_name} 输出长度: {len(output)}")
 
                 # 验证输出质量
-                if not self._validate_output(output) and attempt < self.max_retries:
-                    print(f"[BaseAgent] {self.agent_name} 输出质量不合格，重试")
+                validation = self._validate_output(output)
+                if not validation["ok"] and attempt < self.max_retries:
+                    print(f"[BaseAgent] {self.agent_name} 输出质量不合格 (分数: {validation['score']})，重试")
+                    last_error = f"输出质量不合格: {validation['issues']}"
                     continue
 
+                # 格式化输出
+                formatted_output = self._format_output(output)
+
+                # 保存到记忆
                 if user_id:
                     self.short_term_memory.add_message(user_id, "user", user_input)
-                    if output:
-                        self.short_term_memory.add_message(user_id, "assistant", output)
-                        self.long_term_memory.store(user_id, user_input, output)
+                    if formatted_output:
+                        self.short_term_memory.add_message(user_id, "assistant", formatted_output)
+                        self.long_term_memory.store(user_id, user_input, formatted_output)
+
+                # 记住上一次输出
+                self._last_output = formatted_output
 
                 return {
                     "success": True,
-                    "output": output or "处理完成，但未生成回复",
-                    "intermediate_steps": steps
+                    "output": formatted_output or "处理完成，但未生成回复",
+                    "intermediate_steps": steps,
+                    "quality_score": validation["score"]
                 }
             except Exception as e:
                 print(f"[BaseAgent] {self.agent_name} 异常: {str(e)}")
                 import traceback
                 traceback.print_exc()
+                last_error = str(e)
                 if attempt < self.max_retries:
                     continue
-                return {"success": False, "error": str(e)}
+                
+                # 所有重试都失败，返回友好错误
+                friendly_error = self._get_friendly_error(last_error)
+                return {"success": False, "error": friendly_error}
 
     def _register_tools(self):
         pass

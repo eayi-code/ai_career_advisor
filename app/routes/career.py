@@ -105,7 +105,11 @@ def profile():
 @login_required
 def chat():
     conversation_id = request.args.get('id')
+    auto_message = request.args.get('q')  # Next Actions传递的自动消息
     histories = AnalysisHistory.query.filter_by(user_id=current_user.id).order_by(
         AnalysisHistory.updated_at.desc()
     ).all()
-    return render_template('career/chat.html', conversation_id=conversation_id, histories=histories)
+    return render_template('career/chat.html', 
+                         conversation_id=conversation_id, 
+         auto_message=auto_message,
+         histories=histories)

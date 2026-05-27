@@ -3018,3 +3018,172 @@ tr:hover {
         grid-template-columns: 1fr;
     }
 }
+
+/* ===== Agent图标样式 ===== */
+.agent-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    background: currentColor;
+    background: color-mix(in srgb, currentColor 10%, transparent);
+    border: 1px solid color-mix(in srgb, currentColor 20%, transparent);
+}
+
+.agent-badge svg {
+    flex-shrink: 0;
+}
+
+/* Agent颜色配置 */
+.agent-career { color: #3b82f6; }
+.agent-skill { color: #8b5cf6; }
+.agent-side_job { color: #10b981; }
+.agent-resume { color: #f59e0b; }
+.agent-interview { color: #ec4899; }
+
+/* 推理时间线中的Agent标签 */
+.timeline-agent {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 16px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    background: color-mix(in srgb, currentColor 8%, transparent);
+    border: 1px solid color-mix(in srgb, currentColor 15%, transparent);
+    margin-top: 8px;
+}
+
+.timeline-agent svg {
+    flex-shrink: 0;
+}
+
+/* 子任务中的Agent标签 */
+.subtask-agent {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.subtask-agent svg {
+    flex-shrink: 0;
+}
+
+/* 执行步骤中的Agent标签 */
+.execution-step-meta .agent-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    background: color-mix(in srgb, currentColor 8%, transparent);
+    border: 1px solid color-mix(in srgb, currentColor 12%, transparent);
+}
+
+.execution-step-meta .agent-badge svg {
+    width: 12px;
+    height: 12px;
+}
+
+/* ===== Agent选择器样式 ===== */
+.agent-selector {
+    position: relative;
+}
+
+.agent-selector-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--bg-primary);
+    color: var(--text-secondary);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    white-space: nowrap;
+}
+
+.agent-selector-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.agent-selector-btn.active {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-muted);
+}
+
+.agent-selector-btn .dropdown-arrow {
+    transition: transform var(--transition-fast);
+}
+
+.agent-selector-btn.active .dropdown-arrow {
+    transform: rotate(180deg);
+}
+
+.agent-dropdown {
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 0;
+    min-width: 180px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-lg);
+    z-index: 1000;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(4px);
+    transition: all var(--transition-fast);
+}
+
+.agent-dropdown.show {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.agent-option {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    font-size: 0.8125rem;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.agent-option:first-child {
+    border-radius: var(--radius-md) var(--radius-md) 0 0;
+}
+
+.agent-option:last-child {
+    border-radius: 0 0 var(--radius-md) var(--radius-md);
+}
+
+.agent-option:hover {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+}
+
+.agent-option.selected {
+    background: var(--accent-muted);
+    color: var(--accent);
+    font-weight: 600;
+}
+
+.agent-option svg {
+    flex-shrink: 0;
+}

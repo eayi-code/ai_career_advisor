@@ -465,6 +465,7 @@ def agent_chat_stream():
     message = data.get('message', '')
     agent_type = data.get('agent_type', 'auto')
     conversation_id = data.get('conversation_id')
+    last_agent = data.get('last_agent')  # 上一次使用的Agent
 
     if not message:
         return jsonify({"code": 400, "error": "消息不能为空"}), 400
@@ -483,6 +484,19 @@ def agent_chat_stream():
     # 获取Flask应用对象
     app = current_app._get_current_object()
     
+    # 获取对话历史（用于上下文理解）
+    conversation_history = []
+    try:
+        db.session.rollback()
+        histories = AnalysisHistory.query.filter_by(
+            conversation_id=conversation_id,
+            user_id=user_id
+        ).order_by(AnalysisHistory.updated_at.desc()).first()
+        if histories and histories.messages:
+            conversation_history = histories.messages[-10:]  # 最近10条消息
+    except Exception as e:
+        print(f"获取对话历史失败: {e}")
+    
     def on_step_callback(step_data):
         """步骤更新回调函数（在后台线程中被调用）"""
         task_queue.put({
@@ -499,7 +513,7 @@ def agent_chat_stream():
             # 等待任务完成
             while True:
                 try:
-                    event = task_queue.get(timeout=60)  # 60秒超时
+                    event = task_queue.get(timeout=120)  # 120秒超时
                     event_type = event.get('type')
                     
                     if event_type == 'step':
@@ -522,7 +536,7 @@ def agent_chat_stream():
                         
                 except queue.Empty:
                     # 超时
-                    yield f"event: error\ndata: {json.dumps({'error': '请求超时'})}\n\n"
+                    yield f"event: error\ndata: {json.dumps({'error': '请求超时，请稍后重试'})}\n\n"
                     break
                     
         finally:
@@ -541,8 +555,14 @@ def agent_chat_stream():
                 from app.agents.orchestrator import AgentOrchestrator
                 orch = AgentOrchestrator(on_step_callback=on_step_callback)
                 
-                # 执行orchestrator
-                result = orch.process(message, user_id, force_agent)
+                # 执行orchestrator（传递last_agent和conversation_history）
+                result = orch.process(
+                    message, 
+                    user_id, 
+                    force_agent,
+                    last_agent=last_agent,
+                    conversation_history=conversation_history
+                )
                 
                 # 保存对话记录
                 if result.get("success"):
@@ -1096,6 +1116,243 @@ def get_milestones():
         "code": 200,
         "data": milestones
     })
+
+
+@api_bp.route('/profile/next-actions', methods=['GET'])
+@login_required
+def get_next_actions():
+    """获取Next Action动态建议"""
+    from app.models.profile import UserProfile
+    
+    try:
+        db.session.rollback()
+    except Exception:
+        pass
+    
+    profile = UserProfile.query.filter_by(user_id=current_user.id).first()
+    
+    # 获取对话历史
+    histories = AnalysisHistory.query.filter_by(
+        user_id=current_user.id
+    ).order_by(AnalysisHistory.updated_at.desc()).limit(20).all()
+    
+    # 分析用户状态
+    actions = []
+    used_agents = set()
+    has_resume = False
+    has_target_job = False
+    has_skill_analysis = False
+    has_interview_prep = False
+    
+    # 分析对话历史中的成就
+    for h in histories:
+        agent = h.agent_used or ''
+        used_agents.add(agent)
+        output = (h.result_data or {}).get('output', '')
+        
+        if agent == 'resume' or '简历' in output:
+            if 'RESUME_START' in output or '个人简介' in output:
+                has_resume = True
+        if agent == 'skill' or '差距' in output or '学习路径' in output:
+            has_skill_analysis = True
+        if agent == 'interview' or '面试题' in output or '自我介绍' in output:
+            has_interview_prep = True
+    
+    # 检查档案状态
+    if profile:
+        has_target_job = bool(profile.target_job_title)
+        has_skills = bool(profile.skills and len(profile.skills) > 0)
+        has_projects = bool(profile.projects and len(profile.projects) > 0)
+        has_career_goals = bool(profile.career_goals and profile.career_goals.strip())
+        profile_completion = _calculate_completion(profile)
+    else:
+        has_skills = False
+        has_projects = False
+        has_career_goals = False
+        profile_completion = 0
+    
+    # 生成建议行动（按优先级排序）
+    
+    # 1. 完善档案（如果完善度低于50%）
+    if profile_completion < 50:
+        actions.append({
+            "id": "complete_profile",
+            "title": "完善职业档案",
+            "desc": f"档案完善度仅{profile_completion}%，完善后AI能提供更精准的建议",
+            "icon": "profile",
+            "color": "#0ea5e9",
+            "action": "navigate",
+            "target": "#careerProfile",
+            "priority": 1
+        })
+    
+    # 2. 确定目标岗位
+    if not has_target_job:
+        actions.append({
+            "id": "set_target_job",
+            "title": "确定目标岗位",
+            "desc": "设定目标岗位后，AI可以为你分析技能差距和生成简历",
+            "icon": "target",
+            "color": "#8b5cf6",
+            "action": "chat",
+            "target": "帮我分析一下适合我的目标岗位",
+            "priority": 2
+        })
+    
+    # 3. 添加技能
+    if not has_skills:
+        actions.append({
+            "id": "add_skills",
+            "title": "添加技能标签",
+            "desc": "添加你的技能，让AI更好地匹配职位和分析差距",
+            "icon": "skill",
+            "color": "#10b981",
+            "action": "navigate",
+            "target": "#careerProfile",
+            "priority": 3
+        })
+    
+    # 4. 生成简历
+    if has_target_job and not has_resume:
+        actions.append({
+            "id": "generate_resume",
+            "title": "生成专业简历",
+            "desc": f"你已设定目标岗位「{profile.target_job_title}」，可以生成针对性简历",
+            "icon": "resume",
+            "color": "#f59e0b",
+            "action": "chat",
+            "target": "帮我生成简历",
+            "priority": 4
+        })
+    
+    # 5. 技能差距分析
+    if has_target_job and not has_skill_analysis:
+        actions.append({
+            "id": "skill_analysis",
+            "title": "分析技能差距",
+            "desc": "了解目标岗位需要的技能，制定学习计划",
+            "icon": "chart",
+            "color": "#ec4899",
+            "action": "chat",
+            "target": "分析我的技能与目标岗位的差距",
+            "priority": 5
+        })
+    
+    # 6. 面试准备
+    if has_target_job and has_resume and not has_interview_prep:
+        actions.append({
+            "id": "interview_prep",
+            "title": "准备面试",
+            "desc": "获取面试题和自我介绍优化建议",
+            "icon": "interview",
+            "color": "#6366f1",
+            "action": "chat",
+            "target": "帮我准备面试",
+            "priority": 6
+        })
+    
+    # 7. 探索副业（如果有空闲时间）
+    if profile and profile.available_hours_per_week and profile.available_hours_per_week >= 5:
+        if 'side_job' not in used_agents:
+            actions.append({
+                "id": "explore_side_job",
+                "title": "探索副业机会",
+                "desc": f"你每周有{profile.available_hours_per_week}小时可用，探索副业增加收入",
+                "icon": "money",
+                "color": "#14b8a6",
+                "action": "chat",
+                "target": "帮我推荐适合的副业",
+                "priority": 7
+            })
+    
+    # 8. 添加项目经历
+    if not has_projects and profile_completion >= 50:
+        actions.append({
+            "id": "add_projects",
+            "title": "添加项目经历",
+            "desc": "添加项目经历可以让简历更有竞争力",
+            "icon": "project",
+            "color": "#0ea5e9",
+            "action": "navigate",
+            "target": "#careerProfile",
+            "priority": 8
+        })
+    
+    # 9. 设定职业目标
+    if not has_career_goals and profile_completion >= 50:
+        actions.append({
+            "id": "set_career_goals",
+            "title": "设定职业目标",
+            "desc": "明确职业目标，让AI更好地规划你的职业路径",
+            "icon": "goal",
+            "color": "#8b5cf6",
+            "action": "navigate",
+            "target": "#careerProfile",
+            "priority": 9
+        })
+    
+    # 10. 默认行动
+    if not actions:
+        actions.append({
+            "id": "start_chat",
+            "title": "开始新对话",
+            "desc": "与AI顾问聊聊你的职业困惑",
+            "icon": "chat",
+            "color": "#0ea5e9",
+            "action": "chat",
+            "target": "",
+            "priority": 10
+        })
+    
+    # 按优先级排序，最多返回4个
+    actions.sort(key=lambda x: x['priority'])
+    actions = actions[:4]
+    
+    return jsonify({
+        "code": 200,
+        "data": actions
+    })
+
+
+def _calculate_completion(profile):
+    """计算档案完善度"""
+    field_weights = {
+        'education': 5,
+        'major': 5,
+        'work_experience': 5,
+        'current_job_title': 5,
+        'skills': 10,
+        'target_job_title': 10,
+        'target_industry': 5,
+        'target_salary_min': 5,
+        'location_preference': 5,
+        'job_search_status': 5,
+        'work_preference': 5,
+        'company_type_preference': 5,
+        'projects': 10,
+        'certifications': 5,
+        'career_goals': 5,
+    }
+    
+    total = sum(field_weights.values())
+    filled = 0
+    
+    for field, weight in field_weights.items():
+        value = getattr(profile, field, None)
+        is_filled = False
+        
+        if value is not None:
+            if isinstance(value, list) and len(value) > 0:
+                is_filled = True
+            elif isinstance(value, str) and value.strip():
+                is_filled = True
+            elif isinstance(value, (int, float)) and value > 0:
+                is_filled = True
+        
+        if is_filled:
+            filled += weight
+    
+    return int(filled / total * 100)
 
 
 @api_bp.route('/profile/update', methods=['POST'])

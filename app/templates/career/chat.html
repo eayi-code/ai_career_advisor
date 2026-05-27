@@ -140,14 +140,70 @@
             
             <div class="chat-input-area">
                 <div class="chat-input-wrapper">
-                    <select id="agentType" class="form-select" style="width: 120px; padding: 0.75rem;">
-                        <option value="auto">自动选择</option>
-                        <option value="career">职业规划</option>
-                        <option value="skill">技能分析</option>
-                        <option value="side_job">副业分析</option>
-                        <option value="resume">简历优化</option>
-                        <option value="interview">面试教练</option>
-                    </select>
+                    <!-- 自定义Agent选择器（带图标） -->
+                    <div class="agent-selector" id="agentSelector">
+                        <button class="agent-selector-btn" id="agentSelectorBtn" onclick="toggleAgentDropdown()">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M12 2a4 4 0 014 4v2a4 4 0 01-8 0V6a4 4 0 014-4z"/><path d="M6 10v8a6 6 0 0012 0v-8"/></svg>
+                            <span id="agentSelectorText">自动选择</span>
+                            <svg class="dropdown-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M6 9l6 6 6-6"/></svg>
+                        </button>
+                        <div class="agent-dropdown" id="agentDropdown">
+                            <div class="agent-option selected" data-value="auto" onclick="selectAgent('auto', '自动选择')">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+                                <span>自动选择</span>
+                            </div>
+                            <div class="agent-option" data-value="career" onclick="selectAgent('career', '职业规划')">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="1.5" width="16" height="16">
+                                    <circle cx="12" cy="12" r="10"/>
+                                    <path d="M12 2v4M12 18v4M2 12h4M18 12h4"/>
+                                    <path d="M12 8l-2 4h4l-2 4" stroke-linecap="round" stroke-linejoin="round"/>
+                                    <circle cx="12" cy="12" r="2" fill="#3b82f6"/>
+                                </svg>
+                                <span>职业规划</span>
+                            </div>
+                            <div class="agent-option" data-value="skill" onclick="selectAgent('skill', '技能分析')">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="1.5" width="16" height="16">
+                                    <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                                    <path d="M2 17l10 5 10-5"/>
+                                    <path d="M2 12l10 5 10-5"/>
+                                    <path d="M12 8v8" stroke-linecap="round"/>
+                                    <path d="M8 12l4-4 4 4" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                                <span>技能分析</span>
+                            </div>
+                            <div class="agent-option" data-value="side_job" onclick="selectAgent('side_job', '副业分析')">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="1.5" width="16" height="16">
+                                    <path d="M21 12V7H5a2 2 0 010-4h14v4"/>
+                                    <path d="M3 5v14a2 2 0 002 2h16v-5"/>
+                                    <path d="M18 12a2 2 0 100 4 2 2 0 000-4z"/>
+                                    <path d="M15 8h2M15 16h2" stroke-linecap="round"/>
+                                </svg>
+                                <span>副业分析</span>
+                            </div>
+                            <div class="agent-option" data-value="resume" onclick="selectAgent('resume', '简历优化')">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="1.5" width="16" height="16">
+                                    <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+                                    <polyline points="14 2 14 8 20 8"/>
+                                    <path d="M12 12h4" stroke-linecap="round"/>
+                                    <path d="M12 16h4" stroke-linecap="round"/>
+                                    <path d="M8 12h.01" stroke-linecap="round"/>
+                                    <path d="M8 16h.01" stroke-linecap="round"/>
+                                </svg>
+                                <span>简历优化</span>
+                            </div>
+                            <div class="agent-option" data-value="interview" onclick="selectAgent('interview', '面试教练')">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="#ec4899" stroke-width="1.5" width="16" height="16">
+                                    <path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/>
+                                    <path d="M19 10v2a7 7 0 01-14 0v-2"/>
+                                    <line x1="12" y1="19" x2="12" y2="23"/>
+                                    <line x1="8" y1="23" x2="16" y2="23"/>
+                                    <circle cx="12" cy="8" r="1" fill="#ec4899"/>
+                                </svg>
+                                <span>面试教练</span>
+                            </div>
+                        </div>
+                        <input type="hidden" id="agentType" value="auto">
+                    </div>
                     <input type="file" id="fileInput" accept=".pdf,.docx,.doc,.txt" style="display: none;">
                     <button id="uploadBtn" class="btn btn-icon" title="上传简历文件" onclick="document.getElementById('fileInput').click()">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
@@ -248,6 +304,7 @@
 {% block extra_js %}
 <script>
 let currentConversationId = '{{ conversation_id or "" }}';
+const autoMessage = '{{ auto_message or "" }}';
 const chatMessages = document.getElementById('chatMessages');
 const chatInput = document.getElementById('chatInput');
 const sendBtn = document.getElementById('sendBtn');
@@ -261,6 +318,14 @@ let uploadedFileName = null;
 document.addEventListener('DOMContentLoaded', function() {
     if (currentConversationId) {
         loadConversation(currentConversationId);
+    }
+    
+    // 如果有自动消息，延迟发送
+    if (autoMessage) {
+        setTimeout(() => {
+            chatInput.value = autoMessage;
+            sendMessage();
+        }, 500);
     }
     
     fileInput.addEventListener('change', async function(e) {
@@ -776,10 +841,12 @@ function buildReasoningTimeline(steps) {
             html += '</div>';
         }
         
-        // Agent标签
+        // Agent标签（带图标）
         if (step.agent) {
-            html += '<div class="timeline-agent">';
-            html += '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="10" height="10"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
+            const agentIcon = getAgentIcon(step.agent);
+            const agentColor = getAgentColor(step.agent);
+            html += `<div class="timeline-agent" style="color: ${agentColor};">`;
+            html += agentIcon || '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
             html += getAgentName(step.agent);
             html += '</div>';
         }
@@ -886,13 +953,29 @@ function updateExecutionSteps(steps) {
             subtasksHtml = '<div class="subtasks-list">';
             step.subtasks.forEach(st => {
                 const dependsText = st.depends_on && st.depends_on.length > 0 ? ` (依赖: ${st.depends_on.join(', ')})` : '';
+                const subtaskIcon = getAgentIcon(st.agent);
+                const subtaskColor = getAgentColor(st.agent);
                 subtasksHtml += `<div class="subtask-item">
-                    <span class="subtask-agent">${getAgentName(st.agent)}</span>
+                    <span class="subtask-agent" style="color: ${subtaskColor}; display: inline-flex; align-items: center; gap: 4px;">
+                        ${subtaskIcon || ''}
+                        ${getAgentName(st.agent)}
+                    </span>
                     <span class="subtask-task">${st.task}</span>
                     ${dependsText ? `<span class="subtask-depends">${dependsText}</span>` : ''}
                 </div>`;
             });
             subtasksHtml += '</div>';
+        }
+        
+        // Agent信息（带图标）
+        let agentHtml = '';
+        if (step.agent) {
+            const agentIcon = getAgentIcon(step.agent);
+            const agentColor = getAgentColor(step.agent);
+            agentHtml = `<span class="agent-badge" style="color: ${agentColor}; display: inline-flex; align-items: center; gap: 4px;">
+                ${agentIcon || '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>'}
+                ${getAgentName(step.agent)}
+            </span>`;
         }
         
         html += `
@@ -913,10 +996,7 @@ function updateExecutionSteps(steps) {
                     </div>` : ''}
                     ${subtasksHtml}
                     <div class="execution-step-meta">
-                        ${step.agent ? `<span class="agent-badge">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="10" height="10"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                            ${getAgentName(step.agent)}
-                        </span>` : ''}
+                        ${agentHtml}
                         ${extraInfo}
                     </div>
                 </div>
@@ -938,6 +1018,53 @@ function updateExecutionSteps(steps) {
     }
 }
 
+// Agent图标定义（专业SVG图标）
+const agentIcons = {
+    'career': `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="20" height="20">
+        <circle cx="12" cy="12" r="10"/>
+        <path d="M12 2v4M12 18v4M2 12h4M18 12h4"/>
+        <path d="M12 8l-2 4h4l-2 4" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="12" cy="12" r="2" fill="currentColor"/>
+    </svg>`,
+    'skill': `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="20" height="20">
+        <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+        <path d="M2 17l10 5 10-5"/>
+        <path d="M2 12l10 5 10-5"/>
+        <path d="M12 8v8" stroke-linecap="round"/>
+        <path d="M8 12l4-4 4 4" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>`,
+    'side_job': `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="20" height="20">
+        <path d="M21 12V7H5a2 2 0 010-4h14v4"/>
+        <path d="M3 5v14a2 2 0 002 2h16v-5"/>
+        <path d="M18 12a2 2 0 100 4 2 2 0 000-4z"/>
+        <path d="M15 8h2M15 16h2" stroke-linecap="round"/>
+    </svg>`,
+    'resume': `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="20" height="20">
+        <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+        <polyline points="14 2 14 8 20 8"/>
+        <path d="M12 12h4" stroke-linecap="round"/>
+        <path d="M12 16h4" stroke-linecap="round"/>
+        <path d="M8 12h.01" stroke-linecap="round"/>
+        <path d="M8 16h.01" stroke-linecap="round"/>
+    </svg>`,
+    'interview': `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="20" height="20">
+        <path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/>
+        <path d="M19 10v2a7 7 0 01-14 0v-2"/>
+        <line x1="12" y1="19" x2="12" y2="23"/>
+        <line x1="8" y1="23" x2="16" y2="23"/>
+        <circle cx="12" cy="8" r="1" fill="currentColor"/>
+    </svg>`
+};
+
+// Agent颜色配置
+const agentColors = {
+    'career': '#3b82f6',    // 蓝色 - 专业、信任
+    'skill': '#8b5cf6',     // 紫色 - 成长、智慧
+    'side_job': '#10b981',  // 绿色 - 财富、增长
+    'resume': '#f59e0b',    // 橙色 - 创造、活力
+    'interview': '#ec4899'  // 粉色 - 沟通、亲和
+};
+
 function getAgentName(agentKey) {
     const nameMap = {
         'career': '职业规划顾问',
@@ -949,8 +1076,76 @@ function getAgentName(agentKey) {
     return nameMap[agentKey] || agentKey;
 }
 
+function getAgentIcon(agentKey) {
+    return agentIcons[agentKey] || '';
+}
+
+function getAgentColor(agentKey) {
+    return agentColors[agentKey] || '#6b7280';
+}
+
+// 带图标的Agent名称
+function getAgentNameWithIcon(agentKey) {
+    const icon = getAgentIcon(agentKey);
+    const name = getAgentName(agentKey);
+    const color = getAgentColor(agentKey);
+    return `<span class="agent-badge" style="color: ${color}; display: inline-flex; align-items: center; gap: 6px;">${icon} ${name}</span>`;
+}
+
+// Agent选择器交互
+function toggleAgentDropdown() {
+    const dropdown = document.getElementById('agentDropdown');
+    const btn = document.getElementById('agentSelectorBtn');
+    dropdown.classList.toggle('show');
+    btn.classList.toggle('active');
+}
+
+function selectAgent(value, text) {
+    const dropdown = document.getElementById('agentDropdown');
+    const btn = document.getElementById('agentSelectorBtn');
+    const input = document.getElementById('agentType');
+    const textEl = document.getElementById('agentSelectorText');
+    const selectedOption = event.currentTarget;
+    
+    // 更新选中状态
+    document.querySelectorAll('.agent-option').forEach(opt => opt.classList.remove('selected'));
+    selectedOption.classList.add('selected');
+    
+    // 获取选中选项的图标
+    const optionIcon = selectedOption.querySelector('svg');
+    
+    // 更新按钮图标
+    const btnIcon = btn.querySelector('svg:first-child');
+    if (optionIcon && btnIcon) {
+        // 复制选中选项的图标到按钮
+        btnIcon.outerHTML = optionIcon.outerHTML;
+    }
+    
+    // 更新值
+    input.value = value;
+    textEl.textContent = text;
+    
+    // 关闭下拉菜单
+    dropdown.classList.remove('show');
+    btn.classList.remove('active');
+}
+
+// 点击外部关闭下拉菜单
+document.addEventListener('click', function(e) {
+    const selector = document.getElementById('agentSelector');
+    if (selector && !selector.contains(e.target)) {
+        const dropdown = document.getElementById('agentDropdown');
+        const btn = document.getElementById('agentSelectorBtn');
+        if (dropdown) dropdown.classList.remove('show');
+        if (btn) btn.classList.remove('active');
+    }
+});
+
 sendBtn.onclick = sendMessage;
 chatInput.onkeypress = e => { if (e.key === 'Enter' && !isProcessing) sendMessage(); };
+
+// 记住上一次使用的Agent（用于上下文自动切换）
+let lastUsedAgent = null;
 
 async function sendMessage() {
     const msg = chatInput.value.trim();
@@ -978,7 +1173,7 @@ async function sendMessage() {
         '<div class="reasoning-timeline" id="liveReasoning">' +
             '<div class="reasoning-header">' +
                 '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6"/><path d="M9 16h6"/></svg>' +
-                '<span id="liveProgress">正在思考中...</span>' +
+                '<span id="liveProgress">正在分析您的问题...</span>' +
                 '<div class="loading-dots" style="margin: 0;"><span></span><span></span><span></span></div>' +
             '</div>' +
             '<div class="reasoning-body" id="liveStepsBody"></div>' +
@@ -986,7 +1181,7 @@ async function sendMessage() {
         '<div class="message-content" id="loadingContent">' +
             '<div class="progress-indicator">' +
                 '<div class="loading-dots"><span></span><span></span><span></span></div>' +
-                '<span class="progress-text">正在思考中...</span>' +
+                '<span class="progress-text">正在分析您的问题...</span>' +
             '</div>' +
         '</div>' +
     '</div>';
@@ -994,13 +1189,22 @@ async function sendMessage() {
     chatMessages.scrollTop = chatMessages.scrollHeight;
     
     try {
-        // 使用SSE流式API
-        await streamAgentChat(finalMessage, agentType.value);
+        // 使用SSE流式API（传递last_agent用于上下文自动切换）
+        await streamAgentChat(finalMessage, agentType.value, lastUsedAgent);
         
     } catch (e) {
         const errorEl = document.getElementById('loading');
         if (errorEl) {
-            errorEl.querySelector('.message-content').innerHTML = `<span style="color: var(--error);">请求失败: ${e.message}</span>`;
+            // 友好的错误提示
+            let errorMsg = e.message;
+            if (errorMsg.includes('timeout') || errorMsg.includes('超时')) {
+                errorMsg = '处理超时，请稍后重试。如果问题持续存在，可以尝试简化您的问题。';
+            } else if (errorMsg.includes('network') || errorMsg.includes('网络')) {
+                errorMsg = '网络连接出现问题，请检查网络后重试。';
+            } else {
+                errorMsg = '处理过程中遇到问题，请稍后重试。';
+            }
+            errorEl.querySelector('.message-content').innerHTML = `<span style="color: var(--error);">${errorMsg}</span>`;
             errorEl.removeAttribute('id');
         }
     } finally {
@@ -1008,14 +1212,15 @@ async function sendMessage() {
     }
 }
 
-async function streamAgentChat(message, agentType) {
+async function streamAgentChat(message, agentType, lastAgent) {
     const response = await fetch('/api/agent/chat/stream', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({ 
             message: message, 
             agent_type: agentType, 
-            conversation_id: currentConversationId 
+            conversation_id: currentConversationId,
+            last_agent: lastAgent  // 传递上一次使用的Agent
         })
     });
 
@@ -1181,6 +1386,12 @@ async function handleTaskCompleted(result, originalMessage) {
     const executionSteps = result.steps || result.execution_steps || [];
     const intermediateSteps = result.intermediate_steps || [];
     const agentUsed = result.agent_used || '';
+    
+    // 记住上一次使用的Agent（用于上下文自动切换）
+    if (agentUsed) {
+        // 如果是复合意图（多个Agent），取第一个
+        lastUsedAgent = agentUsed.split(',')[0].trim();
+    }
     
     // 合并所有步骤用于最终显示
     const allSteps = [...executionSteps, ...intermediateSteps];

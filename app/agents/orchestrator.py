@@ -209,35 +209,57 @@ class DAGResolver:
 # ==================== 智能意图识别器 ====================
 
 class IntentClassifier:
-    """智能意图识别器"""
+    """智能意图识别器 - 增强版"""
 
     def __init__(self):
         self.keyword_weights = {
             "career": {
-                "high": ["职业", "工作", "岗位", "求职", "offer", "公司", "就业", "全职", "薪资", "工资", "待遇", "发展前景"],
-                "medium": ["转行", "找工作", "招聘", "入职", "投递", "应聘", "跳槽", "换工作"],
-                "low": ["发展", "前景", "规划", "方向", "前途", "出路"]
+                "high": ["职业", "工作", "岗位", "求职", "offer", "公司", "就业", "全职", "薪资", "工资", "待遇", "发展前景",
+                         "职位", "应聘", "投简历", "找工作", "转行", "跳槽", "换工作", "行业", "方向"],
+                "medium": ["招聘", "入职", "晋升", "升职", "职业规划", "职业发展", "就业形势", "就业市场",
+                           "大厂", "外企", "国企", "创业公司", "互联网", "金融"],
+                "low": ["发展", "前景", "规划", "方向", "前途", "出路", "未来", "选择"]
             },
             "side_job": {
-                "high": ["副业", "兼职", "赚钱", "额外收入", "自由职业", "接单", "外快", "变现"],
-                "medium": ["第二职业", "斜杠", "远程工作", "居家办公", "在家赚钱", "业余收入"],
-                "low": ["被动收入", "投资", "理财", "收入", "赚点钱"]
+                "high": ["副业", "兼职", "赚钱", "额外收入", "自由职业", "接单", "外快", "变现",
+                         "第二职业", "斜杠", "在家赚钱", "业余收入", "被动收入"],
+                "medium": ["远程工作", "居家办公", "网赚", "自媒体", "电商", "带货", "直播",
+                           "知识付费", "课程变现", "技术接单", "外包"],
+                "low": ["投资", "理财", "收入", "赚点钱", "零花钱", "补贴"]
             },
             "skill": {
-                "high": ["技能", "学习", "提升", "差距", "培训", "课程", "学什么", "学哪些"],
-                "medium": ["能力", "技术栈", "知识", "入门", "进阶", "教程", "学习路径", "怎么学"],
-                "low": ["成长", "进步", "精通", "掌握", "学会"]
+                "high": ["技能", "学习", "提升", "差距", "培训", "课程", "学什么", "学哪些",
+                         "学习路径", "学习计划", "怎么学", "从哪学"],
+                "medium": ["能力", "技术栈", "知识", "入门", "进阶", "教程", "学多久",
+                           "难度", "难学", "好学", "速成", "精通"],
+                "low": ["成长", "进步", "掌握", "学会", "练习", "实践"]
             },
             "resume": {
-                "high": ["简历", "resume", "CV", "履历", "求职信", "cover letter", "简历优化", "简历修改"],
-                "medium": ["优化简历", "修改简历", "简历模板", "ATS", "简历评分", "简历解析", "简历生成"],
-                "low": ["写简历", "改简历", "简历建议", "简历怎么写"]
+                "high": ["简历", "resume", "CV", "履历", "求职信", "cover letter", "简历优化", "简历修改",
+                         "写简历", "改简历", "简历模板", "简历生成"],
+                "medium": ["优化简历", "ATS", "简历评分", "简历解析", "简历建议", "简历怎么写",
+                           "工作经历", "项目经历", "个人简介", "自我评价"],
+                "low": ["格式", "排版", "美化"]
             },
             "interview": {
-                "high": ["面试", "自我介绍", "面试题", "薪资谈判", "offer谈判", "面试准备"],
-                "medium": ["面试技巧", "二面", "终面", "HR面", "技术面", "面试问题", "怎么面试"],
-                "low": ["面试经验", "面试流程", "面试结果", "面试问什么"]
+                "high": ["面试", "自我介绍", "面试题", "薪资谈判", "offer谈判", "面试准备",
+                         "模拟面试", "面试练习", "面试技巧"],
+                "medium": ["二面", "终面", "HR面", "技术面", "面试问题", "怎么面试",
+                           "面试经验", "面试流程", "群面", "无领导小组"],
+                "low": ["面试结果", "面试问什么", "穿什么", "注意什么"]
             }
+        }
+        
+        # Agent优先级（当多个Agent匹配度相同时，按此优先级选择）
+        self.agent_priority = ["career", "resume", "interview", "skill", "side_job"]
+        
+        # 上下文关联规则：用户说某些词时，可能需要切换Agent
+        self.context_switch_triggers = {
+            "career_to_resume": ["帮我写简历", "生成简历", "简历优化", "针对这个岗位"],
+            "career_to_interview": ["面试准备", "面试题", "自我介绍", "怎么面试"],
+            "career_to_skill": ["技能差距", "需要学什么", "学习路径", "怎么提升"],
+            "resume_to_career": ["这个岗位", "薪资多少", "发展前景", "其他岗位"],
+            "interview_to_career": ["这个公司", "岗位要求", "行业前景"],
         }
 
     def classify_keywords(self, user_input: str, context: str = "") -> Dict[str, Dict]:
@@ -349,10 +371,20 @@ class IntentClassifier:
             print(f"LLM意图识别失败: {e}")
             return {"intents": ["career"], "reasoning": f"识别失败: {str(e)}", "confidence": 0.5, "subtasks": []}
 
-    def classify(self, user_input: str, context: str = "", user_profile: Dict = None) -> Dict[str, Any]:
-        """综合意图识别"""
+    def classify(self, user_input: str, context: str = "", user_profile: Dict = None, 
+                 last_agent: str = None, conversation_history: List = None) -> Dict[str, Any]:
+        """综合意图识别 - 增强版"""
         # 第一步：关键词匹配
         scores = self.classify_keywords(user_input, context)
+        
+        # 第二步：检查是否需要Agent切换（基于上下文）
+        if last_agent and conversation_history:
+            switch_result = self._check_context_switch(user_input, last_agent, conversation_history)
+            if switch_result:
+                # 上下文切换信号强，优先使用切换后的Agent
+                scores[switch_result] = scores.get(switch_result, {"score": 0, "keywords": []})
+                scores[switch_result]["score"] += 5  # 给上下文切换加分
+                scores[switch_result]["keywords"].append("上下文切换")
 
         # 检查用户档案，判断是否需要前置任务
         need_career_prefix = False
@@ -360,8 +392,20 @@ class IntentClassifier:
             has_target_job = bool(user_profile.get("target_job_title"))
             if not has_target_job and "resume" in scores:
                 need_career_prefix = True
+            if not has_target_job and "interview" in scores:
+                need_career_prefix = True
 
         if not scores:
+            # 未匹配到关键词时，根据上下文决定
+            if last_agent:
+                return {
+                    "intents": [last_agent],
+                    "is_composite": False,
+                    "confidence": 0.6,
+                    "reasoning": f"继续使用{last_agent} Agent处理",
+                    "scores": {},
+                    "subtasks": []
+                }
             return {
                 "intents": ["career"],
                 "is_composite": False,
@@ -376,13 +420,16 @@ class IntentClassifier:
         high_confidence = []
         for name, data in scores.items():
             confidence = data["score"] / total
-            if confidence >= 0.3:
+            if confidence >= 0.25:  # 降低阈值，更容易触发复合意图
                 high_confidence.append({"name": name, "confidence": confidence, "keywords": data["keywords"]})
+        
+        # 按分数排序
+        high_confidence.sort(key=lambda x: x["confidence"], reverse=True)
 
         # 如果需要添加career前置
         if need_career_prefix and "career" not in scores:
             scores["career"] = {"score": 2, "keywords": ["目标岗位"]}
-            high_confidence.append({"name": "career", "confidence": 0.3, "keywords": ["目标岗位"]})
+            high_confidence.insert(0, {"name": "career", "confidence": 0.3, "keywords": ["目标岗位"]})
 
         # 多个高置信度意图，使用LLM确认
         if len(high_confidence) >= 2:
@@ -405,7 +452,8 @@ class IntentClassifier:
             except Exception as e:
                 # LLM调用失败，使用关键词匹配结果
                 print(f"LLM复合意图识别失败，使用关键词结果: {e}")
-                intents = [h["name"] for h in high_confidence]
+                # 只取前两个最相关的意图
+                intents = [h["name"] for h in high_confidence[:2]]
                 return {
                     "intents": intents,
                     "is_composite": len(intents) > 1,
@@ -418,13 +466,13 @@ class IntentClassifier:
         # 单意图
         best = max(scores.items(), key=lambda x: x[1]["score"])
 
-        # 如果是resume但没有目标岗位，转为复合意图
-        if best[0] == "resume" and need_career_prefix:
+        # 如果是resume/interview但没有目标岗位，转为复合意图
+        if best[0] in ["resume", "interview"] and need_career_prefix:
             return {
-                "intents": ["career", "resume"],
+                "intents": ["career", best[0]],
                 "is_composite": True,
                 "confidence": 0.8,
-                "reasoning": "用户请求简历服务但未确定目标岗位，需要先进行职业规划",
+                "reasoning": f"用户请求{best[0]}服务但未确定目标岗位，需要先进行职业规划",
                 "scores": scores,
                 "subtasks": []
             }
@@ -432,11 +480,36 @@ class IntentClassifier:
         return {
             "intents": [best[0]],
             "is_composite": False,
-            "confidence": best[1]["score"] / total,
+            "confidence": best[1]["score"] / total if total > 0 else 0.5,
             "reasoning": f"匹配关键词: {', '.join(best[1]['keywords'][:3])}",
             "scores": scores,
             "subtasks": []
         }
+    
+    def _check_context_switch(self, user_input: str, last_agent: str, 
+                              conversation_history: List) -> Optional[str]:
+        """检查是否需要根据上下文切换Agent"""
+        user_input_lower = user_input.lower()
+        
+        # 检查切换触发词
+        for trigger_key, triggers in self.context_switch_triggers.items():
+            from_agent, to_agent = trigger_key.split("_to_")
+            if from_agent == last_agent:
+                for trigger in triggers:
+                    if trigger in user_input_lower:
+                        return to_agent
+        
+        # 基于对话历史的智能判断
+        if conversation_history:
+            # 如果用户之前在做职业规划，现在问"这个岗位"相关问题
+            if last_agent == "career" and any(kw in user_input_lower for kw in ["这个岗位", "这个职位", "这个公司"]):
+                return "career"  # 继续使用career
+            
+            # 如果用户之前在做简历，现在问薪资相关
+            if last_agent == "resume" and any(kw in user_input_lower for kw in ["薪资", "工资", "待遇"]):
+                return "career"  # 切换到career
+        
+        return None
 
 
 # ==================== 结果合并器 ====================
@@ -1299,8 +1372,9 @@ class AgentOrchestrator:
             print(f"提取用户信息失败: {e}")
             return ""
 
-    def process(self, user_input: str, user_id: int = None, force_agent: str = None) -> Dict[str, Any]:
-        """处理用户请求 - 主入口"""
+    def process(self, user_input: str, user_id: int = None, force_agent: str = None,
+                last_agent: str = None, conversation_history: List = None) -> Dict[str, Any]:
+        """处理用户请求 - 主入口（增强版）"""
         start_time = time.time()
         execution_steps = []
         step_id = 0
@@ -1324,7 +1398,12 @@ class AgentOrchestrator:
                 "subtasks": []
             }
         else:
-            intent_result = self.intent_classifier.classify(user_input, user_profile=user_profile)
+            intent_result = self.intent_classifier.classify(
+                user_input, 
+                user_profile=user_profile,
+                last_agent=last_agent,
+                conversation_history=conversation_history
+            )
 
         intents = intent_result["intents"]
         is_composite = intent_result["is_composite"]
