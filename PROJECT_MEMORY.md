@@ -1499,8 +1499,48 @@ while (true) {
 
 ---
 
+### 2026-05-27 完成功能（前端重构+项目结构优化）
+
+1. **前端Google Material风格重构**
+   - 配色体系：引入Google经典蓝(#1a73e8)，纯白背景+极淡灰
+   - 对话界面：去除毛玻璃和渐变色，用户消息右对齐浅灰气泡，AI消息去气泡化纯文本
+   - 输入框：浮动药丸状(Pill-shape)，聚焦时浅色阴影，无边框设计
+   - 按钮：全圆角药丸形设计，Material阴影
+   - 侧边栏：圆角菜单项，Hover高亮背景
+   - 字体：加入Google Sans和Roboto字体
+   - 滚动条：轻量透明，Hover时变色
+   - 欢迎页：用户名问候语，3列Grid布局欢迎卡片
+
+   **右侧面板重构：**
+   - 推理详情面板：悬浮抽屉式设计(Floating Drawer)，圆角+阴影
+   - 简历预览面板：改为居中弹出的模态框，背景半透明+模糊效果
+   - 支持放大缩小功能(50%-200%)
+   - 三种下载格式：HTML、PDF、图片
+
+2. **项目结构重构（services层）**
+   - `routes/api.py`：1488行 → 348行（只保留路由定义）
+   - 新增 `services/chat_service.py`：对话/流式/异步/任务状态（445行）
+   - 新增 `services/history_service.py`：历史记录CRUD（187行）
+   - 新增 `services/user_service.py`：用户名/密码/头像/统计（136行）
+   - 新增 `services/resume_service.py`：简历上传/下载（196行）
+   - 新增 `services/profile_service.py`：档案完善度/里程碑/建议（333行）
+   - 所有API端点路径不变，前端无需改动
+
+3. **简历下载功能**
+   - HTML下载：正常工作
+   - DOCX下载：正常工作
+   - PDF下载：使用xhtml2pdf（纯Python），但中文乱码（见待开发）
+   - 图片下载：使用html2canvas前端截图，正常工作
+
+4. **输入框优化**
+   - 去掉背后的长方形背景框
+   - 圆角药丸直接悬浮在聊天界面上
+   - 透明背景，无边框
+
+---
+
 **最后更新**: 2026-05-27
-**项目状态**: 核心功能完成，5个Agent已全面优化，支持Agent自动切换、上下文增强、专业图标系统、Next Action动态建议
+**项目状态**: 核心功能完成，5个Agent已全面优化，前端已重构为Google Material风格，项目结构已优化（services层分离）
 **可选优化**:
 - Celery异步执行方案已设计，待实施（见12.1）
 - 实时工具调用步骤（LangChain Streaming）已设计，待实施（见12.2）
@@ -1508,3 +1548,21 @@ while (true) {
 - 模拟面试功能（交互式面试练习）
 - 数据可视化图表（Chart.js）
 - 暗色模式支持
+
+---
+
+## 十四、待开发/待修复
+
+### 14.1 PDF下载中文乱码（优先级：高）
+- **问题**：使用xhtml2pdf生成的PDF文件中文显示为乱码
+- **原因**：xhtml2pdf对中文字体支持不完善
+- **尝试过的方案**：
+  - weasyprint：需要系统级依赖（GTK），Windows上安装困难
+  - fpdf2：需要手动注册中文字体，配置复杂
+  - xhtml2pdf：纯Python但中文乱码
+- **可能的解决方案**：
+  1. 使用pdfkit + wkhtmltopdf（需要安装wkhtmltopdf可执行文件）
+  2. 使用reportlab + 中文字体文件（需要打包字体文件）
+  3. 前端使用html2canvas截图后转PDF（纯前端方案）
+  4. 使用Playwright/Puppeteer无头浏览器渲染HTML后导出PDF
+- **当前状态**：待解决
