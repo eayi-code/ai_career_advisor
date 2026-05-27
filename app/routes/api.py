@@ -962,47 +962,88 @@ def download_resume():
                 )
         
         elif file_format == 'pdf':
-            # 生成PDF格式
-            from xhtml2pdf import pisa
+            # 生成PDF格式 - 使用fpdf2以获得更好的中文支持
+            from fpdf import FPDF
+            import re
             
-            # 如果是HTML内容，直接使用；否则包装为HTML
+            # 创建PDF类，支持中文
+            class ResumePDF(FPDF):
+                def __init__(self):
+                    super().__init__()
+                    # 添加中文字体
+                    import os
+                    font_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'static', 'fonts')
+                    
+                    # 尝试使用系统中文字体
+                    try:
+                        # Windows系统字体路径
+                        win_font = 'C:/Windows/Fonts/msyh.ttc'  # 微软雅黑
+                        if os.path.exists(win_font):
+                            self.add_font('Chinese', '', win_font, uni=True)
+                            self.add_font('Chinese', 'B', win_font, uni=True)
+                            self.chinese_font = 'Chinese'
+                        else:
+                            self.chinese_font = 'Helvetica'
+                    except:
+                        self.chinese_font = 'Helvetica'
+                
+                def header(self):
+                    pass
+                
+                def footer(self):
+                    pass
+            
+            pdf = ResumePDF()
+            pdf.add_page()
+            pdf.set_auto_page_break(auto=True, margin=15)
+            
+            # 提取文本内容
             if is_html:
-                html_content = content
+                # 从HTML中提取文本
+                text_content = re.sub(r'<script[^>]*>.*?</script>', '', content, flags=re.DOTALL)
+                text_content = re.sub(r'<style[^>]*>.*?</style>', '', text_content, flags=re.DOTALL)
+                text_content = re.sub(r'<br\s*/?>', '\n', text_content)
+                text_content = re.sub(r'<h[1-6][^>]*>(.*?)</h[1-6]>', r'\1\n', text_content, flags=re.DOTALL)
+                text_content = re.sub(r'<p[^>]*>(.*?)</p>', r'\1\n', text_content, flags=re.DOTALL)
+                text_content = re.sub(r'<li[^>]*>(.*?)</li>', r'• \1\n', text_content, flags=re.DOTALL)
+                text_content = re.sub(r'<[^>]+>', '', text_content)
+                text_content = re.sub(r'&nbsp;', ' ', text_content)
+                text_content = re.sub(r'&amp;', '&', text_content)
+                text_content = re.sub(r'&lt;', '<', text_content)
+                text_content = re.sub(r'&gt;', '>', text_content)
+                text_content = re.sub(r'\n\s*\n', '\n\n', text_content)
+                text_content = text_content.strip()
             else:
-                # Markdown转HTML
-                import re
-                html_content = content
-                # 简单的Markdown转HTML
-                html_content = re.sub(r'^# (.+)$', r'<h1>\1</h1>', html_content, flags=re.MULTILINE)
-                html_content = re.sub(r'^## (.+)$', r'<h2>\1</h2>', html_content, flags=re.MULTILINE)
-                html_content = re.sub(r'^### (.+)$', r'<h3>\1</h3>', html_content, flags=re.MULTILINE)
-                html_content = re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', html_content)
-                html_content = re.sub(r'^- (.+)$', r'<li>\1</li>', html_content, flags=re.MULTILINE)
-                html_content = re.sub(r'(<li>.*</li>)', r'<ul>\1</ul>', html_content, flags=re.DOTALL)
-                html_content = html_content.replace('\n', '<br>')
-                html_content = f'''<!DOCTYPE html>
-<html>
-<head>
-<meta charset="utf-8">
-<style>
-body {{ font-family: "Microsoft YaHei", "SimSun", Arial, sans-serif; font-size: 12pt; line-height: 1.6; padding: 20px; }}
-h1 {{ font-size: 18pt; color: #333; border-bottom: 2px solid #0066cc; padding-bottom: 5px; }}
-h2 {{ font-size: 14pt; color: #0066cc; margin-top: 15px; }}
-h3 {{ font-size: 12pt; color: #555; }}
-strong {{ color: #333; }}
-ul {{ margin: 5px 0; padding-left: 20px; }}
-li {{ margin: 3px 0; }}
-</style>
-</head>
-<body>{html_content}</body>
-</html>'''
+                text_content = content
+            
+            # 设置字体
+            pdf.set_font(pdf.chinese_font, '', 11)
+            
+            # 按行处理内容
+            lines = text_content.split('\n')
+            for line in lines:
+                line = line.strip()
+                if not line:
+                    pdf.ln(5)
+                    continue
+                
+                # 检测标题（简单启发式）
+                if len(line) < 50 and (line.isupper() or line.endswith('：') or line.endswith(':')):
+                    pdf.set_font(pdf.chinese_font, 'B', 14)
+                    pdf.cell(0, 10, line, new_x="LMARGIN", new_y="NEXT")
+                    pdf.set_font(pdf.chinese_font, '', 11)
+                elif line.startswith('• ') or line.startswith('- '):
+                    # 列表项
+                    pdf.set_font(pdf.chinese_font, '', 11)
+                    pdf.cell(5)
+                    pdf.multi_cell(0, 7, line)
+                else:
+                    # 普通文本
+                    pdf.set_font(pdf.chinese_font, '', 11)
+                    pdf.multi_cell(0, 7, line)
             
             buffer = io.BytesIO()
-            pisa_status = pisa.CreatePDF(html_content, dest=buffer)
-            
-            if pisa_status.err:
-                return jsonify({"code": 500, "error": "PDF生成失败"}), 500
-            
+            pdf.output(buffer)
             buffer.seek(0)
             
             return send_file(
