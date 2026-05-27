@@ -249,27 +249,43 @@
             </div>
         </div>
         
-        <div id="resumePanel" class="chat-side-panel resume-panel collapsed">
-            <div class="panel-header">
-                <span>简历预览</span>
-                <button class="panel-close" onclick="closeResumePanel()">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
-                        <path d="M18 6L6 18M6 6l12 12"/>
-                    </svg>
-                </button>
-            </div>
-            <div class="panel-section" style="flex: 1; overflow: hidden; display: flex; flex-direction: column;">
-                <div id="resumePreviewContent" class="resume-preview-md" style="flex: 1; overflow: auto;"></div>
-            </div>
-            <div class="panel-actions" style="display: flex; gap: 8px;">
-                <button class="btn btn-primary" style="flex: 1;" onclick="downloadFromPanel('html')">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
-                    下载 HTML
-                </button>
-                <button class="btn btn-secondary" style="flex: 1;" onclick="downloadFromPanel('docx')">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
-                    下载 DOCX
-                </button>
+        <!-- 简历预览模态框 -->
+        <div id="resumeModal" class="resume-modal-overlay" style="display: none;">
+            <div class="resume-modal">
+                <div class="resume-modal-header">
+                    <span class="resume-modal-title">简历预览</span>
+                    <div class="resume-modal-controls">
+                        <button class="resume-zoom-btn" onclick="zoomResume(-0.1)" title="缩小">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/><path d="M8 11h6"/></svg>
+                        </button>
+                        <span id="zoomLevel" class="zoom-level">100%</span>
+                        <button class="resume-zoom-btn" onclick="zoomResume(0.1)" title="放大">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/><path d="M11 8v6m-3-3h6"/></svg>
+                        </button>
+                        <button class="resume-close-btn" onclick="closeResumeModal()" title="关闭">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="resume-modal-body">
+                    <div class="resume-paper-container">
+                        <div id="resumePreviewContent" class="resume-paper"></div>
+                    </div>
+                </div>
+                <div class="resume-modal-footer">
+                    <button class="btn btn-primary" onclick="downloadFromPanel('html')">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/><path d="M16 13H8"/><path d="M16 17H8"/><path d="M10 9H8"/></svg>
+                        下载 HTML
+                    </button>
+                    <button class="btn btn-primary" onclick="downloadFromPanel('pdf')">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/><path d="M9 15l2 2 4-4"/></svg>
+                        下载 PDF
+                    </button>
+                    <button class="btn btn-secondary" onclick="downloadResumeAsImage()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+                        下载图片
+                    </button>
+                </div>
             </div>
         </div>
     </main>
@@ -586,52 +602,103 @@ function renderResumeContent(content) {
 }
 
 let currentResumeContent = null;
+let currentZoomLevel = 1;
 
 function showResumeInPanel(contentId) {
     const content = window[contentId];
     if (!content) return;
     
     currentResumeContent = content;
+    currentZoomLevel = 1;
     
     // 检测是否为HTML格式
     const isHTML = content.includes('<!DOCTYPE html>') || content.includes('<html') || content.includes('tailwindcss');
+    
+    const previewContainer = document.getElementById('resumePreviewContent');
     
     if (isHTML) {
         // 使用iframe渲染HTML简历
         const iframe = document.createElement('iframe');
         iframe.style.width = '100%';
         iframe.style.height = '100%';
-        iframe.style.minHeight = '600px';
+        iframe.style.minHeight = '800px';
         iframe.style.border = 'none';
         iframe.style.background = 'white';
-        iframe.style.borderRadius = '8px';
         
-        const previewContainer = document.getElementById('resumePreviewContent');
         previewContainer.innerHTML = '';
-        previewContainer.style.height = '100%';
         previewContainer.appendChild(iframe);
         
         // 写入HTML内容
         iframe.srcdoc = content;
     } else {
         // 使用Markdown渲染
-        const previewContainer = document.getElementById('resumePreviewContent');
-        previewContainer.style.height = 'auto';
         previewContainer.innerHTML = renderResumeContent(content);
     }
     
-    const panel = document.getElementById('resumePanel');
-    if (!panel.classList.contains('expanded')) {
-        panel.classList.add('expanded');
-        panel.classList.remove('collapsed');
-    }
+    // 更新缩放级别显示
+    document.getElementById('zoomLevel').textContent = '100%';
+    previewContainer.style.transform = 'scale(1)';
+    
+    // 显示模态框
+    document.getElementById('resumeModal').style.display = 'flex';
+    document.body.style.overflow = 'hidden';
 }
 
-function closeResumePanel() {
-    const panel = document.getElementById('resumePanel');
-    panel.classList.remove('expanded');
-    panel.classList.add('collapsed');
+function closeResumeModal() {
+    document.getElementById('resumeModal').style.display = 'none';
+    document.body.style.overflow = '';
     currentResumeContent = null;
+    currentZoomLevel = 1;
+}
+
+function zoomResume(delta) {
+    currentZoomLevel = Math.max(0.5, Math.min(2, currentZoomLevel + delta));
+    const previewContainer = document.getElementById('resumePreviewContent');
+    previewContainer.style.transform = `scale(${currentZoomLevel})`;
+    document.getElementById('zoomLevel').textContent = Math.round(currentZoomLevel * 100) + '%';
+}
+
+async function downloadResumeAsImage() {
+    if (!currentResumeContent) return;
+    
+    try {
+        // 使用html2canvas截图
+        const previewContainer = document.getElementById('resumePreviewContent');
+        const iframe = previewContainer.querySelector('iframe');
+        
+        if (iframe) {
+            // 对于HTML内容，使用iframe的document
+            const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+            const canvas = await html2canvas(iframeDoc.body, {
+                scale: 2,
+                useCORS: true,
+                logging: false
+            });
+            
+            // 下载图片
+            const link = document.createElement('a');
+            link.download = 'resume.png';
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        } else {
+            // 对于普通HTML内容
+            const canvas = await html2canvas(previewContainer, {
+                scale: 2,
+                useCORS: true,
+                logging: false
+            });
+            
+            const link = document.createElement('a');
+            link.download = 'resume.png';
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        }
+        
+        modal.toast('图片下载成功', 'success');
+    } catch (err) {
+        console.error('下载图片失败:', err);
+        modal.toast('下载图片失败', 'error');
+    }
 }
 
 function toggleSidePanel() {

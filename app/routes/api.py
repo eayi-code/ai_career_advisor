@@ -961,6 +961,57 @@ def download_resume():
                     mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document'
                 )
         
+        elif file_format == 'pdf':
+            # 生成PDF格式
+            from xhtml2pdf import pisa
+            
+            # 如果是HTML内容，直接使用；否则包装为HTML
+            if is_html:
+                html_content = content
+            else:
+                # Markdown转HTML
+                import re
+                html_content = content
+                # 简单的Markdown转HTML
+                html_content = re.sub(r'^# (.+)$', r'<h1>\1</h1>', html_content, flags=re.MULTILINE)
+                html_content = re.sub(r'^## (.+)$', r'<h2>\1</h2>', html_content, flags=re.MULTILINE)
+                html_content = re.sub(r'^### (.+)$', r'<h3>\1</h3>', html_content, flags=re.MULTILINE)
+                html_content = re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', html_content)
+                html_content = re.sub(r'^- (.+)$', r'<li>\1</li>', html_content, flags=re.MULTILINE)
+                html_content = re.sub(r'(<li>.*</li>)', r'<ul>\1</ul>', html_content, flags=re.DOTALL)
+                html_content = html_content.replace('\n', '<br>')
+                html_content = f'''<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+body {{ font-family: "Microsoft YaHei", "SimSun", Arial, sans-serif; font-size: 12pt; line-height: 1.6; padding: 20px; }}
+h1 {{ font-size: 18pt; color: #333; border-bottom: 2px solid #0066cc; padding-bottom: 5px; }}
+h2 {{ font-size: 14pt; color: #0066cc; margin-top: 15px; }}
+h3 {{ font-size: 12pt; color: #555; }}
+strong {{ color: #333; }}
+ul {{ margin: 5px 0; padding-left: 20px; }}
+li {{ margin: 3px 0; }}
+</style>
+</head>
+<body>{html_content}</body>
+</html>'''
+            
+            buffer = io.BytesIO()
+            pisa_status = pisa.CreatePDF(html_content, dest=buffer)
+            
+            if pisa_status.err:
+                return jsonify({"code": 500, "error": "PDF生成失败"}), 500
+            
+            buffer.seek(0)
+            
+            return send_file(
+                buffer,
+                as_attachment=True,
+                download_name=f'{filename}.pdf',
+                mimetype='application/pdf'
+            )
+        
         elif file_format == 'docx':
             # Markdown格式转DOCX
             from docx import Document
@@ -1014,7 +1065,7 @@ def download_resume():
             )
         
         else:
-            return jsonify({"code": 400, "error": "暂只支持DOCX和HTML格式"}), 400
+            return jsonify({"code": 400, "error": "暂只支持HTML和PDF格式"}), 400
     
     except Exception as e:
         return jsonify({"code": 500, "error": f"生成文件失败: {str(e)}"}), 500
