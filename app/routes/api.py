@@ -1018,6 +1018,7 @@ def download_resume():
             
             # 设置字体
             pdf.set_font(pdf.chinese_font, '', 11)
+            page_width = pdf.w - pdf.l_margin - pdf.r_margin
             
             # 按行处理内容
             lines = text_content.split('\n')
@@ -1030,17 +1031,15 @@ def download_resume():
                 # 检测标题（简单启发式）
                 if len(line) < 50 and (line.isupper() or line.endswith('：') or line.endswith(':')):
                     pdf.set_font(pdf.chinese_font, 'B', 14)
-                    pdf.cell(0, 10, line, new_x="LMARGIN", new_y="NEXT")
+                    pdf.multi_cell(page_width, 10, line)
                     pdf.set_font(pdf.chinese_font, '', 11)
                 elif line.startswith('• ') or line.startswith('- '):
-                    # 列表项
-                    pdf.set_font(pdf.chinese_font, '', 11)
-                    pdf.cell(5)
-                    pdf.multi_cell(0, 7, line)
+                    # 列表项 - 用x偏移实现缩进
+                    pdf.set_x(pdf.l_margin + 6)
+                    pdf.multi_cell(page_width - 6, 7, line)
                 else:
                     # 普通文本
-                    pdf.set_font(pdf.chinese_font, '', 11)
-                    pdf.multi_cell(0, 7, line)
+                    pdf.multi_cell(page_width, 7, line)
             
             buffer = io.BytesIO()
             pdf.output(buffer)
