@@ -53,6 +53,9 @@
 - **样式**: 自定义CSS (style.css)
 - **脚本**: 原生JavaScript (main.js, modal.js)
 - **字体**: Inter (Google Fonts) / SF Pro (Apple系统字体)
+- **第三方库**:
+  - html2canvas：HTML转Canvas（用于截图和PDF生成）
+  - jsPDF：Canvas/图片转PDF（前端PDF生成）
 - **设计风格**: 
   - 落地页：CSS动画背景（浅色系流动渐变）
   - 内部页面：白色背景 + 蓝色主题 (#0066cc)
@@ -1499,8 +1502,126 @@ while (true) {
 
 ---
 
-**最后更新**: 2026-05-27
-**项目状态**: 核心功能完成，5个Agent已全面优化，支持Agent自动切换、上下文增强、专业图标系统、Next Action动态建议
+### 2026-05-27 完成功能（前端重构+项目结构优化）
+
+1. **前端Google Material风格重构**
+   - 配色体系：引入Google经典蓝(#1a73e8)，纯白背景+极淡灰
+   - 对话界面：去除毛玻璃和渐变色，用户消息右对齐浅灰气泡，AI消息去气泡化纯文本
+   - 输入框：浮动药丸状(Pill-shape)，聚焦时浅色阴影，无边框设计
+   - 按钮：全圆角药丸形设计，Material阴影
+   - 侧边栏：圆角菜单项，Hover高亮背景
+   - 字体：加入Google Sans和Roboto字体
+   - 滚动条：轻量透明，Hover时变色
+   - 欢迎页：用户名问候语，3列Grid布局欢迎卡片
+
+   **右侧面板重构：**
+   - 推理详情面板：悬浮抽屉式设计(Floating Drawer)，圆角+阴影
+   - 简历预览面板：改为居中弹出的模态框，背景半透明+模糊效果
+   - 支持放大缩小功能(50%-200%)
+   - 三种下载格式：HTML、PDF、图片
+
+2. **项目结构重构（services层）**
+   - `routes/api.py`：1488行 → 348行（只保留路由定义）
+   - 新增 `services/chat_service.py`：对话/流式/异步/任务状态（445行）
+   - 新增 `services/history_service.py`：历史记录CRUD（187行）
+   - 新增 `services/user_service.py`：用户名/密码/头像/统计（136行）
+   - 新增 `services/resume_service.py`：简历上传/下载（196行）
+   - 新增 `services/profile_service.py`：档案完善度/里程碑/建议（333行）
+   - 所有API端点路径不变，前端无需改动
+
+3. **简历下载功能**
+   - HTML下载：正常工作
+   - DOCX下载：正常工作
+   - PDF下载：使用前端html2canvas + jsPDF，中文完美支持（2026-06-02修复）
+   - 图片下载：使用html2canvas前端截图，正常工作
+
+4. **输入框优化**
+   - 去掉背后的长方形背景框
+   - 圆角药丸直接悬浮在聊天界面上
+   - 透明背景，无边框
+
+---
+
+### 2026-06-02 完成功能
+
+1. **PDF下载功能修复（中文乱码问题彻底解决）**
+   - **问题**：xhtml2pdf生成PDF中文显示乱码
+   - **解决方案**：改为前端生成PDF（html2canvas + jsPDF）
+   - **技术实现**：
+     - 引入jsPDF库（unpkg CDN）
+     - 使用html2canvas将HTML简历渲染为Canvas
+     - 使用jsPDF将Canvas转换为PDF
+     - 支持自动分页处理（A4尺寸）
+   - **修改文件**：
+     - `base.html`：添加jsPDF CDN引入
+     - `chat.html`：新增`downloadResumeAsPDF()`函数，修改`downloadFromPanel()`和`downloadResume()`函数
+   - **优点**：
+     - 中文完美支持（由浏览器渲染）
+     - 所见即所得（与预览效果一致）
+     - 无后端依赖，纯前端方案
+   - **Bug修复**：
+     - 修复cdnjs jsPDF CDN被ORB阻止问题（改用unpkg）
+     - 优化临时容器处理（避免html2canvas对隐藏元素失败）
+     - 增加jsPDF加载检查和错误处理
+
+2. **前端PDF生成技术栈**
+   - **html2canvas**：将HTML/DOM渲染为Canvas
+   - **jsPDF**：将Canvas/图片转换为PDF
+   - **CDN**：
+     - html2canvas: `https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js`
+     - jsPDF: `https://unpkg.com/jspdf@2.5.2/dist/jspdf.umd.min.js`
+
+---
+
+### 2026-06-03 完成功能（前端重构）
+
+1. **CSS模块化拆分**
+   - 将`style.css`（3465行）拆分为6个模块文件：
+     - `base.css`（552行）：全局变量、重置、按钮、表单、落地页样式
+     - `chat.css`（580行）：侧边栏、对话界面、消息气泡、输入框
+     - `components.css`（620行）：推理时间线、执行步骤、Agent图标、滚动条
+     - `profile.css`（380行）：用户中心、技能标签云、决策锚点
+     - `resume.css`（200行）：简历预览模态框
+     - `modal.css`（110行）：弹窗、Toast提示
+   - `base.html`更新为引入6个CSS模块文件
+
+2. **JavaScript提取整理**
+   - 从`chat.html`提取内联JS到`chat.js`（750行）
+     - 聊天页面所有逻辑：消息发送、SSE流式响应、简历预览、下载功能
+     - Agent选择器、推理时间线构建、执行步骤更新
+   - 从`profile.html`提取内联JS到`profile.js`（380行）
+     - 用户中心逻辑：头像上传、密码修改、统计加载
+     - 技能管理、决策锚点编辑、Next Actions渲染
+   - `chat.html`：1731行 → 300行（减少83%）
+   - `profile.html`：1556行 → 1085行（减少30%）
+
+3. **简历预览优化**
+   - 修复双重滚动条问题
+   - 去掉`.resume-paper-container`子容器
+   - 简历预览直接填满模态框
+
+4. **文件结构优化**
+   ```
+   app/static/css/
+   ├── base.css          - 全局变量、重置、基础样式
+   ├── chat.css          - 聊天页面样式
+   ├── components.css    - 通用组件、推理时间线
+   ├── profile.css       - 用户中心样式
+   ├── resume.css        - 简历预览样式
+   ├── modal.css         - 弹窗、Toast
+   └── style.css         - 备份原文件
+
+   app/static/js/
+   ├── main.js           - 通用脚本
+   ├── modal.js          - 弹窗组件
+   ├── chat.js           - 聊天页面逻辑
+   └── profile.js        - 用户中心逻辑
+   ```
+
+---
+
+**最后更新**: 2026-06-03
+**项目状态**: 核心功能完成，5个Agent已全面优化，前端已完成模块化重构（CSS拆分为6个文件，JS提取为独立文件），项目结构清晰，便于维护和扩展
 **可选优化**:
 - Celery异步执行方案已设计，待实施（见12.1）
 - 实时工具调用步骤（LangChain Streaming）已设计，待实施（见12.2）
@@ -1508,3 +1629,19 @@ while (true) {
 - 模拟面试功能（交互式面试练习）
 - 数据可视化图表（Chart.js）
 - 暗色模式支持
+
+---
+
+## 十四、待开发/待修复
+
+### 14.1 ~~PDF下载中文乱码~~（已解决）
+- **问题**：使用xhtml2pdf生成的PDF文件中文显示为乱码
+- **原因**：xhtml2pdf对中文字体支持不完善
+- **尝试过的方案**：
+  - weasyprint：需要系统级依赖（GTK），Windows上安装困难
+  - fpdf2：需要手动注册中文字体，配置复杂
+  - xhtml2pdf：纯Python但中文乱码
+- **最终解决方案**：前端html2canvas + jsPDF
+  - 优点：中文完美支持、所见即所得、无后端依赖
+  - 实现：2026-06-02
+- **当前状态**：✅ 已解决
