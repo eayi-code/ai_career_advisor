@@ -1,0 +1,454 @@
+/* ===== 用户中心样式 ===== */
+
+/* 职业档案分层样式 */
+.form-section {
+    margin-bottom: 2rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.form-section:last-of-type {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+}
+
+.form-section-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.form-section-title svg {
+    color: var(--accent);
+    flex-shrink: 0;
+}
+
+.form-section-title small {
+    font-size: 0.8125rem;
+    color: var(--text-tertiary);
+    font-weight: normal;
+}
+
+.project-item {
+    border: 1px solid var(--border);
+    transition: border-color 0.2s;
+}
+
+.project-item:hover {
+    border-color: var(--accent-border);
+}
+
+.btn-sm {
+    padding: 0.375rem 0.75rem;
+    font-size: 0.8125rem;
+}
+
+/* 折叠面板样式 */
+.collapse-section {
+    background: var(--bg-primary);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border);
+    margin-bottom: 1rem;
+    overflow: hidden;
+}
+
+.collapse-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.25rem;
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.2s;
+}
+
+.collapse-header:hover {
+    background: var(--bg-secondary);
+}
+
+.collapse-header h2 {
+    font-size: 1.125rem;
+    font-weight: 600;
+    margin: 0;
+}
+
+.collapse-header p {
+    font-size: 0.8125rem;
+    color: var(--text-tertiary);
+    margin: 0.25rem 0 0;
+}
+
+.collapse-icon {
+    width: 20px;
+    height: 20px;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    color: var(--text-tertiary);
+    flex-shrink: 0;
+}
+
+.collapse-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    padding: 0 1.25rem;
+}
+
+.collapse-section.expanded .collapse-icon {
+    transform: rotate(180deg);
+}
+
+.collapse-section.expanded .collapse-content {
+    max-height: none;
+    padding: 0 1.25rem 1.25rem;
+    overflow: visible;
+}
+
+/* AI-Native 用户中心样式 */
+
+/* 档案完善度环形图 */
+.completion-ring {
+    position: relative;
+    width: 80px;
+    height: 80px;
+    margin: 0 auto 0.5rem;
+}
+
+.completion-ring svg {
+    width: 100%;
+    height: 100%;
+    transform: rotate(-90deg);
+}
+
+.completion-ring .ring-bg {
+    fill: none;
+    stroke: var(--bg-tertiary);
+    stroke-width: 6;
+}
+
+.completion-ring .ring-fill {
+    fill: none;
+    stroke: var(--accent);
+    stroke-width: 6;
+    stroke-linecap: round;
+    transition: stroke-dasharray 0.8s ease;
+}
+
+.completion-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--accent);
+}
+
+/* Dashboard布局 */
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    padding: 1.5rem;
+}
+
+.dashboard-card {
+    background: var(--bg-primary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+}
+
+.dashboard-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.dashboard-card-title {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.dashboard-card-title svg {
+    color: var(--accent);
+}
+
+.dashboard-card-body {
+    padding: 1.25rem;
+}
+
+/* 技能标签云 */
+.skill-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.skill-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.375rem 0.75rem;
+    background: var(--accent-muted);
+    color: var(--accent);
+    border-radius: 100px;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    transition: all var(--transition-fast);
+}
+
+.skill-tag.auto-extracted {
+    background: rgba(139, 92, 246, 0.1);
+    color: #8b5cf6;
+}
+
+.skill-tag.emphasized {
+    background: var(--accent);
+    color: white;
+}
+
+.skill-tag .tag-action {
+    display: none;
+    width: 16px;
+    height: 16px;
+    border: none;
+    background: none;
+    cursor: pointer;
+    padding: 0;
+    opacity: 0.6;
+}
+
+.skill-tag:hover .tag-action {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.skill-tag .tag-action:hover {
+    opacity: 1;
+}
+
+.skill-tag-add {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.375rem 0.75rem;
+    background: transparent;
+    color: var(--text-tertiary);
+    border: 1px dashed var(--border);
+    border-radius: 100px;
+    font-size: 0.8125rem;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.skill-tag-add:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+/* 决策锚点卡片 */
+.anchor-cards {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+}
+
+.anchor-card {
+    padding: 0.875rem;
+    background: var(--bg-secondary);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.anchor-card:hover {
+    background: var(--bg-tertiary);
+    transform: translateY(-1px);
+}
+
+.anchor-label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-tertiary);
+    margin-bottom: 0.25rem;
+}
+
+.anchor-value {
+    display: block;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.anchor-hint {
+    display: block;
+    font-size: 0.6875rem;
+    color: var(--text-tertiary);
+    margin-top: 0.25rem;
+}
+
+/* 决策里程碑 */
+.milestones {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.milestone {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.625rem 0.75rem;
+    background: var(--bg-secondary);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.milestone:hover {
+    background: var(--bg-tertiary);
+}
+
+.milestone-date {
+    font-size: 0.75rem;
+    color: var(--text-tertiary);
+    width: 40px;
+    flex-shrink: 0;
+}
+
+.milestone-icon {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--accent-muted);
+    color: var(--accent);
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.milestone-icon svg {
+    width: 14px;
+    height: 14px;
+}
+
+.milestone-title {
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--text-primary);
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Next Action卡片 */
+.next-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.next-action {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.875rem;
+    background: linear-gradient(135deg, var(--accent-muted) 0%, rgba(139, 92, 246, 0.05) 100%);
+    border: 1px solid var(--accent-border);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.next-action:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-sm);
+}
+
+.next-action-icon {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: white;
+    border-radius: 8px;
+    flex-shrink: 0;
+}
+
+.next-action-content {
+    flex: 1;
+}
+
+.next-action-title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 0.125rem;
+}
+
+.next-action-desc {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    line-height: 1.4;
+}
+
+/* 目标岗位列表 */
+.target-jobs-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.target-job-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.375rem 0.75rem;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    font-size: 0.8125rem;
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.target-job-tag:hover {
+    border-color: var(--accent);
+}
+
+.target-job-tag.active {
+    background: var(--accent);
+    color: white;
+    border-color: var(--accent);
+}
+
+/* 响应式 */
+@media (max-width: 768px) {
+    .dashboard-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .anchor-cards {
+        grid-template-columns: 1fr;
+    }
+}
