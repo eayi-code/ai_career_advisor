@@ -151,8 +151,10 @@ class ProfileService:
                 "id": "set_target",
                 "title": "设定职业目标",
                 "desc": "明确您的目标职位，获得更精准的建议",
-                "agent": "career",
+                "icon": "target",
                 "color": "#3b82f6",
+                "action": "chat",
+                "target": "帮我确定目标岗位",
                 "priority": 1
             })
         
@@ -161,8 +163,10 @@ class ProfileService:
                 "id": "add_skills",
                 "title": "添加技能清单",
                 "desc": "记录您的技能，便于差距分析和学习规划",
-                "agent": "skill",
+                "icon": "skill",
                 "color": "#8b5cf6",
+                "action": "scroll",
+                "target": "#careerProfile",
                 "priority": 2
             })
         
@@ -171,8 +175,10 @@ class ProfileService:
                 "id": "analyze_skills",
                 "title": "分析技能差距",
                 "desc": "了解目标职位所需的技能，找到提升方向",
-                "agent": "skill",
+                "icon": "chart",
                 "color": "#8b5cf6",
+                "action": "chat",
+                "target": "分析技能差距",
                 "priority": 3
             })
         
@@ -181,8 +187,10 @@ class ProfileService:
                 "id": "create_resume",
                 "title": "生成专业简历",
                 "desc": "根据您的档案自动生成简历",
-                "agent": "resume",
+                "icon": "resume",
                 "color": "#ec4899",
+                "action": "chat",
+                "target": "帮我生成简历",
                 "priority": 4
             })
         
@@ -191,8 +199,10 @@ class ProfileService:
                 "id": "interview_prep",
                 "title": "准备面试",
                 "desc": "获取面试题库和模拟练习",
-                "agent": "interview",
+                "icon": "interview",
                 "color": "#f59e0b",
+                "action": "chat",
+                "target": "帮我准备面试",
                 "priority": 5
             })
         
@@ -201,8 +211,10 @@ class ProfileService:
                 "id": "add_projects",
                 "title": "记录项目经验",
                 "desc": "添加您的项目经历，丰富个人档案",
-                "agent": "career",
+                "icon": "project",
                 "color": "#3b82f6",
+                "action": "scroll",
+                "target": "#careerProfile",
                 "priority": 6
             })
         
@@ -211,8 +223,10 @@ class ProfileService:
                 "id": "career_goals",
                 "title": "明确职业规划",
                 "desc": "设定短期和长期的职业发展目标",
-                "agent": "career",
+                "icon": "goal",
                 "color": "#3b82f6",
+                "action": "scroll",
+                "target": "#careerProfile",
                 "priority": 7
             })
         
@@ -222,8 +236,10 @@ class ProfileService:
                 "id": "explore_sidejob",
                 "title": "探索副业机会",
                 "desc": "发现适合您的副业，拓展收入来源",
-                "agent": "side_job",
+                "icon": "money",
                 "color": "#f59e0b",
+                "action": "chat",
+                "target": "推荐副业",
                 "priority": 8
             })
         
