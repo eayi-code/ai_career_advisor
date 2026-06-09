@@ -335,38 +335,47 @@ class BaseAgent:
                         "status": "running"
                     })
                 
-                # 使用stream模式实现真正的流式输出
+                # 使用invoke模式
+                result = self.agent.invoke({
+                    "messages": [{"role": "user", "content": full_input}]
+                })
+
                 output = ""
                 steps = []
-                
-                for chunk in self.agent.stream({
-                    "messages": [{"role": "user", "content": full_input}]
-                }):
-                    if "messages" in chunk:
-                        for msg in chunk["messages"]:
-                            if hasattr(msg, "type") and msg.type == "ai":
-                                content = getattr(msg, "content", "")
-                                if content:
-                                    output += content
-                                    # 发送token到前端
-                                    if self.on_token_callback:
-                                        self.on_token_callback(content)
+                if "messages" in result:
+                    for msg in result["messages"]:
+                        if hasattr(msg, "type") and msg.type == "ai":
+                            if msg.content:
+                                output = msg.content
+                                # 发送最终内容到前端
+                                if self.on_token_callback:
+                                    self.on_token_callback(msg.content)
+                        if hasattr(msg, "type") and msg.type == "tool":
+                            tool_step = {
+                                "action": msg.name if hasattr(msg, "name") else "tool",
+                                "output": msg.content[:200] if msg.content else ""
+                            }
+                            steps.append(tool_step)
                             
-                            if hasattr(msg, "type") and msg.type == "tool":
-                                tool_step = {
-                                    "action": msg.name if hasattr(msg, "name") else "tool",
-                                    "output": msg.content[:200] if msg.content else ""
-                                }
-                                steps.append(tool_step)
-                                
-                                # 发送工具调用步骤
-                                if self.on_tool_callback:
-                                    self.on_tool_callback({
-                                        "type": "tool",
-                                        "title": f"调用工具: {msg.name if hasattr(msg, 'name') else 'tool'}",
-                                        "detail": (msg.content[:100] if msg.content else "执行完成") + "...",
-                                        "status": "completed"
-                                    })
+                            # 发送工具调用步骤
+                            if self.on_tool_callback:
+                                self.on_tool_callback({
+                                    "type": "tool",
+                                    "title": f"调用工具: {msg.name if hasattr(msg, 'name') else 'tool'}",
+                                    "detail": (msg.content[:100] if msg.content else "执行完成") + "...",
+                                    "status": "completed"
+                                })
+                
+                if not output and "messages" in result:
+                    for msg in reversed(result["messages"]):
+                        if hasattr(msg, "type") and msg.type == "ai":
+                            content = getattr(msg, "content", "")
+                            if content:
+                                output = content
+                                # 发送最终内容到前端
+                                if self.on_token_callback:
+                                    self.on_token_callback(content)
+                                break
                 
                 print(f"[BaseAgent] {self.agent_name} 输出长度: {len(output)}")
 
