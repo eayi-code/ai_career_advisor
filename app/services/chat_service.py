@@ -475,7 +475,7 @@ class ChatService:
                                     # 提取工具调用信息
                                     execution_steps = result.get("steps", [])
                                     intermediate_steps = result.get("intermediate_steps", [])
-                                    all_steps = [...execution_steps, ...intermediate_steps]
+                                    all_steps = execution_steps + intermediate_steps
                                     tools_used = list(set([
                                         s.get("action", "") or s.get("title", "").replace("调用工具: ", "")
                                         for s in all_steps
