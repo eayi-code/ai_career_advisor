@@ -394,7 +394,7 @@ class ChatService:
                 
                 while True:
                     try:
-                        event = task_queue.get(timeout=120)
+                        event = task_queue.get(timeout=300)  # 增加到300秒
                         event_type = event.get('type')
                         
                         if event_type == 'step':
