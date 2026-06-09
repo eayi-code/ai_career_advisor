@@ -1542,8 +1542,11 @@ async function handleTaskCompleted(result, originalMessage) {
     const allSteps = [...executionSteps, ...intermediateSteps];
     
     updateExecutionSteps(executionSteps);
-    updateReasoning(intermediateSteps);
-    const toolsUsed = [...new Set(intermediateSteps.filter(s => s.action).map(s => s.action))];
+    
+    // 从executionSteps中提取工具调用信息
+    const toolsFromSteps = executionSteps.filter(s => s.type === 'tool' || s.action).map(s => s.action || s.title || '');
+    const toolsFromIntermediate = intermediateSteps.filter(s => s.action).map(s => s.action);
+    const toolsUsed = [...new Set([...toolsFromSteps, ...toolsFromIntermediate].filter(Boolean))];
     updateTools(toolsUsed);
     
     const liveReasoning = document.getElementById('liveReasoning');

@@ -875,13 +875,17 @@ class AgentOrchestrator:
                 # 添加到共享上下文
                 context.add_agent_output(agent_name, output)
 
+                # 从intermediate_steps中提取工具名称
+                intermediate_steps = result.get("intermediate_steps", [])
+                tools_used = [step.get("action", "") for step in intermediate_steps if step.get("action")]
+
                 return AgentResult(
                     task_id=task_id,
                     agent=agent_name,
                     success=True,
                     output=output,
                     duration=duration,
-                    tools_used=result.get("tools_used", []),
+                    tools_used=tools_used,
                     status=TaskStatus.COMPLETED
                 )
             else:
