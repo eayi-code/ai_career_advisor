@@ -301,15 +301,21 @@ async function loadConversation(id) {
             if (lastAssistantMsg) {
                 const execSteps = lastAssistantMsg.execution_steps || [];
                 const reasonSteps = lastAssistantMsg.steps || [];
-                const toolsUsed = [...new Set(reasonSteps.filter(s => s.action).map(s => s.action))];
+                const toolsUsedFromMsg = lastAssistantMsg.tools_used || [];
+                
+                // 从execution_steps中提取工具调用信息
+                const toolsFromExecSteps = execSteps
+                    .filter(s => s.type === 'tool' || s.action)
+                    .map(s => s.action || s.title?.replace('调用工具: ', '') || '')
+                    .filter(Boolean);
+                
+                const toolsUsed = [...new Set([...toolsUsedFromMsg, ...toolsFromExecSteps, ...reasonSteps.filter(s => s.action).map(s => s.action)])];
                 
                 updateExecutionSteps(execSteps);
-                updateReasoning(reasonSteps);
                 updateTools(toolsUsed);
             } else {
                 // 清空为默认占位符
                 document.getElementById('executionStepsPanel').innerHTML = '<p style="font-size: 0.8125rem; color: var(--text-tertiary);">发送消息后展示</p>';
-                document.getElementById('reasoningPanel').innerHTML = '<p style="font-size: 0.8125rem; color: var(--text-tertiary);">发送消息后展示</p>';
                 document.getElementById('toolsPanel').innerHTML = '<p style="font-size: 0.8125rem; color: var(--text-tertiary);">工具调用信息</p>';
             }
         }

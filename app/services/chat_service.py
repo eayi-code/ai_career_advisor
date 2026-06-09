@@ -472,20 +472,29 @@ class ChatService:
                                 messages = history.messages or []
                                 # 防止在极罕见情况下重复添加 assistant 回复
                                 if not messages or messages[-1].get("role") != "assistant":
+                                    # 提取工具调用信息
+                                    execution_steps = result.get("steps", [])
+                                    intermediate_steps = result.get("intermediate_steps", [])
+                                    all_steps = [...execution_steps, ...intermediate_steps]
+                                    tools_used = list(set([
+                                        s.get("action", "") or s.get("title", "").replace("调用工具: ", "")
+                                        for s in all_steps
+                                        if s.get("type") == "tool" or s.get("action")
+                                    ]))
+                                    
                                     messages.append({
                                         "role": "assistant",
                                         "content": result.get("output", ""),
                                         "agent": result.get("agent_used"),
-                                        "steps": result.get("intermediate_steps", []),
-                                        "execution_steps": result.get("steps", []),
+                                        "steps": intermediate_steps,
+                                        "execution_steps": execution_steps,
+                                        "tools_used": tools_used,
                                         "timestamp": datetime.utcnow().isoformat()
                                     })
                                     history.messages = messages
                                     history.result_data = {"output": result.get("output", "")}
-                                    history.reasoning_steps = result.get("intermediate_steps", [])
-                                    existing_tools = history.tools_used or []
-                                    new_tools = [s.get("action", "") for s in result.get("intermediate_steps", [])]
-                                    history.tools_used = list(set(existing_tools + new_tools))
+                                    history.reasoning_steps = intermediate_steps
+                                    history.tools_used = tools_used
                                     history.agent_used = result.get("agent_used", history.agent_used)
                                     history.updated_at = datetime.utcnow()
                                     
