@@ -507,6 +507,7 @@ function detectResumeContent(content, agent) {
     if (agent === '简历优化专家' && content.length > 200) return true;
     if (content.includes('<!DOCTYPE html>') && content.includes('tailwindcss')) return true;
     if (content.includes('<html') && content.includes('bg-primary')) return true;
+    if (content.includes('<div') && content.includes('class=') && content.length > 500) return true;
     
     const resumeKeywords = ['## 个人简介', '## 工作经验', '## 教育背景', '## 技能', '## 项目经历'];
     const hasKeywords = resumeKeywords.some(kw => content.includes(kw));
