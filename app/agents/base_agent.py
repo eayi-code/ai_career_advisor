@@ -306,7 +306,7 @@ class BaseAgent:
             return f"处理过程中遇到问题，请稍后重试。如果问题持续存在，请尝试换个方式描述您的需求。"
 
     def run(self, user_input: str, user_id: int = None) -> Dict[str, Any]:
-        """执行Agent - 增强版"""
+        """执行Agent - 增强版，支持流式输出"""
         if not self.agent:
             self.build_agent()
 
@@ -335,40 +335,38 @@ class BaseAgent:
                         "status": "running"
                     })
                 
-                result = self.agent.invoke({
-                    "messages": [{"role": "user", "content": full_input}]
-                })
-
+                # 使用stream模式实现真正的流式输出
                 output = ""
                 steps = []
-                if "messages" in result:
-                    for msg in result["messages"]:
-                        if hasattr(msg, "type") and msg.type == "ai":
-                            if msg.content:
-                                output = msg.content
-                        if hasattr(msg, "type") and msg.type == "tool":
-                            tool_step = {
-                                "action": msg.name if hasattr(msg, "name") else "tool",
-                                "output": msg.content[:200] if msg.content else ""
-                            }
-                            steps.append(tool_step)
-                            
-                            # 发送工具调用步骤
-                            if self.on_tool_callback:
-                                self.on_tool_callback({
-                                    "type": "tool",
-                                    "title": f"调用工具: {msg.name if hasattr(msg, 'name') else 'tool'}",
-                                    "detail": (msg.content[:100] if msg.content else "执行完成") + "...",
-                                    "status": "completed"
-                                })
                 
-                if not output and "messages" in result:
-                    for msg in reversed(result["messages"]):
-                        if hasattr(msg, "type") and msg.type == "ai":
-                            content = getattr(msg, "content", "")
-                            if content:
-                                output = content
-                                break
+                for chunk in self.agent.stream({
+                    "messages": [{"role": "user", "content": full_input}]
+                }):
+                    if "messages" in chunk:
+                        for msg in chunk["messages"]:
+                            if hasattr(msg, "type") and msg.type == "ai":
+                                content = getattr(msg, "content", "")
+                                if content:
+                                    output += content
+                                    # 发送token到前端
+                                    if self.on_token_callback:
+                                        self.on_token_callback(content)
+                            
+                            if hasattr(msg, "type") and msg.type == "tool":
+                                tool_step = {
+                                    "action": msg.name if hasattr(msg, "name") else "tool",
+                                    "output": msg.content[:200] if msg.content else ""
+                                }
+                                steps.append(tool_step)
+                                
+                                # 发送工具调用步骤
+                                if self.on_tool_callback:
+                                    self.on_tool_callback({
+                                        "type": "tool",
+                                        "title": f"调用工具: {msg.name if hasattr(msg, 'name') else 'tool'}",
+                                        "detail": (msg.content[:100] if msg.content else "执行完成") + "...",
+                                        "status": "completed"
+                                    })
                 
                 print(f"[BaseAgent] {self.agent_name} 输出长度: {len(output)}")
 
