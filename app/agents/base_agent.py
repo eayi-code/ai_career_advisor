@@ -221,10 +221,10 @@ class BaseAgent:
             score -= 30
         elif len(output) < 50:
             score -= 10
-        elif len(output) > 100:
-            score += 10
         elif len(output) > 300:
             score += 15
+        elif len(output) > 100:
+            score += 10
         
         # 错误关键词检查（短回复中的错误关键词扣分更多）
         error_keywords = ["抱歉", "无法", "失败", "错误", "不支持", "暂不支持"]
