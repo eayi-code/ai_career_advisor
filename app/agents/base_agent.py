@@ -343,13 +343,8 @@ class BaseAgent:
                 output = ""
                 steps = []
                 if "messages" in result:
+                    # 先收集所有工具调用步骤
                     for msg in result["messages"]:
-                        if hasattr(msg, "type") and msg.type == "ai":
-                            if msg.content:
-                                output = msg.content
-                                # 发送最终内容到前端
-                                if self.on_token_callback:
-                                    self.on_token_callback(msg.content)
                         if hasattr(msg, "type") and msg.type == "tool":
                             tool_step = {
                                 "action": msg.name if hasattr(msg, "name") else "tool",
@@ -365,17 +360,18 @@ class BaseAgent:
                                     "detail": (msg.content[:100] if msg.content else "执行完成") + "...",
                                     "status": "completed"
                                 })
-                
-                if not output and "messages" in result:
+                    
+                    # 然后找到最后一个ai message作为最终输出
                     for msg in reversed(result["messages"]):
                         if hasattr(msg, "type") and msg.type == "ai":
                             content = getattr(msg, "content", "")
                             if content:
                                 output = content
-                                # 发送最终内容到前端
-                                if self.on_token_callback:
-                                    self.on_token_callback(content)
                                 break
+                
+                # 发送最终内容到前端
+                if output and self.on_token_callback:
+                    self.on_token_callback(output)
                 
                 print(f"[BaseAgent] {self.agent_name} 输出长度: {len(output)}")
 
