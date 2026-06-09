@@ -1566,7 +1566,8 @@ async function handleTaskCompleted(result, originalMessage) {
         liveReasoning.remove();
     }
     
-    const fullContent = result.output || '';
+    // 使用result.output或currentStreamedText（流式输出的内容）
+    const fullContent = result.output || currentStreamedText || '';
     const isResume = detectResumeContent(fullContent, agentUsed);
     
     if (isResume) {
