@@ -1443,7 +1443,26 @@ function appendStreamContent(token) {
     }
     
     currentStreamedText += token;
-    loadingContent.innerHTML = formatMessageContent(currentStreamedText);
+    
+    // 检测是否包含简历内容，如果是则分离文字和HTML
+    const isResume = detectResumeContent(currentStreamedText, '');
+    if (isResume) {
+        const resumeOnly = extractResumeContent(currentStreamedText);
+        if (resumeOnly) {
+            const displayContent = currentStreamedText.split('<!--RESUME_START-->')[0].trim() || '已为您生成简历';
+            loadingContent.innerHTML = formatMessageContent(displayContent);
+        } else {
+            // 简历内容还在生成中，只显示文字部分
+            const parts = currentStreamedText.split('<!--RESUME_START-->');
+            if (parts.length > 1) {
+                loadingContent.innerHTML = formatMessageContent(parts[0].trim() || '正在生成简历...');
+            } else {
+                loadingContent.innerHTML = formatMessageContent(currentStreamedText);
+            }
+        }
+    } else {
+        loadingContent.innerHTML = formatMessageContent(currentStreamedText);
+    }
     
     // 自动流动滚动
     smartScrollToBottom();
