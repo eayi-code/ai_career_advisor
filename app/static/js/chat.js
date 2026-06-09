@@ -1397,6 +1397,15 @@ function handleSSEEvent(eventType, data, allSteps) {
             
             updateLiveSteps(allSteps);
             updateExecutionSteps(allSteps);
+            
+            // 实时更新工具调用信息
+            const currentTools = allSteps
+                .filter(s => s.type === 'tool' || s.action)
+                .map(s => s.action || s.title?.replace('调用工具: ', '') || '')
+                .filter(Boolean);
+            if (currentTools.length > 0) {
+                updateTools([...new Set(currentTools)]);
+            }
             break;
             
         case 'content':
