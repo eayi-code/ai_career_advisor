@@ -1564,6 +1564,20 @@ class AgentOrchestrator:
             }
             execution_steps.append(subtask_step)
             self._emit_step(subtask_step)
+            
+            # 添加工具调用信息到execution_steps
+            if result.tools_used:
+                for tool_info in result.tools_used:
+                    if isinstance(tool_info, dict) and tool_info.get("action"):
+                        tool_step = {
+                            "step_id": step_id,
+                            "type": "tool",
+                            "title": f"调用工具: {tool_info.get('action', '')}",
+                            "detail": tool_info.get("output", "")[:100] + "..." if tool_info.get("output") else "执行完成",
+                            "status": "completed"
+                        }
+                        execution_steps.append(tool_step)
+                        self._emit_step(tool_step)
 
         # 更新执行开始步骤状态
         execution_steps[-len(results) - 1]["status"] = TaskStatus.COMPLETED.value
