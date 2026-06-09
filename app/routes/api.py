@@ -57,6 +57,14 @@ def get_task_status(task_id):
     return jsonify({"code": 200, "data": result})
 
 
+@api_bp.route('/agent/task/abort/<task_id>', methods=['POST'])
+@login_required
+def abort_task(task_id):
+    """显式中止后台Agent任务"""
+    ChatService.abort_task(task_id)
+    return jsonify({"code": 200, "message": "任务已请求中止"})
+
+
 @api_bp.route('/agent/chat', methods=['POST'])
 @login_required
 def agent_chat():

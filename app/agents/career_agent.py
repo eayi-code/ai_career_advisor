@@ -9,8 +9,8 @@ from app.tools.interview_tools import get_interview_tools
 class CareerAgent(BaseAgent):
     """职业规划智能体 - 增强版"""
 
-    def __init__(self, on_tool_callback=None):
-        super().__init__(agent_name="职业规划顾问", on_tool_callback=on_tool_callback)
+    def __init__(self, on_tool_callback=None, on_token_callback=None):
+        super().__init__(agent_name="职业规划顾问", on_tool_callback=on_tool_callback, on_token_callback=on_token_callback)
         self.tools = get_job_tools()
 
     def _build_system_prompt(self) -> str:
@@ -96,8 +96,8 @@ class CareerAgent(BaseAgent):
 class SkillAgent(BaseAgent):
     """技能发展顾问 - 增强版"""
 
-    def __init__(self, on_tool_callback=None):
-        super().__init__(agent_name="技能发展顾问", on_tool_callback=on_tool_callback)
+    def __init__(self, on_tool_callback=None, on_token_callback=None):
+        super().__init__(agent_name="技能发展顾问", on_tool_callback=on_tool_callback, on_token_callback=on_token_callback)
         self.tools = get_skill_tools()
 
     def _build_system_prompt(self) -> str:
@@ -174,8 +174,8 @@ class SkillAgent(BaseAgent):
 class SideJobAgent(BaseAgent):
     """副业规划专家 - 增强版"""
 
-    def __init__(self, on_tool_callback=None):
-        super().__init__(agent_name="副业规划专家", on_tool_callback=on_tool_callback)
+    def __init__(self, on_tool_callback=None, on_token_callback=None):
+        super().__init__(agent_name="副业规划专家", on_tool_callback=on_tool_callback, on_token_callback=on_token_callback)
         self.tools = get_market_tools()
 
     def _build_system_prompt(self) -> str:
@@ -260,8 +260,8 @@ class SideJobAgent(BaseAgent):
 class ResumeAgent(BaseAgent):
     """简历优化专家 - 增强版"""
 
-    def __init__(self, on_tool_callback=None):
-        super().__init__(agent_name="简历优化专家", on_tool_callback=on_tool_callback)
+    def __init__(self, on_tool_callback=None, on_token_callback=None):
+        super().__init__(agent_name="简历优化专家", on_tool_callback=on_tool_callback, on_token_callback=on_token_callback)
         self.tools = get_resume_tools()
 
     def _build_system_prompt(self) -> str:
@@ -359,8 +359,8 @@ class ResumeAgent(BaseAgent):
 class InterviewAgent(BaseAgent):
     """面试教练 - 增强版"""
 
-    def __init__(self, on_tool_callback=None):
-        super().__init__(agent_name="面试教练", on_tool_callback=on_tool_callback)
+    def __init__(self, on_tool_callback=None, on_token_callback=None):
+        super().__init__(agent_name="面试教练", on_tool_callback=on_tool_callback, on_token_callback=on_token_callback)
         self.tools = get_interview_tools()
 
     def _build_system_prompt(self) -> str:

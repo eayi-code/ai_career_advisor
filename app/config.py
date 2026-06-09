@@ -21,4 +21,8 @@ class Config:
     OPENAI_BASE_URL = os.getenv('OPENAI_BASE_URL')
     OPENAI_MODEL = os.getenv('OPENAI_MODEL', 'gpt-3.5-turbo')
 
+    VISION_API_KEY = os.getenv('VISION_API_KEY') or os.getenv('OPENAI_API_KEY')
+    VISION_BASE_URL = os.getenv('VISION_BASE_URL') or os.getenv('OPENAI_BASE_URL')
+    VISION_MODEL = os.getenv('VISION_MODEL') or os.getenv('OPENAI_MODEL', 'gpt-3.5-turbo')
+
     CHROMA_PERSIST_DIR = os.getenv('CHROMA_PERSIST_DIR', './chroma_data')

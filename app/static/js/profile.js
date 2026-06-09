@@ -297,6 +297,29 @@ function uploadAvatar(input) {
     reader.readAsDataURL(file);
 }
 
+// 数字跳动动画
+function animateNumber(element, start, end, duration) {
+    let startTime = null;
+    
+    function easeOutExpo(x) {
+        return x === 1 ? 1 : 1 - Math.pow(2, -10 * x);
+    }
+    
+    function step(timestamp) {
+        if (!startTime) startTime = timestamp;
+        const progress = Math.min((timestamp - startTime) / duration, 1);
+        const easeProgress = easeOutExpo(progress);
+        const currentValue = Math.floor(start + (end - start) * easeProgress);
+        element.textContent = currentValue + '%';
+        
+        if (progress < 1) {
+            window.requestAnimationFrame(step);
+        }
+    }
+    
+    window.requestAnimationFrame(step);
+}
+
 // 加载档案完善度
 async function loadProfileCompletion() {
     try {
@@ -309,12 +332,15 @@ async function loadProfileCompletion() {
             const completionCircle = document.getElementById('completionCircle');
             
             if (completionText) {
-                completionText.textContent = completion + '%';
+                animateNumber(completionText, 0, completion, 1200);
             }
             if (completionCircle) {
                 const circumference = 2 * Math.PI * 42;
                 const dashArray = (completion / 100) * circumference;
-                completionCircle.style.strokeDasharray = `${dashArray} ${circumference}`;
+                // 用setTimeout轻微延迟，确保初始动画触发
+                setTimeout(() => {
+                    completionCircle.style.strokeDasharray = `${dashArray} ${circumference}`;
+                }, 50);
             }
         }
     } catch (e) {

@@ -134,6 +134,13 @@
             </div>
             
             <div class="chat-input-area">
+                <div class="input-glow-glow" id="inputGlow">
+                    <div class="glow-bubble glow-bubble-1"></div>
+                    <div class="glow-bubble glow-bubble-2"></div>
+                    <div class="glow-bubble glow-bubble-3"></div>
+                    <div class="glow-bubble glow-bubble-4"></div>
+                    <div class="glow-bubble glow-bubble-5"></div>
+                </div>
                 <div class="chat-input-wrapper">
                     <!-- 自定义Agent选择器（带图标） -->
                     <div class="agent-selector" id="agentSelector">
@@ -143,11 +150,11 @@
                             <svg class="dropdown-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M6 9l6 6 6-6"/></svg>
                         </button>
                         <div class="agent-dropdown" id="agentDropdown">
-                            <div class="agent-option selected" data-value="auto" onclick="selectAgent('auto', '自动选择')">
+                            <div class="agent-option selected" data-value="auto" onclick="selectAgent('auto', '自动选择', event)">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
                                 <span>自动选择</span>
                             </div>
-                            <div class="agent-option" data-value="career" onclick="selectAgent('career', '职业规划')">
+                            <div class="agent-option" data-value="career" onclick="selectAgent('career', '职业规划', event)">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="1.5" width="16" height="16">
                                     <circle cx="12" cy="12" r="10"/>
                                     <path d="M12 2v4M12 18v4M2 12h4M18 12h4"/>
@@ -156,7 +163,7 @@
                                 </svg>
                                 <span>职业规划</span>
                             </div>
-                            <div class="agent-option" data-value="skill" onclick="selectAgent('skill', '技能分析')">
+                            <div class="agent-option" data-value="skill" onclick="selectAgent('skill', '技能分析', event)">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="1.5" width="16" height="16">
                                     <path d="M12 2L2 7l10 5 10-5-10-5z"/>
                                     <path d="M2 17l10 5 10-5"/>
@@ -166,7 +173,7 @@
                                 </svg>
                                 <span>技能分析</span>
                             </div>
-                            <div class="agent-option" data-value="side_job" onclick="selectAgent('side_job', '副业分析')">
+                            <div class="agent-option" data-value="side_job" onclick="selectAgent('side_job', '副业分析', event)">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="1.5" width="16" height="16">
                                     <path d="M21 12V7H5a2 2 0 010-4h14v4"/>
                                     <path d="M3 5v14a2 2 0 002 2h16v-5"/>
@@ -175,7 +182,7 @@
                                 </svg>
                                 <span>副业分析</span>
                             </div>
-                            <div class="agent-option" data-value="resume" onclick="selectAgent('resume', '简历优化')">
+                            <div class="agent-option" data-value="resume" onclick="selectAgent('resume', '简历优化', event)">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="1.5" width="16" height="16">
                                     <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
                                     <polyline points="14 2 14 8 20 8"/>
@@ -186,7 +193,7 @@
                                 </svg>
                                 <span>简历优化</span>
                             </div>
-                            <div class="agent-option" data-value="interview" onclick="selectAgent('interview', '面试教练')">
+                            <div class="agent-option" data-value="interview" onclick="selectAgent('interview', '面试教练', event)">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="#ec4899" stroke-width="1.5" width="16" height="16">
                                     <path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/>
                                     <path d="M19 10v2a7 7 0 01-14 0v-2"/>
@@ -199,13 +206,13 @@
                         </div>
                         <input type="hidden" id="agentType" value="auto">
                     </div>
-                    <input type="file" id="fileInput" accept=".pdf,.docx,.doc,.txt" style="display: none;">
-                    <button id="uploadBtn" class="btn btn-icon" title="上传简历文件" onclick="document.getElementById('fileInput').click()">
+                    <input type="file" id="fileInput" accept=".pdf,.docx,.doc,.txt,.png,.jpg,.jpeg,.webp,.bmp" style="display: none;">
+                    <button id="uploadBtn" class="btn btn-icon" title="上传简历文件或岗位招聘截图" onclick="document.getElementById('fileInput').click()">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
                             <path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/>
                         </svg>
                     </button>
-                    <input type="text" id="chatInput" class="chat-input" placeholder="输入你的问题...">
+                    <textarea id="chatInput" class="chat-input" placeholder="输入你的问题..." rows="1"></textarea>
                     <button id="sendBtn" class="btn btn-primary">发送</button>
                 </div>
                 <div id="filePreview" class="file-preview" style="display: none;">
@@ -291,7 +298,7 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="{{ url_for('static', filename='js/chat.js') }}"></script>
+<script src="{{ url_for('static', filename='js/chat.js') }}?v=1.0.4"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     initChatPage('{{ conversation_id or "" }}', '{{ auto_message or "" }}');

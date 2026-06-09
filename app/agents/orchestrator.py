@@ -15,6 +15,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from collections import defaultdict
 from enum import Enum
 from app.agents.career_agent import CareerAgent, SkillAgent, SideJobAgent, ResumeAgent, InterviewAgent
+from app.agents.base_agent import ClientDisconnectedError
 from app.memory.long_term import LongTermMemory
 from langchain_openai import ChatOpenAI
 from flask import current_app
@@ -520,7 +521,7 @@ class ResultMerger:
     def __init__(self):
         pass
 
-    def merge_with_llm(self, results: List[AgentResult], user_input: str, context: SharedContext) -> str:
+    def merge_with_llm(self, results: List[AgentResult], user_input: str, context: SharedContext, on_token_callback=None) -> str:
         """使用LLM智能合并多个Agent的结果"""
         if not results:
             return "抱歉，处理失败，请重试。"
@@ -529,11 +530,18 @@ class ResultMerger:
             return results[0].output
 
         try:
+            callbacks = []
+            if on_token_callback:
+                from app.agents.base_agent import TokenStreamingHandler
+                callbacks.append(TokenStreamingHandler(on_token_callback))
+
             llm = ChatOpenAI(
                 model=current_app.config['OPENAI_MODEL'],
                 api_key=current_app.config['OPENAI_API_KEY'],
                 base_url=current_app.config['OPENAI_BASE_URL'],
-                temperature=0.7
+                temperature=0.7,
+                streaming=bool(on_token_callback),
+                callbacks=callbacks
             )
 
             # 构建Agent输出摘要
@@ -761,7 +769,7 @@ class ErrorRecovery:
 class AgentOrchestrator:
     """多智能体编排器 - 完美版"""
 
-    def __init__(self, max_workers: int = 3, on_step_callback=None):
+    def __init__(self, max_workers: int = 3, on_step_callback=None, on_token_callback=None):
         self.agents: Dict[str, Any] = {}
         self.memory = LongTermMemory()
         self.max_workers = max_workers
@@ -770,6 +778,7 @@ class AgentOrchestrator:
         self.quality_assessor = QualityAssessor()
         self.error_recovery = ErrorRecovery()
         self.on_step_callback = on_step_callback  # 步骤更新回调函数
+        self.on_token_callback = on_token_callback  # 流式Token回调函数
         self._initialize_agents()
     
     def _emit_step(self, step_data: Dict[str, Any]):
@@ -784,12 +793,13 @@ class AgentOrchestrator:
         """初始化所有Agent"""
         # 传入回调函数给每个Agent
         on_tool_callback = self.on_step_callback
+        on_token_callback = self.on_token_callback
         
-        self.agents["career"] = CareerAgent(on_tool_callback=on_tool_callback)
-        self.agents["skill"] = SkillAgent(on_tool_callback=on_tool_callback)
-        self.agents["side_job"] = SideJobAgent(on_tool_callback=on_tool_callback)
-        self.agents["resume"] = ResumeAgent(on_tool_callback=on_tool_callback)
-        self.agents["interview"] = InterviewAgent(on_tool_callback=on_tool_callback)
+        self.agents["career"] = CareerAgent(on_tool_callback=on_tool_callback, on_token_callback=on_token_callback)
+        self.agents["skill"] = SkillAgent(on_tool_callback=on_tool_callback, on_token_callback=on_token_callback)
+        self.agents["side_job"] = SideJobAgent(on_tool_callback=on_tool_callback, on_token_callback=on_token_callback)
+        self.agents["resume"] = ResumeAgent(on_tool_callback=on_tool_callback, on_token_callback=on_token_callback)
+        self.agents["interview"] = InterviewAgent(on_tool_callback=on_tool_callback, on_token_callback=on_token_callback)
 
     def _load_user_profile(self, user_id: int) -> Dict[str, Any]:
         """加载用户档案"""
@@ -884,10 +894,17 @@ class AgentOrchestrator:
                     status=TaskStatus.FAILED
                 )
 
+        except ClientDisconnectedError as e:
+            raise e
         except Exception as e:
             print(f"[Agent] {agent_name} Agent 异常: {str(e)}")
             import traceback
             traceback.print_exc()
+            try:
+                from app import db
+                db.session.rollback()
+            except Exception:
+                pass
             return AgentResult(
                 task_id=task_id,
                 agent=agent_name,
@@ -1553,7 +1570,7 @@ class AgentOrchestrator:
         self._emit_step(result_merge_step)
 
         # 使用LLM智能合并结果
-        final_output = self.result_merger.merge_with_llm(results, user_input, context)
+        final_output = self.result_merger.merge_with_llm(results, user_input, context, on_token_callback=self.on_token_callback)
 
         execution_steps[-1]["status"] = TaskStatus.COMPLETED.value
         self._emit_step(execution_steps[-1])

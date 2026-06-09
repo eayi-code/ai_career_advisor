@@ -103,3 +103,14 @@ class MiMoChatOpenAI(ChatOpenAI):
             _base_module._convert_message_to_dict = _original_convert_message_to_dict
         
         return result
+
+    def _stream(self, messages, stop=None, run_manager=None, **kwargs):
+        _base_module._convert_dict_to_message = _patched_convert_dict_to_message
+        _base_module._convert_message_to_dict = _patched_convert_message_to_dict
+        try:
+            for chunk in super()._stream(messages, stop, run_manager, **kwargs):
+                yield chunk
+        finally:
+            _base_module._convert_dict_to_message = _original_convert_dict_to_message
+            _base_module._convert_message_to_dict = _original_convert_message_to_dict
+

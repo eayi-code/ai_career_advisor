@@ -15,6 +15,7 @@ from sqlalchemy.orm.attributes import flag_modified
 from app import db
 from app.models.history import AnalysisHistory
 from app.agents.orchestrator import AgentOrchestrator
+from app.agents.base_agent import ClientDisconnectedError
 
 
 class ChatService:
@@ -23,6 +24,21 @@ class ChatService:
     # 模块级任务存储
     _task_store = {}
     _sse_task_queues = {}
+    _aborted_tasks = set()
+    
+    @classmethod
+    def abort_task(cls, task_id):
+        cls._aborted_tasks.add(task_id)
+        if task_id in cls._sse_task_queues:
+            try:
+                cls._sse_task_queues[task_id].put({
+                    'type': 'error',
+                    'error': '用户中止了操作'
+                })
+            except Exception:
+                pass
+    
+
     
     @classmethod
     def get_task_store(cls):
@@ -188,10 +204,12 @@ class ChatService:
                 "output": result.get("output", ""),
                 "agent_used": result.get("agent_used"),
                 "reasoning_steps": result.get("intermediate_steps", []),
+                "intermediate_steps": result.get("intermediate_steps", []),
                 "tools_used": list(set(
-                    s["action"] for s in result.get("intermediate_steps", [])
+                    s.get("action", "") for s in result.get("intermediate_steps", []) if isinstance(s, dict) and s.get("action")
                 )),
                 "execution_steps": result.get("steps", []),
+                "steps": result.get("steps", []),
                 "is_composite": result.get("is_composite", False)
             }
         elif task['status'] == 'failed':
@@ -309,13 +327,65 @@ class ChatService:
                 conversation_history = histories.messages[-10:]
         except Exception as e:
             print(f"获取对话历史失败: {e}")
+
+        # 1. 立即将用户发送的消息保存到数据库中，防止丢失
+        try:
+            db.session.rollback()
+            history = AnalysisHistory.query.filter_by(
+                conversation_id=conversation_id,
+                user_id=user_id
+            ).first()
+            
+            if not history:
+                title = message[:30] + ('...' if len(message) > 30 else '')
+                history = AnalysisHistory(
+                    user_id=user_id,
+                    conversation_id=conversation_id,
+                    title=title,
+                    analysis_type=agent_type,
+                    agent_used=last_agent or "unknown",
+                    input_data={"message": message},
+                    result_data={"output": ""},
+                    reasoning_steps=[],
+                    tools_used=[],
+                    messages=[]
+                )
+                db.session.add(history)
+            
+            messages = history.messages or []
+            messages.append({
+                "role": "user",
+                "content": message,
+                "timestamp": datetime.utcnow().isoformat()
+            })
+            history.messages = messages
+            history.updated_at = datetime.utcnow()
+            flag_modified(history, 'messages')
+            db.session.commit()
+            print(f"[SSE] 用户消息已提前保存: {conversation_id}")
+        except Exception as e:
+            db.session.rollback()
+            print(f"[SSE] 提前保存用户消息失败: {e}")
         
         def on_step_callback(step_data):
             """步骤更新回调函数"""
-            task_queue.put({
-                'type': 'step',
-                'data': step_data
-            })
+            if task_id in ChatService._aborted_tasks:
+                raise ClientDisconnectedError("Client disconnected")
+            if task_id in ChatService._sse_task_queues:
+                task_queue.put({
+                    'type': 'step',
+                    'data': step_data
+                })
+        
+        def on_token_callback(token):
+            """流式Token回调函数"""
+            if task_id in ChatService._aborted_tasks:
+                raise ClientDisconnectedError("Client disconnected")
+            if task_id in ChatService._sse_task_queues:
+                task_queue.put({
+                    'type': 'content',
+                    'data': {'content': token}
+                })
         
         def generate():
             """SSE生成器"""
@@ -329,6 +399,8 @@ class ChatService:
                         
                         if event_type == 'step':
                             yield f"event: step\ndata: {json.dumps(event['data'])}\n\n"
+                        elif event_type == 'content':
+                            yield f"event: content\ndata: {json.dumps(event['data'])}\n\n"
                         elif event_type == 'progress':
                             yield f"event: progress\ndata: {json.dumps({'message': event['message']})}\n\n"
                         elif event_type == 'done':
@@ -345,14 +417,20 @@ class ChatService:
             finally:
                 if task_id in task_queues:
                     del task_queues[task_id]
+                # 任务运行结束或断开后，从 _aborted_tasks 中移除，释放内存
+                ChatService._aborted_tasks.discard(task_id)
         
         def run_agent():
             """后台执行Agent"""
             with app.app_context():
                 try:
-                    task_queue.put({'type': 'progress', 'message': '正在分析意图...'})
+                    if task_id in ChatService._sse_task_queues:
+                        task_queue.put({'type': 'progress', 'message': '正在分析意图...'})
                     
-                    orch = AgentOrchestrator(on_step_callback=on_step_callback)
+                    orch = AgentOrchestrator(
+                        on_step_callback=on_step_callback,
+                        on_token_callback=on_token_callback
+                    )
                     
                     result = orch.process(
                         message, 
@@ -362,7 +440,25 @@ class ChatService:
                         conversation_history=conversation_history
                     )
                     
-                    # 保存对话记录
+                    # 如果是被用户显式终止了，才退出
+                    if task_id in ChatService._aborted_tasks:
+                        print(f"[SSE] Task explicitly aborted: {task_id}")
+                        return
+ 
+                    # 发送完成事件
+                    if task_id in ChatService._sse_task_queues:
+                        if result.get("success"):
+                            task_queue.put({
+                                'type': 'done',
+                                'result': result
+                            })
+                        else:
+                            task_queue.put({
+                                'type': 'error',
+                                'error': result.get('error', '执行失败')
+                            })
+ 
+                    # 保存助手生成的回复到数据库中
                     if result.get("success"):
                         try:
                             history = AnalysisHistory.query.filter_by(
@@ -370,67 +466,53 @@ class ChatService:
                                 user_id=user_id
                             ).first()
                             
-                            if not history:
-                                title = message[:30] + ('...' if len(message) > 30 else '')
-                                history = AnalysisHistory(
-                                    user_id=user_id,
-                                    conversation_id=conversation_id,
-                                    title=title,
-                                    analysis_type=agent_type,
-                                    agent_used=result.get("agent_used", "unknown"),
-                                    input_data={"message": message},
-                                    result_data={"output": result.get("output", "")},
-                                    reasoning_steps=result.get("intermediate_steps", []),
-                                    tools_used=[s.get("action", "") for s in result.get("intermediate_steps", [])],
-                                    messages=[]
-                                )
-                                db.session.add(history)
-                            
-                            messages = history.messages or []
-                            messages.append({
-                                "role": "user",
-                                "content": message,
-                                "timestamp": datetime.utcnow().isoformat()
-                            })
-                            messages.append({
-                                "role": "assistant",
-                                "content": result.get("output", ""),
-                                "agent": result.get("agent_used"),
-                                "steps": result.get("intermediate_steps", []),
-                                "execution_steps": result.get("steps", []),
-                                "timestamp": datetime.utcnow().isoformat()
-                            })
-                            history.messages = messages
-                            history.updated_at = datetime.utcnow()
-                            
-                            flag_modified(history, 'messages')
-                            flag_modified(history, 'tools_used')
-                            
-                            db.session.commit()
-                            print(f"[SSE] 对话已保存: {conversation_id}")
+                            if history:
+                                messages = history.messages or []
+                                # 防止在极罕见情况下重复添加 assistant 回复
+                                if not messages or messages[-1].get("role") != "assistant":
+                                    messages.append({
+                                        "role": "assistant",
+                                        "content": result.get("output", ""),
+                                        "agent": result.get("agent_used"),
+                                        "steps": result.get("intermediate_steps", []),
+                                        "execution_steps": result.get("steps", []),
+                                        "timestamp": datetime.utcnow().isoformat()
+                                    })
+                                    history.messages = messages
+                                    history.result_data = {"output": result.get("output", "")}
+                                    history.reasoning_steps = result.get("intermediate_steps", [])
+                                    existing_tools = history.tools_used or []
+                                    new_tools = [s.get("action", "") for s in result.get("intermediate_steps", [])]
+                                    history.tools_used = list(set(existing_tools + new_tools))
+                                    history.agent_used = result.get("agent_used", history.agent_used)
+                                    history.updated_at = datetime.utcnow()
+                                    
+                                    flag_modified(history, 'messages')
+                                    flag_modified(history, 'tools_used')
+                                    db.session.commit()
+                                    print(f"[SSE] 助手回复已成功后台保存: {conversation_id}")
                         except Exception as e:
                             db.session.rollback()
-                            print(f"[SSE] 保存对话失败: {e}")
-                    
-                    # 发送完成事件
-                    if result.get("success"):
-                        task_queue.put({
-                            'type': 'done',
-                            'result': result
-                        })
-                    else:
-                        task_queue.put({
-                            'type': 'error',
-                            'error': result.get('error', '执行失败')
-                        })
+                            print(f"[SSE] 后台保存助手回复失败: {e}")
                         
+                except ClientDisconnectedError:
+                    print(f"[SSE] Task explicitly aborted via ClientDisconnectedError: {task_id}")
+                    return
                 except Exception as e:
+                    if task_id in ChatService._aborted_tasks:
+                        print(f"[SSE] Background task aborted during exception: {task_id}")
+                        return
+                        
                     import traceback
                     traceback.print_exc()
-                    task_queue.put({
-                        'type': 'error',
-                        'error': str(e)
-                    })
+                    if task_id in ChatService._sse_task_queues:
+                        try:
+                            task_queue.put({
+                                'type': 'error',
+                                'error': str(e)
+                            })
+                        except Exception:
+                            pass
         
         # 启动后台线程
         thread = threading.Thread(target=run_agent)

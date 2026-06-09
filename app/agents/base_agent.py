@@ -2,14 +2,36 @@ from typing import List, Dict, Any, Optional
 from langchain.agents import create_agent
 from langchain.tools import BaseTool
 from flask import current_app
+from langchain_core.callbacks import BaseCallbackHandler
 from app.memory.short_term import ShortTermMemory
 from app.memory.long_term import LongTermMemory
+
+
+class ClientDisconnectedError(BaseException):
+    """Raised when the client disconnects from the SSE stream."""
+    pass
+
+
+class TokenStreamingHandler(BaseCallbackHandler):
+    """Callback handler for streaming tokens, filtering out tool calls."""
+    def __init__(self, on_token_fn):
+        self.on_token_fn = on_token_fn
+        
+    def on_llm_new_token(self, token: str, chunk: Any = None, **kwargs: Any) -> None:
+        if self.on_token_fn:
+            if chunk:
+                message = getattr(chunk, "message", None)
+                if message:
+                    # Filter out tool calls
+                    if getattr(message, "tool_call_chunks", None):
+                        return
+            self.on_token_fn(token)
 
 
 class BaseAgent:
     """智能体基类，实现ReAct推理模式 - 增强版"""
 
-    def __init__(self, agent_name: str, llm=None, on_tool_callback=None):
+    def __init__(self, agent_name: str, llm=None, on_tool_callback=None, on_token_callback=None):
         self.agent_name = agent_name
         self.llm = llm
         self.tools: List[BaseTool] = []
@@ -18,17 +40,25 @@ class BaseAgent:
         self.agent = None
         self.max_retries = 2
         self.on_tool_callback = on_tool_callback
+        self.on_token_callback = on_token_callback
         self._last_output = ""  # 记住上一次输出，用于上下文
 
     def _get_llm(self):
         if self.llm:
             return self.llm
         from app.agents.custom_llm import MiMoChatOpenAI
+        
+        callbacks = []
+        if self.on_token_callback:
+            callbacks.append(TokenStreamingHandler(self.on_token_callback))
+            
         return MiMoChatOpenAI(
             model=current_app.config['OPENAI_MODEL'],
             api_key=current_app.config['OPENAI_API_KEY'],
             base_url=current_app.config['OPENAI_BASE_URL'],
-            temperature=0.7
+            temperature=0.7,
+            streaming=bool(self.on_token_callback),
+            callbacks=callbacks
         )
 
     def _build_system_prompt(self) -> str:
@@ -357,7 +387,10 @@ class BaseAgent:
                     self.short_term_memory.add_message(user_id, "user", user_input)
                     if formatted_output:
                         self.short_term_memory.add_message(user_id, "assistant", formatted_output)
-                        self.long_term_memory.store(user_id, user_input, formatted_output)
+                        try:
+                            self.long_term_memory.store(user_id, user_input, formatted_output)
+                        except Exception as e:
+                            print(f"[BaseAgent] 保存长期向量记忆失败 (可能是本地Ollama未启动或ChromaDB不可用): {e}")
 
                 # 记住上一次输出
                 self._last_output = formatted_output
@@ -368,10 +401,17 @@ class BaseAgent:
                     "intermediate_steps": steps,
                     "quality_score": validation["score"]
                 }
+            except ClientDisconnectedError as e:
+                raise e
             except Exception as e:
                 print(f"[BaseAgent] {self.agent_name} 异常: {str(e)}")
                 import traceback
                 traceback.print_exc()
+                try:
+                    from app import db
+                    db.session.rollback()
+                except Exception:
+                    pass
                 last_error = str(e)
                 if attempt < self.max_retries:
                     continue
