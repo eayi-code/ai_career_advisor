@@ -1127,6 +1127,12 @@
     opacity: 1;
 }
 
+.chat-layout .chat-side-panel .panel-content {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
 .chat-layout .reasoning-panel {
     width: 360px;
     background: var(--bg-secondary);

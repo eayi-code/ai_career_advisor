@@ -7,7 +7,7 @@ from app.tools.interview_tools import get_interview_tools
 
 
 class CareerAgent(BaseAgent):
-    """职业规划智能体 - 增强版"""
+    """职业规划智能体"""
 
     def __init__(self, on_tool_callback=None, on_token_callback=None):
         super().__init__(agent_name="职业规划顾问", on_tool_callback=on_tool_callback, on_token_callback=on_token_callback)
