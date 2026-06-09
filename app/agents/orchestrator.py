@@ -583,6 +583,9 @@ class ResultMerger:
 请直接返回整合后的内容，不要添加"整合结果："等前缀。"""
 
             response = llm.invoke(prompt)
+            # 如果启用了streaming，token已经通过回调发送到前端，返回空字符串避免重复
+            if on_token_callback:
+                return ""
             return response.content.strip()
 
         except Exception as e:
