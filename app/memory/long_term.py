@@ -30,7 +30,7 @@ class OllamaEmbeddingFunction:
 
 
 class LongTermMemory:
-    """长期记忆，基于ChromaDB + Ollama本地嵌入模型"""
+    """长期记忆，基于ChromaDB + Ollama本地嵌入模型，存放用户的对话历史，对话具体内容"""
 
     def __init__(self, persist_dir: str = "./chroma_data"):
         self.persist_dir = persist_dir

@@ -1493,7 +1493,7 @@ class AgentOrchestrator:
                 "success": result.success,
                 "output": result.output if result.success else result.error,
                 "agent_used": agent_name,
-                "intermediate_steps": [],
+                "intermediate_steps": result.tools_used or [],
                 "steps": execution_steps,
                 "total_duration": time.time() - start_time,
                 "score": result.quality_score  # 前端期望score字段
