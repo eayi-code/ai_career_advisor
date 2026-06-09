@@ -864,7 +864,15 @@ class AgentOrchestrator:
             print(f"[Agent] 执行 {agent_name} Agent，任务长度: {len(enhanced_task)}")
             print(f"[Agent] 任务内容预览: {enhanced_task[:200]}...")
 
+            # 临时禁用token回调，避免在复合意图处理中重复发送内容
+            original_token_callback = self.agents[agent_name].on_token_callback
+            self.agents[agent_name].on_token_callback = None
+            
             result = self.agents[agent_name].run(enhanced_task, context.user_id)
+            
+            # 恢复token回调
+            self.agents[agent_name].on_token_callback = original_token_callback
+            
             duration = time.time() - start_time
             
             print(f"[Agent] {agent_name} Agent 执行结果: success={result.get('success')}")
