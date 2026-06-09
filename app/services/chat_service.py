@@ -371,11 +371,13 @@ class ChatService:
             """步骤更新回调函数"""
             if task_id in ChatService._aborted_tasks:
                 raise ClientDisconnectedError("Client disconnected")
-            if task_id in ChatService._sse_task_queues:
+            try:
                 task_queue.put({
                     'type': 'step',
                     'data': step_data
                 })
+            except Exception:
+                pass
         
         def on_token_callback(token):
             """流式Token回调函数"""

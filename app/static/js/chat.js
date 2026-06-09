@@ -963,12 +963,13 @@ function toggleReasoningTimeline(header) {
 }
 
 function updateReasoning(steps) {
+    const panel = document.getElementById('reasoningPanel');
+    if (!panel) return; // 如果面板不存在，直接返回
     if (!steps || steps.length === 0) {
-        document.getElementById('reasoningPanel').innerHTML = 
-            '<p style="font-size: 0.8125rem; color: var(--text-tertiary);">无推理步骤</p>';
+        panel.innerHTML = '<p style="font-size: 0.8125rem; color: var(--text-tertiary);">无推理步骤</p>';
         return;
     }
-    document.getElementById('reasoningPanel').innerHTML = steps.map(s => 
+    panel.innerHTML = steps.map(s => 
         '<div class="step-item"><div class="step-action">' + s.action + '</div>' +
         '<div class="step-output">' + (s.output?.substring(0, 80) || '') + '</div></div>'
     ).join('');
