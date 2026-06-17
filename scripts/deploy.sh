@@ -49,16 +49,16 @@ if [ ! -f ".env" ]; then
 SECRET_KEY=${SECRET_KEY}
 FLASK_DEBUG=false
 DATABASE_URL=mysql+pymysql://root:password@db:3306/career_advisor
-OPENAI_API_KEY=请填入你的API密钥
-OPENAI_BASE_URL=https://api.openai.com/v1
-OPENAI_MODEL=gpt-3.5-turbo
+OPENAI_API_KEY=sk-请填入你的API密钥
+OPENAI_BASE_URL=https://token-plan-cn.xiaomimimo.com/v1
+OPENAI_MODEL=mimo-v2.5-pro
 CHROMA_PERSIST_DIR=/app/chroma_data
 LOG_LEVEL=INFO
 EOF
     echo "  [OK] 环境变量配置完成"
     echo ""
     echo "  *** 重要 ***"
-    echo "  请编辑 ~/.env 填入你的OpenAI API密钥："
+    echo "  请编辑 ~/ai_career_advisor/.env 填入你的OpenAI API密钥："
     echo "  nano ~/ai_career_advisor/.env"
     echo ""
 else
