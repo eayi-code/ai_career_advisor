@@ -17,6 +17,14 @@ def create_app():
     login_manager.login_view = 'auth.login'
     migrate.init_app(app, db)
 
+    # 配置日志
+    from app.logging_config import setup_logging
+    setup_logging(app)
+
+    # 配置限流
+    from app.ratelimit import limiter
+    limiter.init_app(app)
+
     from app.routes.auth import auth_bp
     from app.routes.career import career_bp
     from app.routes.api import api_bp

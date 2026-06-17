@@ -432,6 +432,12 @@ function addMessage(content, isUser, agent, steps, index = 0) {
             window[contentId] = resumeOnly;
             previewCard = buildResumePreviewCard(contentId);
             showCopyBtn = '';
+            
+            // 清理旧的简历内容（保留最近5个）
+            const resumeKeys = Object.keys(window).filter(k => k.startsWith('resume-content-'));
+            if (resumeKeys.length > 5) {
+                resumeKeys.slice(0, resumeKeys.length - 5).forEach(k => delete window[k]);
+            }
         }
     }
     
@@ -513,7 +519,6 @@ function detectResumeContent(content, agent) {
     if (agent === '简历优化专家' && content.length > 200) return true;
     if (content.includes('<!DOCTYPE html>') && content.includes('tailwindcss')) return true;
     if (content.includes('<html') && content.includes('bg-primary')) return true;
-    if (content.includes('<div') && content.includes('class=') && content.length > 500) return true;
     
     const resumeKeywords = ['## 个人简介', '## 工作经验', '## 教育背景', '## 技能', '## 项目经历'];
     const hasKeywords = resumeKeywords.some(kw => content.includes(kw));
@@ -969,16 +974,8 @@ function toggleReasoningTimeline(header) {
 }
 
 function updateReasoning(steps) {
-    const panel = document.getElementById('reasoningPanel');
-    if (!panel) return; // 如果面板不存在，直接返回
-    if (!steps || steps.length === 0) {
-        panel.innerHTML = '<p style="font-size: 0.8125rem; color: var(--text-tertiary);">无推理步骤</p>';
-        return;
-    }
-    panel.innerHTML = steps.map(s => 
-        '<div class="step-item"><div class="step-action">' + s.action + '</div>' +
-        '<div class="step-output">' + (s.output?.substring(0, 80) || '') + '</div></div>'
-    ).join('');
+    // 已废弃：推理步骤现在通过内联时间线显示
+    // 保留函数签名以兼容现有调用
 }
 
 function updateTools(tools) {

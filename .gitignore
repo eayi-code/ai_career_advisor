@@ -9,6 +9,8 @@ build/
 
 # Environment variables (contains secrets)
 .env
+.env.local
+.env.production
 
 # IDE
 .idea/
@@ -18,7 +20,26 @@ build/
 
 # Database / vector store
 chroma_data/
+*.db
+*.sqlite3
+
+# Logs
+*.log
+logs/
 
 # OS
 .DS_Store
 Thumbs.db
+
+# Virtual environment
+venv/
+.venv/
+env/
+
+# Uploads
+app/static/uploads/avatars/*
+!app/static/uploads/avatars/.gitkeep
+
+# Temporary files
+*.tmp
+*.bak

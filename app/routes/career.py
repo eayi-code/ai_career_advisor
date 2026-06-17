@@ -24,7 +24,10 @@ def profile():
         # 基本信息
         profile.education = request.form.get('education', 'bachelor')
         profile.major = request.form.get('major')
-        profile.work_experience = int(request.form.get('work_experience', 0))
+        try:
+            profile.work_experience = int(request.form.get('work_experience', 0))
+        except (ValueError, TypeError):
+            profile.work_experience = 0
         profile.current_job_title = request.form.get('current_job_title')
         
         skills = request.form.get('skills', '')
@@ -42,13 +45,13 @@ def profile():
         # 目标薪资
         target_salary_min = request.form.get('target_salary_min')
         target_salary_max = request.form.get('target_salary_max')
-        if target_salary_min:
-            profile.target_salary_min = float(target_salary_min)
-        else:
+        try:
+            profile.target_salary_min = float(target_salary_min) if target_salary_min else None
+        except (ValueError, TypeError):
             profile.target_salary_min = None
-        if target_salary_max:
-            profile.target_salary_max = float(target_salary_max)
-        else:
+        try:
+            profile.target_salary_max = float(target_salary_max) if target_salary_max else None
+        except (ValueError, TypeError):
             profile.target_salary_max = None
         
         # 目标岗位列表
@@ -88,8 +91,14 @@ def profile():
         # 副业信息
         available_hours = request.form.get('available_hours_per_week')
         income_target = request.form.get('side_job_income_target')
-        profile.available_hours_per_week = int(available_hours) if available_hours else None
-        profile.side_job_income_target = float(income_target) if income_target else None
+        try:
+            profile.available_hours_per_week = int(available_hours) if available_hours else None
+        except (ValueError, TypeError):
+            profile.available_hours_per_week = None
+        try:
+            profile.side_job_income_target = float(income_target) if income_target else None
+        except (ValueError, TypeError):
+            profile.side_job_income_target = None
         
         # 职业目标
         profile.career_goals = request.form.get('career_goals')
@@ -108,7 +117,7 @@ def chat():
     auto_message = request.args.get('q')  # Next Actions传递的自动消息
     histories = AnalysisHistory.query.filter_by(user_id=current_user.id).order_by(
         AnalysisHistory.updated_at.desc()
-    ).all()
+    ).limit(50).all()
     return render_template('career/chat.html', 
                          conversation_id=conversation_id, 
          auto_message=auto_message,

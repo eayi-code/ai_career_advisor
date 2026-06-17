@@ -3,7 +3,7 @@ API路由模块
 只负责路由定义和请求/响应处理，业务逻辑由services层处理
 """
 
-from flask import Blueprint, request, jsonify, send_file, Response, stream_with_context
+from flask import Blueprint, request, jsonify, send_file, Response, stream_with_context, current_app
 from flask_login import login_required, current_user
 
 from app.services.chat_service import ChatService
@@ -11,30 +11,54 @@ from app.services.history_service import HistoryService
 from app.services.user_service import UserService
 from app.services.resume_service import ResumeService
 from app.services.profile_service import ProfileService
+from app.ratelimit import limiter, RATE_LIMITS
 
 api_bp = Blueprint('api', __name__)
+
+
+def validate_message_length(message):
+    """验证消息长度"""
+    max_length = current_app.config.get('MAX_MESSAGE_LENGTH', 10000)
+    if len(message) > max_length:
+        return False, f'消息长度不能超过{max_length}个字符'
+    return True, ''
 
 
 # ==================== 测试接口 ====================
 
 @api_bp.route('/test', methods=['GET'])
 def test_route():
-    return jsonify({"code": 200, "message": "API is working"})
+    """健康检查接口"""
+    return jsonify({
+        "code": 200, 
+        "message": "API is working",
+        "version": "1.0.0",
+        "status": "healthy"
+    })
 
 
 # ==================== 对话相关接口 ====================
 
 @api_bp.route('/agent/chat/async', methods=['POST'])
 @login_required
+@limiter.limit(RATE_LIMITS["chat_send"])
 def agent_chat_async():
     """异步Agent对话（轮询模式，支持实时推理步骤）"""
     data = request.get_json()
+    if not data:
+        return jsonify({"code": 400, "error": "请求数据格式错误"}), 400
+    
     message = data.get('message', '')
     agent_type = data.get('agent_type', 'auto')
     conversation_id = data.get('conversation_id')
     
     if not message:
         return jsonify({"code": 400, "error": "消息不能为空"}), 400
+    
+    # 验证消息长度
+    is_valid, error_msg = validate_message_length(message)
+    if not is_valid:
+        return jsonify({"code": 400, "error": error_msg}), 400
     
     try:
         result = ChatService.process_async_chat(
@@ -67,15 +91,24 @@ def abort_task(task_id):
 
 @api_bp.route('/agent/chat', methods=['POST'])
 @login_required
+@limiter.limit(RATE_LIMITS["chat_send"])
 def agent_chat():
     """同步Agent对话"""
     data = request.get_json()
+    if not data:
+        return jsonify({"code": 400, "error": "请求数据格式错误"}), 400
+    
     message = data.get('message', '')
     agent_type = data.get('agent_type', 'auto')
     conversation_id = data.get('conversation_id')
     
     if not message:
         return jsonify({"code": 400, "error": "消息不能为空"}), 400
+    
+    # 验证消息长度
+    is_valid, error_msg = validate_message_length(message)
+    if not is_valid:
+        return jsonify({"code": 400, "error": error_msg}), 400
     
     try:
         from app import db
@@ -94,9 +127,13 @@ def agent_chat():
 
 @api_bp.route('/agent/chat/stream', methods=['POST'])
 @login_required
+@limiter.limit(RATE_LIMITS["chat_stream"])
 def agent_chat_stream():
     """SSE流式响应 - 实时推理步骤"""
     data = request.get_json()
+    if not data:
+        return jsonify({"code": 400, "error": "请求数据格式错误"}), 400
+    
     message = data.get('message', '')
     agent_type = data.get('agent_type', 'auto')
     conversation_id = data.get('conversation_id')
@@ -104,6 +141,11 @@ def agent_chat_stream():
     
     if not message:
         return jsonify({"code": 400, "error": "消息不能为空"}), 400
+    
+    # 验证消息长度
+    is_valid, error_msg = validate_message_length(message)
+    if not is_valid:
+        return jsonify({"code": 400, "error": error_msg}), 400
     
     try:
         generate_func, task_id = ChatService.process_stream_chat(
@@ -135,6 +177,7 @@ def agent_tools():
 
 @api_bp.route('/history/<conversation_id>', methods=['GET'])
 @login_required
+@limiter.limit(RATE_LIMITS["history_get"])
 def get_conversation(conversation_id):
     """获取对话详情"""
     result = HistoryService.get_conversation(conversation_id, current_user.id)
@@ -147,6 +190,7 @@ def get_conversation(conversation_id):
 
 @api_bp.route('/history', methods=['GET'])
 @login_required
+@limiter.limit(RATE_LIMITS["history_list"])
 def get_history():
     """获取历史记录列表"""
     try:
@@ -175,6 +219,9 @@ def delete_conversation(conversation_id):
 def save_conversation():
     """保存对话记录（用于异步模式）"""
     data = request.get_json()
+    if not data:
+        return jsonify({"code": 400, "error": "请求数据格式错误"}), 400
+    
     conversation_id = data.get('conversation_id')
     message = data.get('message', '')
     result = data.get('result', {})
@@ -213,6 +260,9 @@ def export_conversation(conversation_id):
 def update_username():
     """更新用户名"""
     data = request.get_json()
+    if not data:
+        return jsonify({"code": 400, "error": "请求数据格式错误"}), 400
+    
     new_username = data.get('username', '').strip()
     
     result = UserService.update_username(current_user, new_username)
@@ -228,6 +278,9 @@ def update_username():
 def update_password():
     """更新密码"""
     data = request.get_json()
+    if not data:
+        return jsonify({"code": 400, "error": "请求数据格式错误"}), 400
+    
     old_password = data.get('old_password', '')
     new_password = data.get('new_password', '')
     
@@ -241,9 +294,13 @@ def update_password():
 
 @api_bp.route('/user/update-avatar', methods=['POST'])
 @login_required
+@limiter.limit(RATE_LIMITS["file_upload"])
 def update_avatar():
     """更新头像"""
     data = request.get_json()
+    if not data:
+        return jsonify({"code": 400, "error": "请求数据格式错误"}), 400
+    
     avatar_data = data.get('avatar', '')
     
     result = UserService.update_avatar(current_user, avatar_data)
@@ -273,6 +330,7 @@ def user_stats():
 
 @api_bp.route('/upload/resume', methods=['POST'])
 @login_required
+@limiter.limit(RATE_LIMITS["file_upload"])
 def upload_resume():
     """上传简历文件"""
     if 'file' not in request.files:
@@ -292,6 +350,9 @@ def upload_resume():
 def download_resume():
     """下载简历文件"""
     data = request.get_json()
+    if not data:
+        return jsonify({"code": 400, "error": "请求数据格式错误"}), 400
+    
     content = data.get('content', '')
     filename = data.get('filename', 'resume')
     file_format = data.get('format', 'html')

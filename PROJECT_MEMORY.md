@@ -1712,3 +1712,78 @@ while (true) {
 - USER_CENTER_REQUIREMENTS.md（过时）
 
 **当前状态**：项目已完成P0+P1优化，端到端测试通过，可进行答辩演示
+
+---
+
+## 十六、mimobuild分支开发记录
+
+### 2026-06-17 mimobuild分支创建与全面优化
+
+**分支目的**：将项目打造成面试简历加分项，突出AI工具使用能力，部署上线供他人访问
+
+**合并时间**：2026-06-17
+**分支状态**：开发中
+
+#### 16.1 代码审查与Bug修复
+
+**前端修复（7项）**：
+1. **CSS语法损坏修复** - chat.css:687 `@keyframes` 块被破坏，删除损坏的重复代码
+2. **Jinja2模板安全注入** - chat.html:300 使用 `| tojson` 过滤器安全嵌入JS字符串
+3. **移动端响应式布局** - chat.css:1362 侧边栏隐藏时移除margin-left
+4. **navbar空指针异常** - main.js:31 添加null检查保护
+5. **简历内容误检测** - chat.js:516 移除过于宽泛的 `<div` 匹配规则
+6. **内存泄漏修复** - chat.js:432 保留最近5个简历内容，自动清理旧数据
+7. **废弃代码清理** - chat.js:971 清理引用不存在的 `#reasoningPanel`
+
+**后端修复（10项）**：
+1. **SECRET_KEY安全配置** - config.py:8 使用 `secrets.token_hex(32)` 动态生成
+2. **生产环境debug模式** - run.py:13 从环境变量读取，生产环境默认关闭
+3. **API请求验证** - api.py 所有POST端点添加 `request.get_json()` null检查
+4. **注册输入验证** - auth.py:22-24 添加完整的邮箱、密码、用户名验证
+5. **登出CSRF漏洞** - auth.py:64 改为POST请求 + 表单提交
+6. **历史记录分页** - career.py:109 添加 `.limit(50)` 防止内存溢出
+7. **类型转换异常** - career.py:27,46,50 添加try-except处理
+8. **消息长度限制** - api.py 添加 `MAX_MESSAGE_LENGTH` 配置
+9. **专业日志系统** - 创建 `logging_config.py` 模块替代print
+10. **安全配置增强** - config.py 添加Cookie安全和上传限制
+
+#### 16.2 部署配置
+
+**新增文件**：
+- `.env.example` - 环境变量配置示例
+- `Dockerfile` - Docker镜像配置
+- `docker-compose.yml` - 一键部署配置（含Nginx、MySQL）
+- `nginx.conf` - Nginx反向代理配置
+- `DEPLOYMENT.md` - 详细部署指南
+- `app/logging_config.py` - 日志配置模块
+
+**依赖更新**：
+- requirements.txt 添加 `gunicorn>=21.2.0`
+
+#### 16.3 Git配置优化
+
+**`.gitignore` 更新**：
+- 添加日志文件排除 (*.log, logs/)
+- 添加虚拟环境排除 (venv/, .venv/)
+- 添加上传文件排除 (app/static/uploads/avatars/*)
+- 添加临时文件排除 (*.tmp, *.bak)
+
+#### 16.4 当前状态
+
+**已完成**：
+- ✅ 22项Bug修复和安全加固
+- ✅ 部署配置（Docker、Nginx、日志）
+- ✅ Git配置优化
+- ✅ API限流配置（flask-limiter）
+- ✅ 数据库索引优化（7个索引）
+- ✅ 备份脚本（MySQL + ChromaDB）
+- ✅ 恢复脚本
+- ✅ 健康检查脚本
+- ✅ Docker健康检查配置
+- ✅ 日志轮转配置
+
+**待完成**：
+- ⏳ 前端UI/UX优化（需要更精细的设计调整）
+- ⏳ 生产环境部署测试
+- ⏳ Redis缓存配置（可选）
+- ⏳ CDN加速配置（可选）
