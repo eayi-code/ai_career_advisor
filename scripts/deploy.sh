@@ -13,7 +13,11 @@ echo ""
 echo "[1/5] 安装Docker..."
 if ! command -v docker &> /dev/null; then
     curl -fsSL https://get.docker.com | sh
+    # 创建docker组（Deepin可能没有）
+    sudo groupadd docker 2>/dev/null || true
     sudo usermod -aG docker $USER
+    sudo systemctl start docker
+    sudo systemctl enable docker
     echo "  [OK] Docker安装完成"
 else
     echo "  [OK] Docker已安装"
