@@ -1687,8 +1687,28 @@ while (true) {
 - **当前状态**：✅ 已解决
 
 ### 14.2 后台运行任务的实时进度拉回与重连 (Live Task Resumption & Polling)
-- **目标**：在用户切换会话或刷新页面导致连接断开后，后台任务仍能持续运行并最终入库。同时，当用户切回处于“生成中”的会话时，前端页面应能够自动“认领”后台任务，重新唤醒 Loading 状态并实时显示中间推理步骤（Timeline）和最新的生成内容。
-- **当前状态**：⏳ 待开发（已实现“切换页面后台任务不中断并默默入库”的功能，但“切回会话重新拉起轮询同步进度”的 UI 部分因体验和调试需要已暂时回滚，留待后续迭代开发）
-- **技术思路**：
-  - **服务端**：通过 `ChatService.get_active_task_for_conversation(conversation_id)` 检测某会话是否存在进行中的任务，并在 `HistoryService.get_conversation` 获取详情时向前端返回 `active_task_id`。
-  - **前端**：`chat.js` 加载会话时如检测到 `active_task_id`，立即构建 Loading DOM 节点（复活 `#liveReasoning` 和 `#liveStepsBody`），并通过 `GET /api/agent/task/<task_id>` 接口拉起定时轮询（如 1.5 秒/次），实时同步进度。任务结束后调用 `handleTaskCompleted` 恢复输入框并入库渲染。
+- **目标**：在用户切换会话或刷新页面导致连接断开后，后台任务仍能持续运行并最终入库。同时，当用户切回处于"生成中"的会话时，前端页面应能够自动"认领"后台任务，重新唤醒 Loading 状态并实时显示中间推理步骤（Timeline）和最新的生成内容。
+- **当前状态**：⏳ 待开发（已实现"切换页面后台任务不中断并默默入库"的功能，但"切回会话重新拉起轮询同步进度"的 UI 部分因体验和调试需要已暂时回滚，留待后续迭代开发）
+
+---
+
+## 十五、分支合并记录
+
+### 2026-06-10 合并 antigravity-build 到 main
+
+**合并时间**：2026-06-10
+**合并方式**：--no-ff（保留分支历史）
+
+**主要变更**：
+- P0优化：Orchestrator模块化、Token级流式输出、Docker部署、README重写
+- P1优化：结构化输出协议、数据可视化、Onboarding引导、模拟面试、单元测试、暗色模式
+- Bug修复：流式输出、工具调用显示、数据库连接、复合意图处理等
+
+**删除的文件**：
+- BRANCH_MEMORY_ANTIGRAVITY_BUILD.md（重复）
+- DEVELOPMENT_MEMORY_ANTIGRAVITY_BUILD.md（重复）
+- DESIGN.md（过时）
+- USER_CENTER_REDESIGN.md（过时）
+- USER_CENTER_REQUIREMENTS.md（过时）
+
+**当前状态**：项目已完成P0+P1优化，端到端测试通过，可进行答辩演示
