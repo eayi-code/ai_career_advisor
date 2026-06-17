@@ -15,6 +15,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from collections import defaultdict
 from enum import Enum
 from app.agents.career_agent import CareerAgent, SkillAgent, SideJobAgent, ResumeAgent, InterviewAgent
+from app.agents.base_agent import ClientDisconnectedError
 from app.memory.long_term import LongTermMemory
 from langchain_openai import ChatOpenAI
 from flask import current_app
@@ -520,7 +521,7 @@ class ResultMerger:
     def __init__(self):
         pass
 
-    def merge_with_llm(self, results: List[AgentResult], user_input: str, context: SharedContext) -> str:
+    def merge_with_llm(self, results: List[AgentResult], user_input: str, context: SharedContext, on_token_callback=None) -> str:
         """使用LLM智能合并多个Agent的结果"""
         if not results:
             return "抱歉，处理失败，请重试。"
@@ -529,11 +530,18 @@ class ResultMerger:
             return results[0].output
 
         try:
+            callbacks = []
+            if on_token_callback:
+                from app.agents.base_agent import TokenStreamingHandler
+                callbacks.append(TokenStreamingHandler(on_token_callback))
+
             llm = ChatOpenAI(
                 model=current_app.config['OPENAI_MODEL'],
                 api_key=current_app.config['OPENAI_API_KEY'],
                 base_url=current_app.config['OPENAI_BASE_URL'],
-                temperature=0.7
+                temperature=0.7,
+                streaming=bool(on_token_callback),
+                callbacks=callbacks
             )
 
             # 构建Agent输出摘要
@@ -575,6 +583,7 @@ class ResultMerger:
 请直接返回整合后的内容，不要添加"整合结果："等前缀。"""
 
             response = llm.invoke(prompt)
+            # 始终返回合并后的内容，确保内容能被保存到数据库
             return response.content.strip()
 
         except Exception as e:
@@ -761,7 +770,7 @@ class ErrorRecovery:
 class AgentOrchestrator:
     """多智能体编排器 - 完美版"""
 
-    def __init__(self, max_workers: int = 3, on_step_callback=None):
+    def __init__(self, max_workers: int = 3, on_step_callback=None, on_token_callback=None):
         self.agents: Dict[str, Any] = {}
         self.memory = LongTermMemory()
         self.max_workers = max_workers
@@ -770,6 +779,7 @@ class AgentOrchestrator:
         self.quality_assessor = QualityAssessor()
         self.error_recovery = ErrorRecovery()
         self.on_step_callback = on_step_callback  # 步骤更新回调函数
+        self.on_token_callback = on_token_callback  # 流式Token回调函数
         self._initialize_agents()
     
     def _emit_step(self, step_data: Dict[str, Any]):
@@ -784,12 +794,13 @@ class AgentOrchestrator:
         """初始化所有Agent"""
         # 传入回调函数给每个Agent
         on_tool_callback = self.on_step_callback
+        on_token_callback = self.on_token_callback
         
-        self.agents["career"] = CareerAgent(on_tool_callback=on_tool_callback)
-        self.agents["skill"] = SkillAgent(on_tool_callback=on_tool_callback)
-        self.agents["side_job"] = SideJobAgent(on_tool_callback=on_tool_callback)
-        self.agents["resume"] = ResumeAgent(on_tool_callback=on_tool_callback)
-        self.agents["interview"] = InterviewAgent(on_tool_callback=on_tool_callback)
+        self.agents["career"] = CareerAgent(on_tool_callback=on_tool_callback, on_token_callback=on_token_callback)
+        self.agents["skill"] = SkillAgent(on_tool_callback=on_tool_callback, on_token_callback=on_token_callback)
+        self.agents["side_job"] = SideJobAgent(on_tool_callback=on_tool_callback, on_token_callback=on_token_callback)
+        self.agents["resume"] = ResumeAgent(on_tool_callback=on_tool_callback, on_token_callback=on_token_callback)
+        self.agents["interview"] = InterviewAgent(on_tool_callback=on_tool_callback, on_token_callback=on_token_callback)
 
     def _load_user_profile(self, user_id: int) -> Dict[str, Any]:
         """加载用户档案"""
@@ -851,7 +862,15 @@ class AgentOrchestrator:
             print(f"[Agent] 执行 {agent_name} Agent，任务长度: {len(enhanced_task)}")
             print(f"[Agent] 任务内容预览: {enhanced_task[:200]}...")
 
+            # 临时禁用token回调，避免在复合意图处理中重复发送内容
+            original_token_callback = self.agents[agent_name].on_token_callback
+            self.agents[agent_name].on_token_callback = None
+            
             result = self.agents[agent_name].run(enhanced_task, context.user_id)
+            
+            # 恢复token回调
+            self.agents[agent_name].on_token_callback = original_token_callback
+            
             duration = time.time() - start_time
             
             print(f"[Agent] {agent_name} Agent 执行结果: success={result.get('success')}")
@@ -865,13 +884,16 @@ class AgentOrchestrator:
                 # 添加到共享上下文
                 context.add_agent_output(agent_name, output)
 
+                # 获取完整的工具调用信息
+                intermediate_steps = result.get("intermediate_steps", [])
+
                 return AgentResult(
                     task_id=task_id,
                     agent=agent_name,
                     success=True,
                     output=output,
                     duration=duration,
-                    tools_used=result.get("tools_used", []),
+                    tools_used=intermediate_steps,  # 保存完整的工具调用信息
                     status=TaskStatus.COMPLETED
                 )
             else:
@@ -884,10 +906,17 @@ class AgentOrchestrator:
                     status=TaskStatus.FAILED
                 )
 
+        except ClientDisconnectedError as e:
+            raise e
         except Exception as e:
             print(f"[Agent] {agent_name} Agent 异常: {str(e)}")
             import traceback
             traceback.print_exc()
+            try:
+                from app import db
+                db.session.rollback()
+            except Exception:
+                pass
             return AgentResult(
                 task_id=task_id,
                 agent=agent_name,
@@ -1476,7 +1505,7 @@ class AgentOrchestrator:
                 "success": result.success,
                 "output": result.output if result.success else result.error,
                 "agent_used": agent_name,
-                "intermediate_steps": [],
+                "intermediate_steps": result.tools_used or [],
                 "steps": execution_steps,
                 "total_duration": time.time() - start_time,
                 "score": result.quality_score  # 前端期望score字段
@@ -1535,6 +1564,20 @@ class AgentOrchestrator:
             }
             execution_steps.append(subtask_step)
             self._emit_step(subtask_step)
+            
+            # 添加工具调用信息到execution_steps
+            if result.tools_used:
+                for tool_info in result.tools_used:
+                    if isinstance(tool_info, dict) and tool_info.get("action"):
+                        tool_step = {
+                            "step_id": step_id,
+                            "type": "tool",
+                            "title": f"调用工具: {tool_info.get('action', '')}",
+                            "detail": tool_info.get("output", "")[:100] + "..." if tool_info.get("output") else "执行完成",
+                            "status": "completed"
+                        }
+                        execution_steps.append(tool_step)
+                        self._emit_step(tool_step)
 
         # 更新执行开始步骤状态
         execution_steps[-len(results) - 1]["status"] = TaskStatus.COMPLETED.value
@@ -1553,7 +1596,7 @@ class AgentOrchestrator:
         self._emit_step(result_merge_step)
 
         # 使用LLM智能合并结果
-        final_output = self.result_merger.merge_with_llm(results, user_input, context)
+        final_output = self.result_merger.merge_with_llm(results, user_input, context, on_token_callback=self.on_token_callback)
 
         execution_steps[-1]["status"] = TaskStatus.COMPLETED.value
         self._emit_step(execution_steps[-1])

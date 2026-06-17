@@ -1618,17 +1618,57 @@ while (true) {
    └── profile.js        - 用户中心逻辑
    ```
 
+5. **交互与动效体验升级 (Premium Interactive Animations)**
+   - **欢迎卡片 3D 视差倾斜效果**：在 `chat.js` 和 `chat.css` 中，实现欢迎问题卡片随鼠标移动的 3D 旋转及微缩放动画，当鼠标移出时，配合 cubic-bezier 过渡平滑回弹。
+   - **文件拖拽磁吸 snap 上传效果**：实现文件拖入窗口时，输入框胶囊轻微膨胀高亮（`.drag-over`），拖入胶囊热区时触发带有虚线边框和浮起动画的磁吸状态（`.drag-snap`）。
+   - **Accordion 折叠推理步骤面板**：推理历史或当前生成时，点击头部通过切换 `.collapsed` 类名控制 max-height 属性（0 到 800px），同时旋转折叠图标；首次加载 token 流时自动折叠。
+   - **Staggered 消息气泡级联滑入**：重写 `.message` 默认动画为 `msgEntrance` 弹簧动画（0.95 缩放搭配 translateY 平移），利用 JS 设置 CSS 变量 `--msg-index`，使用 `animation-delay: calc(var(--msg-index, 0) * 0.08s)` 实现列表层叠滑入。
+   - **环形完善度图表绘制与数字跳动**：在 `profile.js` 和 `style.css` 中引入 `animateNumber` 缓动函数（easeOutExpo），在页面加载时完成环形 SVG dasharray 渐进绘制与百分比数字从 0% 起跳。
+
 ---
 
-**最后更新**: 2026-06-03
-**项目状态**: 核心功能完成，5个Agent已全面优化，前端已完成模块化重构（CSS拆分为6个文件，JS提取为独立文件），项目结构清晰，便于维护和扩展
-**可选优化**:
-- Celery异步执行方案已设计，待实施（见12.1）
-- 实时工具调用步骤（LangChain Streaming）已设计，待实施（见12.2）
-- 简历模板多样化（3-5套行业特色模板）
-- 模拟面试功能（交互式面试练习）
-- 数据可视化图表（Chart.js）
-- 暗色模式支持
+**最后更新**: 2026-06-10
+**项目状态**: P0+P1优化完成，端到端测试通过，可进行答辩演示
+**当前分支**: antigravity-build
+
+### 2026-06-10 完成功能（Bug修复与优化）
+
+1. **Orchestrator模块化重构**
+   - 将orchestrator.py拆分为8个独立模块（intent/planner/executor/merger/quality/recovery/context/data_types）
+   - 遵循单一职责原则，提升代码可维护性
+
+2. **流式输出修复**
+   - 修复agent.stream()在工具调用时返回空内容的问题
+   - 改回agent.invoke()并在完成后发送最终内容
+   - 修复复合意图处理时重复输出的问题
+
+3. **工具调用信息显示修复**
+   - 保存时从execution_steps和intermediate_steps中提取工具调用信息
+   - 加载时正确解析tools_used字段
+   - 修复复合意图处理时使用工具板块不显示的问题
+
+4. **数据库连接修复**
+   - 在工具函数开头添加db.session.rollback()防止连接池问题
+   - 修复job_skills表查询错误
+
+5. **推理详情面板优化**
+   - 删除推理过程板块，只保留执行流程和使用工具
+   - 添加panel-content类支持滚动
+
+6. **落地页修正**
+   - 将智能体数量从3个改为5个
+
+7. **项目结构整理**
+   - 删除.idea/.pytest_cache/test_screenshots等无用文件
+   - 删除重复的记忆文件和过时的设计文档
+
+8. **单元测试**
+   - 重新创建test_intent.py，10个测试用例全部通过
+
+9. **端到端测试**
+   - 测试用户注册、登录、单Agent对话、复合Agent对话
+   - 测试切换界面返回、工具调用显示
+   - 所有核心功能正常
 
 ---
 
@@ -1645,3 +1685,10 @@ while (true) {
   - 优点：中文完美支持、所见即所得、无后端依赖
   - 实现：2026-06-02
 - **当前状态**：✅ 已解决
+
+### 14.2 后台运行任务的实时进度拉回与重连 (Live Task Resumption & Polling)
+- **目标**：在用户切换会话或刷新页面导致连接断开后，后台任务仍能持续运行并最终入库。同时，当用户切回处于“生成中”的会话时，前端页面应能够自动“认领”后台任务，重新唤醒 Loading 状态并实时显示中间推理步骤（Timeline）和最新的生成内容。
+- **当前状态**：⏳ 待开发（已实现“切换页面后台任务不中断并默默入库”的功能，但“切回会话重新拉起轮询同步进度”的 UI 部分因体验和调试需要已暂时回滚，留待后续迭代开发）
+- **技术思路**：
+  - **服务端**：通过 `ChatService.get_active_task_for_conversation(conversation_id)` 检测某会话是否存在进行中的任务，并在 `HistoryService.get_conversation` 获取详情时向前端返回 `active_task_id`。
+  - **前端**：`chat.js` 加载会话时如检测到 `active_task_id`，立即构建 Loading DOM 节点（复活 `#liveReasoning` 和 `#liveStepsBody`），并通过 `GET /api/agent/task/<task_id>` 接口拉起定时轮询（如 1.5 秒/次），实时同步进度。任务结束后调用 `handleTaskCompleted` 恢复输入框并入库渲染。

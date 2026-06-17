@@ -7,6 +7,9 @@ from app.models.job import Job, JobSkill
 def search_jobs(keywords: List[str], location: str = "全国", salary_min: Optional[int] = None) -> str:
     """搜索职位信息。输入关键词列表、工作地点、最低薪资。"""
     try:
+        from app import db
+        db.session.rollback()
+        
         query = Job.query
 
         if location and location != "全国":
@@ -31,12 +34,17 @@ def search_jobs(keywords: List[str], location: str = "全国", salary_min: Optio
 
         result = f"找到 {len(jobs)} 个匹配职位:\n\n"
         for job in jobs:
-            skills = [s.skill_name for s in job.skills.limit(5).all()]
+            try:
+                skills = [s.skill_name for s in job.skills.all()]
+            except Exception:
+                skills = []
             result += f"{job.title} ({job.industry})\n"
-            result += f"  薪资: {job.salary_min//1000}k-{job.salary_max//1000}k\n"
+            result += f"  薪资: {job.salary_min//1000 if job.salary_min else 0}k-{job.salary_max//1000 if job.salary_max else 0}k\n"
             result += f"  地点: {job.city}\n"
             result += f"  经验: {job.experience_years}年\n"
-            result += f"  技能: {', '.join(skills)}\n\n"
+            if skills:
+                result += f"  技能: {', '.join(skills)}\n"
+            result += "\n"
 
         return result
     except Exception as e:
@@ -47,6 +55,9 @@ def search_jobs(keywords: List[str], location: str = "全国", salary_min: Optio
 def query_salary(job_title: str, experience_years: int = 0) -> str:
     """查询特定职位的薪资水平。输入职位名称和工作年限。"""
     try:
+        from app import db
+        db.session.rollback()
+        
         jobs = Job.query.filter(Job.title.contains(job_title)).all()
 
         if not jobs:
@@ -55,10 +66,10 @@ def query_salary(job_title: str, experience_years: int = 0) -> str:
         result = f"{job_title} 薪资水平:\n\n"
         for job in jobs:
             result += f"{job.title}:\n"
-            result += f"  薪资范围: {job.salary_min//1000}k-{job.salary_max//1000}k\n"
-            result += f"  平均薪资: {job.salary_avg//1000}k\n"
+            result += f"  薪资范围: {job.salary_min//1000 if job.salary_min else 0}k-{job.salary_max//1000 if job.salary_max else 0}k\n"
+            result += f"  平均薪资: {job.salary_avg//1000 if job.salary_avg else 0}k\n"
             result += f"  经验要求: {job.experience_years}年\n"
-            result += f"  学历要求: {job.education_requirement}\n"
+            result += f"  学历要求: {job.education_requirement or '不限'}\n"
             result += f"  城市: {job.city}\n\n"
 
         return result

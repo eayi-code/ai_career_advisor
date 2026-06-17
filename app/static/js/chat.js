@@ -10,13 +10,70 @@ let uploadedFileName = null;
 let currentResumeContent = null;
 let currentZoomLevel = 1;
 let lastUsedAgent = null;
+let currentStreamedText = '';
+let activeLoadingBubble = null;
+let currentTaskId = null;
+let isNewConversation = false;
 
 // DOM元素引用（需要在DOMContentLoaded后初始化）
 let chatMessages, chatInput, sendBtn, fileInput, filePreview;
 
+// 配置 marked.js 自定义代码块渲染（支持 ChatGPT/Gemini 风格的代码复制与标题栏）
+if (window.marked) {
+    marked.use({
+        renderer: {
+            code(codeText, infostring) {
+                const lang = infostring || 'code';
+                const escaped = codeText
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#039;');
+                
+                return `<div class="code-block-wrapper">` +
+                            `<div class="code-block-header">` +
+                                `<span class="code-block-lang">${lang}</span>` +
+                                `<button class="code-block-copy-btn" onclick="copyCodeBlock(this)">` +
+                                    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>` +
+                                    `<span>复制代码</span>` +
+                                `</button>` +
+                            `</div>` +
+                            `<pre><code class="language-${lang}">${escaped}</code></pre>` +
+                       `</div>`;
+            }
+        }
+    });
+}
+
+// 复制代码块辅助函数
+function copyCodeBlock(button) {
+    const wrapper = button.closest('.code-block-wrapper');
+    if (!wrapper) return;
+    const codeEl = wrapper.querySelector('pre code');
+    if (!codeEl) return;
+    
+    const textToCopy = codeEl.textContent;
+    
+    navigator.clipboard.writeText(textToCopy).then(() => {
+        const textSpan = button.querySelector('span');
+        const originalText = textSpan.textContent;
+        textSpan.textContent = '已复制！';
+        button.classList.add('copied');
+        
+        setTimeout(() => {
+            textSpan.textContent = originalText;
+            button.classList.remove('copied');
+        }, 2000);
+    }).catch(err => {
+        console.error('无法复制代码: ', err);
+    });
+}
+
 // 初始化函数
 function initChatPage(conversationId, autoMsg) {
     currentConversationId = conversationId;
+    isNewConversation = !currentConversationId;
     autoMessage = autoMsg;
     
     chatMessages = document.getElementById('chatMessages');
@@ -30,6 +87,15 @@ function initChatPage(conversationId, autoMsg) {
     }
     
     if (autoMessage) {
+        // Clear query parameters from URL to prevent re-triggering on back navigation or refresh
+        try {
+            const url = new URL(window.location.href);
+            url.searchParams.delete('q');
+            window.history.replaceState(null, '', url.pathname + url.search);
+        } catch (e) {
+            console.error('Failed to update history state:', e);
+        }
+        
         setTimeout(() => {
             chatInput.value = autoMessage;
             sendMessage();
@@ -38,7 +104,129 @@ function initChatPage(conversationId, autoMsg) {
     
     fileInput.addEventListener('change', handleFileUpload);
     sendBtn.onclick = sendMessage;
-    chatInput.onkeypress = e => { if (e.key === 'Enter' && !isProcessing) sendMessage(); };
+    
+    // 输入框自动撑高与 Enter 发送 / Shift+Enter 换行逻辑
+    chatInput.addEventListener('input', function() {
+        this.style.height = '32px';
+        const newHeight = Math.min(this.scrollHeight, 160);
+        this.style.height = newHeight + 'px';
+    });
+    
+    chatInput.addEventListener('keydown', e => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            if (!isProcessing) {
+                sendMessage();
+            }
+        }
+    });
+    
+    // 初始化欢迎卡片 3D 悬浮磁吸动效
+    initWelcomeCardsTilt();
+    
+    // 初始化文件拖拽高亮上传动效
+    initDragAndDropUpload();
+}
+
+// 欢迎卡片 3D 视差倾斜效果
+function initWelcomeCardsTilt() {
+    const cards = document.querySelectorAll('.welcome-card');
+    cards.forEach(card => {
+        card.addEventListener('mousemove', e => {
+            const rect = card.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            const centerX = rect.width / 2;
+            const centerY = rect.height / 2;
+            
+            // 倾斜角度：限制在 8 度以内，展现出精致的微动效
+            const rotateX = ((centerY - y) / centerY) * 8;
+            const rotateY = ((x - centerX) / centerX) * 8;
+            
+            card.classList.add('is-tilting');
+            card.style.transform = `perspective(600px) rotateX(${rotateX.toFixed(2)}deg) rotateY(${rotateY.toFixed(2)}deg) scale(1.02)`;
+        });
+        
+        card.addEventListener('mouseleave', () => {
+            card.classList.remove('is-tilting');
+            card.style.transform = 'perspective(600px) rotateX(0deg) rotateY(0deg) scale(1)';
+        });
+    });
+}
+
+// 文件拖拽磁吸 snap 上传效果
+function initDragAndDropUpload() {
+    const wrapper = document.querySelector('.chat-input-wrapper');
+    if (!wrapper) return;
+    
+    // 阻止浏览器默认拖拽打开文件行为
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        window.addEventListener(eventName, e => {
+            e.preventDefault();
+            e.stopPropagation();
+        }, false);
+    });
+    
+    // 当文件拖入页面时，令输入框进行初级膨胀高亮
+    ['dragenter', 'dragover'].forEach(eventName => {
+        window.addEventListener(eventName, () => {
+            if (!isProcessing) {
+                wrapper.classList.add('drag-over');
+            }
+        }, false);
+    });
+    
+    // 文件拖离页面时还原
+    window.addEventListener('dragleave', e => {
+        if (e.clientX <= 0 || e.clientY <= 0 || e.clientX >= window.innerWidth || e.clientY >= window.innerHeight) {
+            wrapper.classList.remove('drag-over', 'drag-snap');
+        }
+    }, false);
+    
+    window.addEventListener('drop', () => {
+        wrapper.classList.remove('drag-over', 'drag-snap');
+    }, false);
+    
+    // 当文件移动进输入框胶囊局部时，触发“磁吸对接”高亮
+    wrapper.addEventListener('dragover', () => {
+        if (!isProcessing) {
+            wrapper.classList.add('drag-snap');
+        }
+    }, false);
+    
+    wrapper.addEventListener('dragleave', () => {
+        wrapper.classList.remove('drag-snap');
+    }, false);
+    
+    // 拖拽松开，认领文件上传
+    wrapper.addEventListener('drop', e => {
+        wrapper.classList.remove('drag-over', 'drag-snap');
+        if (isProcessing) return;
+        
+        const dt = e.dataTransfer;
+        const files = dt.files;
+        if (files && files.length > 0) {
+            handleDroppedFiles(files);
+        }
+    }, false);
+}
+
+function handleDroppedFiles(files) {
+    if (isProcessing) return;
+    const file = files[0];
+    if (!file) return;
+    
+    const allowedExts = ['.pdf', '.docx', '.doc', '.txt', '.png', '.jpg', '.jpeg', '.webp', '.bmp'];
+    const ext = '.' + file.name.split('.').pop().toLowerCase();
+    if (!allowedExts.includes(ext)) {
+        modal.toast('不支持的文件格式，请上传PDF、DOCX、TXT或图片文件', 'error');
+        return;
+    }
+    
+    // 赋予 fileInput 并触发原生上传逻辑
+    fileInput.files = files;
+    handleFileUpload({ target: fileInput });
 }
 
 // 文件上传处理
@@ -46,10 +234,10 @@ async function handleFileUpload(e) {
     const file = e.target.files[0];
     if (!file) return;
     
-    const allowedExts = ['.pdf', '.docx', '.doc', '.txt'];
+    const allowedExts = ['.pdf', '.docx', '.doc', '.txt', '.png', '.jpg', '.jpeg', '.webp', '.bmp'];
     const ext = '.' + file.name.split('.').pop().toLowerCase();
     if (!allowedExts.includes(ext)) {
-        modal.toast('不支持的文件格式，请上传PDF、DOCX或TXT文件', 'error');
+        modal.toast('不支持的文件格式，请上传PDF、DOCX、TXT或图片文件', 'error');
         fileInput.value = '';
         return;
     }
@@ -58,7 +246,8 @@ async function handleFileUpload(e) {
     formData.append('file', file);
     
     try {
-        modal.toast('正在解析文件...', 'info');
+        const isImage = ['.png', '.jpg', '.jpeg', '.webp', '.bmp'].includes(ext);
+        modal.toast(isImage ? '正在使用AI智能识别截图岗位信息...' : '正在解析文件...', 'info');
         const res = await fetch('/api/upload/resume', {
             method: 'POST',
             body: formData
@@ -92,18 +281,42 @@ function removeFile() {
 
 // 加载对话历史
 async function loadConversation(id) {
+    isNewConversation = false;
     try {
         const res = await fetch('/api/history/' + id);
         const data = await res.json();
         if (data.code === 200 && data.data.messages && data.data.messages.length > 0) {
             document.getElementById('welcomeMessage')?.remove();
-            data.data.messages.forEach(msg => {
+            data.data.messages.forEach((msg, idx) => {
                 const steps = msg.steps || msg.execution_steps || [];
-                addMessage(msg.content, msg.role === 'user', msg.agent, steps);
+                addMessage(msg.content, msg.role === 'user', msg.agent, steps, idx);
             });
             chatMessages.scrollTop = chatMessages.scrollHeight;
             if (data.data.title) {
                 document.getElementById('chatTitle').textContent = data.data.title;
+            }
+            
+            // 填充全局推理详情侧边栏为最后一条助手回复的详情
+            const lastAssistantMsg = data.data.messages.filter(msg => msg.role === 'assistant').pop();
+            if (lastAssistantMsg) {
+                const execSteps = lastAssistantMsg.execution_steps || [];
+                const reasonSteps = lastAssistantMsg.steps || [];
+                const toolsUsedFromMsg = lastAssistantMsg.tools_used || [];
+                
+                // 从execution_steps中提取工具调用信息
+                const toolsFromExecSteps = execSteps
+                    .filter(s => s.type === 'tool' || s.action)
+                    .map(s => s.action || s.title?.replace('调用工具: ', '') || '')
+                    .filter(Boolean);
+                
+                const toolsUsed = [...new Set([...toolsUsedFromMsg, ...toolsFromExecSteps, ...reasonSteps.filter(s => s.action).map(s => s.action)])];
+                
+                updateExecutionSteps(execSteps);
+                updateTools(toolsUsed);
+            } else {
+                // 清空为默认占位符
+                document.getElementById('executionStepsPanel').innerHTML = '<p style="font-size: 0.8125rem; color: var(--text-tertiary);">发送消息后展示</p>';
+                document.getElementById('toolsPanel').innerHTML = '<p style="font-size: 0.8125rem; color: var(--text-tertiary);">工具调用信息</p>';
             }
         }
     } catch (e) { console.error(e); }
@@ -112,37 +325,94 @@ async function loadConversation(id) {
 // 处理状态控制
 function setProcessingState(processing) {
     isProcessing = processing;
+    const wrapper = document.querySelector('.chat-input-wrapper');
+    const uploadBtn = document.getElementById('uploadBtn');
+    const glowEl = document.getElementById('inputGlow');
+    
     if (processing) {
         sendBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>';
         sendBtn.classList.add('stop-btn');
         sendBtn.onclick = stopProcessing;
         chatInput.disabled = true;
+        if (uploadBtn) uploadBtn.disabled = true;
+        if (wrapper) wrapper.classList.add('disabled');
+        
+        // 如果是新对话的第一次提问，激活扩散光的效果
+        if (isNewConversation && glowEl) {
+            glowEl.classList.add('glow-active');
+        }
     } else {
         sendBtn.innerHTML = '发送';
         sendBtn.classList.remove('stop-btn');
         sendBtn.onclick = sendMessage;
         chatInput.disabled = false;
+        if (uploadBtn) uploadBtn.disabled = false;
+        if (wrapper) wrapper.classList.remove('disabled');
+        
+        // 移除扩散光效果
+        if (glowEl) {
+            glowEl.classList.remove('glow-active');
+        }
+        
+        // 第一次提问已经完成，之后便不再是“新对话”状态
+        if (isNewConversation) {
+            isNewConversation = false;
+        }
+        
+        // 移除正在生成的流式光标
+        if (activeLoadingBubble) {
+            const contentEl = activeLoadingBubble.querySelector('.message-content');
+            if (contentEl) {
+                contentEl.classList.remove('streaming-active');
+            }
+        }
+        
         currentAbortController = null;
+        activeLoadingBubble = null;
+        currentTaskId = null;
     }
 }
 
 function stopProcessing() {
+    if (currentTaskId) {
+        fetch('/api/agent/task/abort/' + currentTaskId, { method: 'POST' })
+            .catch(err => console.error('Failed to abort task on server:', err));
+        currentTaskId = null;
+    }
     if (currentAbortController) {
         currentAbortController.abort();
         currentAbortController = null;
     }
     
-    const loadingEl = document.getElementById('loading');
-    if (loadingEl) loadingEl.remove();
+    const loadingEl = activeLoadingBubble || document.getElementById('loading');
+    if (loadingEl) {
+        // 移除加载点和进度指示器
+        const indicator = loadingEl.querySelector('.progress-indicator');
+        if (indicator) indicator.remove();
+        
+        const loadingDots = loadingEl.querySelector('.loading-dots');
+        if (loadingDots) loadingDots.remove();
+        
+        const liveReasoning = loadingEl.querySelector('.reasoning-timeline');
+        if (liveReasoning) {
+            const runningDots = liveReasoning.querySelector('.loading-dots');
+            if (runningDots) runningDots.remove();
+            const liveProgress = liveReasoning.querySelector('#liveProgress');
+            if (liveProgress) liveProgress.textContent = '已停止生成';
+        }
+        
+        // 移除ID防篡改，并使消息内容显示正常
+        loadingEl.removeAttribute('id');
+    }
     
-    addMessage('已停止生成', false);
     setProcessingState(false);
 }
 
 // 添加消息
-function addMessage(content, isUser, agent, steps) {
+function addMessage(content, isUser, agent, steps, index = 0) {
     const div = document.createElement('div');
     div.className = 'message ' + (isUser ? 'message-user' : 'message-agent');
+    div.style.setProperty('--msg-index', index);
     const copyBtn = isUser ? '' : 
         '<button class="msg-copy-btn" onclick="copyMessage(this)" title="复制">' +
             '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>' +
@@ -189,32 +459,20 @@ function addMessage(content, isUser, agent, steps) {
 
 // 格式化消息内容
 function formatMessageContent(content) {
-    let html = content;
-    
-    html = html.replace(/^### (.*?)$/gm, '<h3 style="font-size:0.9375rem;font-weight:600;margin:0.5rem 0 0.25rem;color:var(--accent);">$1</h3>');
-    html = html.replace(/^## (.*?)$/gm, '<h2 style="font-size:1rem;font-weight:600;margin:0.75rem 0 0.5rem;color:var(--accent);">$1</h2>');
-    html = html.replace(/^# (.*?)$/gm, '<h1 style="font-size:1.125rem;font-weight:700;margin:0.5rem 0;padding-bottom:0.5rem;border-bottom:2px solid var(--accent);">$1</h1>');
-    
-    html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-    html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
-    
-    html = html.replace(/`(.*?)`/g, '<code style="background:var(--bg-tertiary);padding:0.125rem 0.375rem;border-radius:0.25rem;font-family:var(--font-mono);font-size:0.875em;">$1</code>');
-    
-    html = html.replace(/^- (.*?)$/gm, '<li style="margin:0.25rem 0;padding-left:0.5rem;">$1</li>');
-    html = html.replace(/(<li.*?<\/li>)/gs, '<ul style="padding-left:1.5rem;margin:0.5rem 0;">$1</ul>');
-    
-    html = html.replace(/^\d+\. (.*?)$/gm, '<li style="margin:0.25rem 0;padding-left:0.5rem;">$1</li>');
-    
-    html = html.replace(/\|(.+)\|/g, function(match) {
-        if (match.includes('---')) return '';
-        const cells = match.split('|').filter(c => c.trim());
-        return '<tr>' + cells.map(c => '<td style="padding:0.375rem 0.75rem;border:1px solid var(--border);">' + c.trim() + '</td>').join('') + '</tr>';
-    });
-    
-    html = html.replace(/\n/g, '<br>');
-    html = html.replace(/<br><br><br>/g, '<br><br>');
-    
-    return html;
+    if (!content) return '';
+    try {
+        // Use marked for robust standard markdown parsing (tables, lists, blockquotes, code blocks)
+        return marked.parse(content);
+    } catch (e) {
+        console.error('Failed to parse Markdown with marked, falling back to simple format:', e);
+        // Basic fallback
+        let html = content
+            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+            .replace(/\*(.*?)\*/g, '<em>$1</em>')
+            .replace(/`(.*?)`/g, '<code>$1</code>')
+            .replace(/\n/g, '<br>');
+        return html;
+    }
 }
 
 // 简历内容检测和提取
@@ -255,6 +513,7 @@ function detectResumeContent(content, agent) {
     if (agent === '简历优化专家' && content.length > 200) return true;
     if (content.includes('<!DOCTYPE html>') && content.includes('tailwindcss')) return true;
     if (content.includes('<html') && content.includes('bg-primary')) return true;
+    if (content.includes('<div') && content.includes('class=') && content.length > 500) return true;
     
     const resumeKeywords = ['## 个人简介', '## 工作经验', '## 教育背景', '## 技能', '## 项目经历'];
     const hasKeywords = resumeKeywords.some(kw => content.includes(kw));
@@ -285,18 +544,22 @@ function renderResumeContent(content) {
     if (content.includes('<!DOCTYPE html>') || content.includes('<html') || content.includes('tailwindcss')) {
         return content;
     }
-    
-    let html = content;
-    html = html.replace(/^### (.*?)$/gm, '<h3>$1</h3>');
-    html = html.replace(/^## (.*?)$/gm, '<h2>$1</h2>');
-    html = html.replace(/^# (.*?)$/gm, '<h1>$1</h1>');
-    html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-    html = html.replace(/^- (.*?)$/gm, '<li>$1</li>');
-    html = html.replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>');
-    html = html.replace(/\n\n/g, '</p><p>');
-    html = html.replace(/\n/g, '<br>');
-    html = '<p>' + html + '</p>';
-    return html;
+    try {
+        return marked.parse(content);
+    } catch (e) {
+        console.error('Failed to parse Resume Markdown with marked:', e);
+        let html = content;
+        html = html.replace(/^### (.*?)$/gm, '<h3>$1</h3>');
+        html = html.replace(/^## (.*?)$/gm, '<h2>$1</h2>');
+        html = html.replace(/^# (.*?)$/gm, '<h1>$1</h1>');
+        html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        html = html.replace(/^- (.*?)$/gm, '<li>$1</li>');
+        html = html.replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>');
+        html = html.replace(/\n\n/g, '</p><p>');
+        html = html.replace(/\n/g, '<br>');
+        html = '<p>' + html + '</p>';
+        return html;
+    }
 }
 
 // 简历预览模态框
@@ -615,8 +878,8 @@ function buildReasoningTimeline(steps) {
 
     let html = '<div class="reasoning-timeline">';
     html += '<div class="reasoning-header" onclick="toggleReasoningTimeline(this)">';
-    html += '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6"/><path d="M9 16h6"/></svg>';
-    html += '<span>推理过程</span>';
+    html += '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>';
+    html += '<span>工具调用</span>';
     html += '<svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M6 9l6 6 6-6"/></svg>';
     html += '</div>';
     html += '<div class="reasoning-body">';
@@ -699,21 +962,20 @@ function buildReasoningTimeline(steps) {
 }
 
 function toggleReasoningTimeline(header) {
-    const timeline = header.parentElement;
-    const body = timeline.querySelector('.reasoning-body');
-    const chevron = header.querySelector('.chevron');
-    
-    if (body.style.display === 'none') {
-        body.style.display = 'block';
-        chevron.style.transform = 'rotate(0deg)';
-    } else {
-        body.style.display = 'none';
-        chevron.style.transform = 'rotate(-90deg)';
+    const timeline = header.closest('.reasoning-timeline');
+    if (timeline) {
+        timeline.classList.toggle('collapsed');
     }
 }
 
 function updateReasoning(steps) {
-    document.getElementById('reasoningPanel').innerHTML = steps.map(s => 
+    const panel = document.getElementById('reasoningPanel');
+    if (!panel) return; // 如果面板不存在，直接返回
+    if (!steps || steps.length === 0) {
+        panel.innerHTML = '<p style="font-size: 0.8125rem; color: var(--text-tertiary);">无推理步骤</p>';
+        return;
+    }
+    panel.innerHTML = steps.map(s => 
         '<div class="step-item"><div class="step-action">' + s.action + '</div>' +
         '<div class="step-output">' + (s.output?.substring(0, 80) || '') + '</div></div>'
     ).join('');
@@ -931,17 +1193,17 @@ function toggleAgentDropdown() {
     btn.classList.toggle('active');
 }
 
-function selectAgent(value, text) {
+function selectAgent(value, text, e) {
     const dropdown = document.getElementById('agentDropdown');
     const btn = document.getElementById('agentSelectorBtn');
     const input = document.getElementById('agentType');
     const textEl = document.getElementById('agentSelectorText');
-    const selectedOption = event.currentTarget;
+    const selectedOption = e ? e.currentTarget : document.querySelector(`.agent-option[data-value="${value}"]`);
     
     document.querySelectorAll('.agent-option').forEach(opt => opt.classList.remove('selected'));
-    selectedOption.classList.add('selected');
+    if (selectedOption) selectedOption.classList.add('selected');
     
-    const optionIcon = selectedOption.querySelector('svg');
+    const optionIcon = selectedOption ? selectedOption.querySelector('svg') : null;
     const btnIcon = btn.querySelector('svg:first-child');
     if (optionIcon && btnIcon) {
         btnIcon.outerHTML = optionIcon.outerHTML;
@@ -978,21 +1240,29 @@ async function sendMessage() {
     }
     
     chatInput.value = '';
+    chatInput.style.height = '32px'; // 重置输入框高度
     
     document.getElementById('welcomeMessage')?.remove();
     addMessage(finalMessage, true);
     
     setProcessingState(true);
+    currentStreamedText = '';
+    
+    // 清空右侧侧边栏推理步骤面板的旧内容
+    const stepsPanel = document.getElementById('executionStepsPanel');
+    if (stepsPanel) {
+        stepsPanel.innerHTML = '<p style="font-size: 0.8125rem; color: var(--text-tertiary);">正在分析...</p>';
+    }
     
     const load = document.createElement('div');
     load.className = 'message message-agent';
     load.id = 'loading';
     load.innerHTML = '<div class="message-avatar">AI</div><div class="message-bubble">' +
         '<div class="reasoning-timeline" id="liveReasoning">' +
-            '<div class="reasoning-header">' +
+            '<div class="reasoning-header" onclick="toggleReasoningTimeline(this)">' +
                 '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6"/><path d="M9 16h6"/></svg>' +
                 '<span id="liveProgress">正在分析您的问题...</span>' +
-                '<div class="loading-dots" style="margin: 0;"><span></span><span></span><span></span></div>' +
+                '<svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" style="margin-left: auto; transition: transform 0.4s;"><path d="M6 9l6 6 6-6"/></svg>' +
             '</div>' +
             '<div class="reasoning-body" id="liveStepsBody"></div>' +
         '</div>' +
@@ -1005,11 +1275,18 @@ async function sendMessage() {
     '</div>';
     chatMessages.appendChild(load);
     chatMessages.scrollTop = chatMessages.scrollHeight;
+    activeLoadingBubble = load;
+    
+    currentAbortController = new AbortController();
     
     try {
-        await streamAgentChat(finalMessage, agentType.value, lastUsedAgent);
+        await streamAgentChat(finalMessage, agentType.value, lastUsedAgent, currentAbortController.signal);
     } catch (e) {
-        const errorEl = document.getElementById('loading');
+        if (e.name === 'AbortError') {
+            console.log('Stream fetch aborted');
+            return;
+        }
+        const errorEl = activeLoadingBubble || document.getElementById('loading');
         if (errorEl) {
             let errorMsg = e.message;
             if (errorMsg.includes('timeout') || errorMsg.includes('超时')) {
@@ -1028,7 +1305,7 @@ async function sendMessage() {
 }
 
 // SSE流式响应
-async function streamAgentChat(message, agentType, lastAgent) {
+async function streamAgentChat(message, agentType, lastAgent, signal) {
     const response = await fetch('/api/agent/chat/stream', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
@@ -1037,7 +1314,8 @@ async function streamAgentChat(message, agentType, lastAgent) {
             agent_type: agentType, 
             conversation_id: currentConversationId,
             last_agent: lastAgent
-        })
+        }),
+        signal: signal
     });
 
     if (!response.ok) {
@@ -1049,6 +1327,7 @@ async function streamAgentChat(message, agentType, lastAgent) {
     let buffer = '';
     let finalResult = null;
     let allSteps = [];
+    let shouldBreak = false;
 
     while (true) {
         const { done, value } = await reader.read();
@@ -1071,6 +1350,7 @@ async function streamAgentChat(message, agentType, lastAgent) {
                     
                     if (eventType === 'done') {
                         finalResult = parsed;
+                        shouldBreak = true;
                     } else if (eventType === 'error') {
                         throw new Error(parsed.error || '执行失败');
                     }
@@ -1081,6 +1361,7 @@ async function streamAgentChat(message, agentType, lastAgent) {
                 eventType = null;
             }
         }
+        if (shouldBreak) break;
     }
 
     if (finalResult) {
@@ -1091,11 +1372,21 @@ async function streamAgentChat(message, agentType, lastAgent) {
 function handleSSEEvent(eventType, data, allSteps) {
     switch (eventType) {
         case 'start':
-            currentConversationId = data.conversation_id;
+            currentTaskId = data.task_id;
+            if (currentConversationId !== data.conversation_id) {
+                currentConversationId = data.conversation_id;
+                try {
+                    const url = new URL(window.location.href);
+                    url.searchParams.set('id', currentConversationId);
+                    window.history.replaceState(null, '', url.pathname + url.search);
+                } catch (e) {
+                    console.error('Failed to update URL search params:', e);
+                }
+            }
             break;
             
         case 'progress':
-            const progressEl = document.getElementById('liveProgress');
+            const progressEl = activeLoadingBubble ? activeLoadingBubble.querySelector('#liveProgress') : document.getElementById('liveProgress');
             if (progressEl) progressEl.textContent = data.message;
             break;
             
@@ -1111,6 +1402,20 @@ function handleSSEEvent(eventType, data, allSteps) {
             }
             
             updateLiveSteps(allSteps);
+            updateExecutionSteps(allSteps);
+            
+            // 实时更新工具调用信息
+            const currentTools = allSteps
+                .filter(s => s.type === 'tool' || s.action)
+                .map(s => s.action || s.title?.replace('调用工具: ', '') || '')
+                .filter(Boolean);
+            if (currentTools.length > 0) {
+                updateTools([...new Set(currentTools)]);
+            }
+            break;
+            
+        case 'content':
+            appendStreamContent(data.content);
             break;
             
         case 'done':
@@ -1121,8 +1426,67 @@ function handleSSEEvent(eventType, data, allSteps) {
     }
 }
 
+// 智能自动滚动到最下方（如果用户手动向上滚动查看历史，则停止强制拉到底部）
+function smartScrollToBottom() {
+    if (!chatMessages) return;
+    const threshold = 150; // 判定距离底部的阈值
+    const isAtBottom = (chatMessages.scrollHeight - chatMessages.scrollTop - chatMessages.clientHeight) <= threshold;
+    if (isAtBottom) {
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+}
+
+// 追加流式文本内容
+function appendStreamContent(token) {
+    const loadingContent = activeLoadingBubble ? activeLoadingBubble.querySelector('.message-content') : document.getElementById('loadingContent');
+    if (!loadingContent) return;
+    
+    // 如果是第一次接收到token，清除进度指示器并加上流式光标样式，并优雅折叠时间线
+    const indicator = loadingContent.querySelector('.progress-indicator');
+    if (indicator) {
+        loadingContent.innerHTML = '';
+        currentStreamedText = '';
+        loadingContent.classList.add('streaming-active');
+        
+        // 自动折叠推理时间线，使用手风琴收起效果
+        const liveReasoning = activeLoadingBubble ? activeLoadingBubble.querySelector('.reasoning-timeline') : document.getElementById('liveReasoning');
+        if (liveReasoning) {
+            liveReasoning.classList.add('collapsed');
+            const liveProgress = liveReasoning.querySelector('#liveProgress');
+            if (liveProgress) {
+                liveProgress.textContent = '思考完毕，已开始回答';
+            }
+        }
+    }
+    
+    currentStreamedText += token;
+    
+    // 检测是否包含简历内容，如果是则分离文字和HTML
+    const isResume = detectResumeContent(currentStreamedText, '');
+    if (isResume) {
+        const resumeOnly = extractResumeContent(currentStreamedText);
+        if (resumeOnly) {
+            const displayContent = currentStreamedText.split('<!--RESUME_START-->')[0].trim() || '已为您生成简历';
+            loadingContent.innerHTML = formatMessageContent(displayContent);
+        } else {
+            // 简历内容还在生成中，只显示文字部分
+            const parts = currentStreamedText.split('<!--RESUME_START-->');
+            if (parts.length > 1) {
+                loadingContent.innerHTML = formatMessageContent(parts[0].trim() || '正在生成简历...');
+            } else {
+                loadingContent.innerHTML = formatMessageContent(currentStreamedText);
+            }
+        }
+    } else {
+        loadingContent.innerHTML = formatMessageContent(currentStreamedText);
+    }
+    
+    // 自动流动滚动
+    smartScrollToBottom();
+}
+
 function updateLiveSteps(steps) {
-    const body = document.getElementById('liveStepsBody');
+    const body = activeLoadingBubble ? activeLoadingBubble.querySelector('#liveStepsBody') : document.getElementById('liveStepsBody');
     if (!body) return;
     
     const iconMap = {
@@ -1171,12 +1535,12 @@ function updateLiveSteps(steps) {
     });
     
     body.innerHTML = html;
-    chatMessages.scrollTop = chatMessages.scrollHeight;
+    smartScrollToBottom();
 }
 
 // 任务完成处理
 async function handleTaskCompleted(result, originalMessage) {
-    const doneEl = document.getElementById('loading');
+    const doneEl = activeLoadingBubble || document.getElementById('loading');
     if (!doneEl) return;
     
     setProcessingState(false);
@@ -1192,9 +1556,13 @@ async function handleTaskCompleted(result, originalMessage) {
     
     const allSteps = [...executionSteps, ...intermediateSteps];
     
-    if (executionSteps.length > 0) {
-        updateExecutionSteps(executionSteps);
-    }
+    updateExecutionSteps(executionSteps);
+    
+    // 从executionSteps中提取工具调用信息
+    const toolsFromSteps = executionSteps.filter(s => s.type === 'tool' || s.action).map(s => s.action || s.title || '');
+    const toolsFromIntermediate = intermediateSteps.filter(s => s.action).map(s => s.action);
+    const toolsUsed = [...new Set([...toolsFromSteps, ...toolsFromIntermediate].filter(Boolean))];
+    updateTools(toolsUsed);
     
     const liveReasoning = document.getElementById('liveReasoning');
     if (liveReasoning && allSteps.length > 0) {
@@ -1204,7 +1572,8 @@ async function handleTaskCompleted(result, originalMessage) {
         liveReasoning.remove();
     }
     
-    const fullContent = result.output || '';
+    // 使用result.output或currentStreamedText（流式输出的内容）
+    const fullContent = result.output || currentStreamedText || '';
     const isResume = detectResumeContent(fullContent, agentUsed);
     
     if (isResume) {

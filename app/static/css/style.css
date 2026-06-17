@@ -2778,7 +2778,7 @@ tr:hover {
     stroke: var(--accent);
     stroke-width: 6;
     stroke-linecap: round;
-    transition: stroke-dasharray 0.8s ease;
+    transition: stroke-dasharray 1.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .completion-text {

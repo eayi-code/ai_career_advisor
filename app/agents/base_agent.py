@@ -2,14 +2,36 @@ from typing import List, Dict, Any, Optional
 from langchain.agents import create_agent
 from langchain.tools import BaseTool
 from flask import current_app
+from langchain_core.callbacks import BaseCallbackHandler
 from app.memory.short_term import ShortTermMemory
 from app.memory.long_term import LongTermMemory
+
+
+class ClientDisconnectedError(BaseException):
+    """Raised when the client disconnects from the SSE stream."""
+    pass
+
+
+class TokenStreamingHandler(BaseCallbackHandler):
+    """Callback handler for streaming tokens, filtering out tool calls."""
+    def __init__(self, on_token_fn):
+        self.on_token_fn = on_token_fn
+        
+    def on_llm_new_token(self, token: str, chunk: Any = None, **kwargs: Any) -> None:
+        if self.on_token_fn:
+            if chunk:
+                message = getattr(chunk, "message", None)
+                if message:
+                    # Filter out tool calls
+                    if getattr(message, "tool_call_chunks", None):
+                        return
+            self.on_token_fn(token)
 
 
 class BaseAgent:
     """智能体基类，实现ReAct推理模式 - 增强版"""
 
-    def __init__(self, agent_name: str, llm=None, on_tool_callback=None):
+    def __init__(self, agent_name: str, llm=None, on_tool_callback=None, on_token_callback=None):
         self.agent_name = agent_name
         self.llm = llm
         self.tools: List[BaseTool] = []
@@ -18,17 +40,25 @@ class BaseAgent:
         self.agent = None
         self.max_retries = 2
         self.on_tool_callback = on_tool_callback
+        self.on_token_callback = on_token_callback
         self._last_output = ""  # 记住上一次输出，用于上下文
 
     def _get_llm(self):
         if self.llm:
             return self.llm
         from app.agents.custom_llm import MiMoChatOpenAI
+        
+        callbacks = []
+        if self.on_token_callback:
+            callbacks.append(TokenStreamingHandler(self.on_token_callback))
+            
         return MiMoChatOpenAI(
             model=current_app.config['OPENAI_MODEL'],
             api_key=current_app.config['OPENAI_API_KEY'],
             base_url=current_app.config['OPENAI_BASE_URL'],
-            temperature=0.7
+            temperature=0.7,
+            streaming=bool(self.on_token_callback),
+            callbacks=callbacks
         )
 
     def _build_system_prompt(self) -> str:
@@ -191,10 +221,10 @@ class BaseAgent:
             score -= 30
         elif len(output) < 50:
             score -= 10
-        elif len(output) > 100:
-            score += 10
         elif len(output) > 300:
             score += 15
+        elif len(output) > 100:
+            score += 10
         
         # 错误关键词检查（短回复中的错误关键词扣分更多）
         error_keywords = ["抱歉", "无法", "失败", "错误", "不支持", "暂不支持"]
@@ -276,7 +306,7 @@ class BaseAgent:
             return f"处理过程中遇到问题，请稍后重试。如果问题持续存在，请尝试换个方式描述您的需求。"
 
     def run(self, user_input: str, user_id: int = None) -> Dict[str, Any]:
-        """执行Agent - 增强版"""
+        """执行Agent - 增强版，支持流式输出"""
         if not self.agent:
             self.build_agent()
 
@@ -305,6 +335,7 @@ class BaseAgent:
                         "status": "running"
                     })
                 
+                # 使用invoke模式
                 result = self.agent.invoke({
                     "messages": [{"role": "user", "content": full_input}]
                 })
@@ -312,10 +343,8 @@ class BaseAgent:
                 output = ""
                 steps = []
                 if "messages" in result:
+                    # 先收集所有工具调用步骤
                     for msg in result["messages"]:
-                        if hasattr(msg, "type") and msg.type == "ai":
-                            if msg.content:
-                                output = msg.content
                         if hasattr(msg, "type") and msg.type == "tool":
                             tool_step = {
                                 "action": msg.name if hasattr(msg, "name") else "tool",
@@ -331,14 +360,18 @@ class BaseAgent:
                                     "detail": (msg.content[:100] if msg.content else "执行完成") + "...",
                                     "status": "completed"
                                 })
-                
-                if not output and "messages" in result:
+                    
+                    # 然后找到最后一个ai message作为最终输出
                     for msg in reversed(result["messages"]):
                         if hasattr(msg, "type") and msg.type == "ai":
                             content = getattr(msg, "content", "")
                             if content:
                                 output = content
                                 break
+                
+                # 发送最终内容到前端
+                if output and self.on_token_callback:
+                    self.on_token_callback(output)
                 
                 print(f"[BaseAgent] {self.agent_name} 输出长度: {len(output)}")
 
@@ -357,7 +390,10 @@ class BaseAgent:
                     self.short_term_memory.add_message(user_id, "user", user_input)
                     if formatted_output:
                         self.short_term_memory.add_message(user_id, "assistant", formatted_output)
-                        self.long_term_memory.store(user_id, user_input, formatted_output)
+                        try:
+                            self.long_term_memory.store(user_id, user_input, formatted_output)
+                        except Exception as e:
+                            print(f"[BaseAgent] 保存长期向量记忆失败 (可能是本地Ollama未启动或ChromaDB不可用): {e}")
 
                 # 记住上一次输出
                 self._last_output = formatted_output
@@ -368,10 +404,17 @@ class BaseAgent:
                     "intermediate_steps": steps,
                     "quality_score": validation["score"]
                 }
+            except ClientDisconnectedError as e:
+                raise e
             except Exception as e:
                 print(f"[BaseAgent] {self.agent_name} 异常: {str(e)}")
                 import traceback
                 traceback.print_exc()
+                try:
+                    from app import db
+                    db.session.rollback()
+                except Exception:
+                    pass
                 last_error = str(e)
                 if attempt < self.max_retries:
                     continue
