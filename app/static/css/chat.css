@@ -820,6 +820,20 @@
     box-shadow: 0 4px 12px rgba(26, 115, 232, 0.25);
 }
 
+/* Hide mobile elements on desktop */
+.mobile-plus-btn {
+    display: none !important;
+}
+
+.mobile-plus-menu {
+    display: none !important;
+}
+
+/* Show desktop elements by default */
+.desktop-only {
+    display: flex;
+}
+
 .chat-input-wrapper .btn-icon {
     width: 28px;
     height: 28px;
@@ -1359,12 +1373,4 @@ body.resume-open .chat-layout .chat-container {
 }
 
 /* ===== 响应式 ===== */
-@media (max-width: 768px) {
-    .sidebar {
-        display: none;
-    }
-
-    .chat-sidebar {
-        display: none;
-    }
-}
+/* Mobile styles moved to mobile.css */

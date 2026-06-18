@@ -1648,37 +1648,134 @@ async function deleteConversation(id, e) {
     }
 }
 
-// ===== 移动端侧边栏切换 =====
+// ===== Mobile Plus Menu =====
+function toggleMobileMenu() {
+    const menu = document.getElementById('mobilePlusMenu');
+    const btn = document.getElementById('mobilePlusBtn');
+    if (!menu || !btn) return;
+
+    const isOpen = menu.classList.contains('show');
+    if (isOpen) {
+        closeMobileMenu();
+    } else {
+        menu.classList.add('show');
+        btn.classList.add('active');
+    }
+}
+
+function closeMobileMenu() {
+    const menu = document.getElementById('mobilePlusMenu');
+    const btn = document.getElementById('mobilePlusBtn');
+    if (menu) menu.classList.remove('show');
+    if (btn) btn.classList.remove('active');
+}
+
+function showMobileAgentSelector() {
+    // Create a simple agent selector modal for mobile
+    const agentOptions = [
+        { value: 'auto', name: '自动选择', color: '#666' },
+        { value: 'career', name: '职业规划', color: '#3b82f6' },
+        { value: 'skill', name: '技能分析', color: '#8b5cf6' },
+        { value: 'side_job', name: '副业分析', color: '#10b981' },
+        { value: 'resume', name: '简历优化', color: '#f59e0b' },
+        { value: 'interview', name: '面试教练', color: '#ec4899' }
+    ];
+
+    const currentAgent = document.getElementById('agentType')?.value || 'auto';
+
+    let html = '<div class="mobile-agent-modal" onclick="this.remove()">';
+    html += '<div class="mobile-agent-sheet" onclick="event.stopPropagation()">';
+    html += '<div class="mobile-agent-header">选择智能体</div>';
+    html += '<div class="mobile-agent-list">';
+
+    agentOptions.forEach(opt => {
+        const isSelected = opt.value === currentAgent;
+        html += `<button class="mobile-agent-option ${isSelected ? 'selected' : ''}" 
+                    onclick="selectAgent('${opt.value}', '${opt.name}', event); this.closest('.mobile-agent-modal').remove();">
+            <span class="mobile-agent-dot" style="background: ${opt.color};"></span>
+            <span>${opt.name}</span>
+            ${isSelected ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M20 6L9 17l-5-5"/></svg>' : ''}
+        </button>`;
+    });
+
+    html += '</div></div></div>';
+
+    document.body.insertAdjacentHTML('beforeend', html);
+}
+
+// Close mobile menu when clicking outside
+document.addEventListener('click', function(e) {
+    const menu = document.getElementById('mobilePlusMenu');
+    const btn = document.getElementById('mobilePlusBtn');
+    if (menu && btn && !menu.contains(e.target) && !btn.contains(e.target)) {
+        closeMobileMenu();
+    }
+});
+
+// ===== Mobile Sidebar Toggle =====
 function toggleSidebar() {
     const sidebar = document.querySelector('.sidebar');
     const overlay = document.getElementById('sidebarOverlay');
-    
+    const hamburger = document.getElementById('hamburgerBtn');
+
     if (!sidebar || !overlay) return;
-    
+
     const isActive = sidebar.classList.contains('active');
-    
+
     if (isActive) {
-        // 关闭侧边栏
+        // Close sidebar
         sidebar.classList.remove('active');
         overlay.classList.remove('active');
+        if (hamburger) hamburger.classList.remove('active');
         document.body.style.overflow = '';
     } else {
-        // 打开侧边栏
+        // Open sidebar
         sidebar.classList.add('active');
         overlay.classList.add('active');
+        if (hamburger) hamburger.classList.add('active');
         document.body.style.overflow = 'hidden';
     }
 }
 
-// 点击侧边栏链接后自动关闭侧边栏（移动端）
+// Close sidebar when clicking links (mobile)
 document.addEventListener('DOMContentLoaded', function() {
     const sidebarLinks = document.querySelectorAll('.sidebar-link, .chat-history-link');
     sidebarLinks.forEach(link => {
         link.addEventListener('click', function() {
             if (window.innerWidth <= 768) {
-                // 延迟关闭，让页面跳转先执行
                 setTimeout(() => toggleSidebar(), 100);
             }
         });
     });
+
+    // Close sidebar on escape key
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            const sidebar = document.querySelector('.sidebar');
+            if (sidebar && sidebar.classList.contains('active')) {
+                toggleSidebar();
+            }
+        }
+    });
+
+    // Handle swipe to close
+    let touchStartX = 0;
+    let touchEndX = 0;
+    const sidebar = document.querySelector('.sidebar');
+
+    if (sidebar) {
+        sidebar.addEventListener('touchstart', function(e) {
+            touchStartX = e.changedTouches[0].screenX;
+        }, { passive: true });
+
+        sidebar.addEventListener('touchend', function(e) {
+            touchEndX = e.changedTouches[0].screenX;
+            const swipeDistance = touchStartX - touchEndX;
+
+            // Swipe left to close
+            if (swipeDistance > 50 && sidebar.classList.contains('active')) {
+                toggleSidebar();
+            }
+        }, { passive: true });
+    }
 });

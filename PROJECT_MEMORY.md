@@ -1988,3 +1988,81 @@ sudo docker exec ai_career_advisor-db-1 mysqldump -u root -p career_advisor > ba
 - ⏳ Cloudflare Tunnel配置（外网访问）
 - ⏳ 自动备份定时任务
 - ⏳ HTTPS证书配置
+
+---
+
+## 二十一、移动端适配开发记录
+
+### 2026-06-18 移动端响应式适配
+
+**目标**：让项目在手机上正常显示和使用
+
+**已完成的工作**：
+
+1. **创建移动端CSS文件**
+   - 新建 `app/static/css/mobile.css`
+   - 使用媒体查询隔离移动端和桌面端样式
+   - 使用 `.desktop-only` 和 `.mobile-plus-btn` 类控制显示
+
+2. **修复侧边栏问题**
+   - 问题：`chat.css` 中的 `display: none` 覆盖了 `mobile.css` 的 `transform` 样式
+   - 解决：删除 `chat.css` 中的移动端媒体查询，统一在 `mobile.css` 中管理
+   - 侧边栏改为抽屉式，使用 `transform: translateX(-100%)` 隐藏
+
+3. **添加汉堡菜单**
+   - 在 `chat.html` 和 `profile.html` 添加汉堡菜单按钮
+   - 添加侧边栏遮罩层
+   - 实现点击遮罩层关闭侧边栏
+
+4. **添加+号菜单**
+   - 输入框左侧添加+号按钮（移动端显示）
+   - 点击弹出菜单，包含"上传文件"和"切换智能体"
+   - 桌面端隐藏+号按钮，显示原有的Agent选择器和上传按钮
+
+5. **优化输入框**
+   - 悬浮在底部（position: fixed）
+   - 毛玻璃背景效果
+   - 发送按钮改为圆形蓝色
+   - 消息区域留出底部空间
+
+6. **参照ChatGPT/Gemini风格重构**
+   - 配色：纯白背景 + 浅灰消息气泡 + 蓝色强调
+   - 消息气泡：用户右对齐浅灰，AI左对齐无背景
+   - 入场动画：从下方淡入
+   - 侧边栏：300px宽，从左侧滑入
+
+**遇到的问题**：
+
+1. **CSS优先级冲突**：`chat.css` 的 `display: none` 覆盖了 `mobile.css` 的样式
+2. **浏览器缓存**：修改CSS后需要强制刷新才能看到效果
+3. **输入框布局**：发送按钮和Agent选择器的大小需要反复调整
+4. **历史对话加载**：数据库中有完整消息，但用户反馈只显示第一条（可能是缓存问题）
+
+**待优化**：
+
+- ⏳ 移动端UI效果还需进一步打磨
+- ⏳ 需要参照taste-skill的设计规范进行更精细的优化
+- ⏳ 用户交互体验（触摸反馈、动画流畅度）
+- ⏳ 业务场景适配（欢迎页面、对话历史、用户中心）
+
+**相关文件**：
+
+| 文件 | 修改内容 |
+|------|----------|
+| `app/static/css/mobile.css` | 新建，移动端响应式样式 |
+| `app/static/css/chat.css` | 删除移动端媒体查询，添加mobile-plus-btn隐藏样式 |
+| `app/templates/base.html` | 引入mobile.css |
+| `app/templates/career/chat.html` | 添加汉堡菜单、遮罩层、+号菜单 |
+| `app/templates/career/profile.html` | 添加汉堡菜单、遮罩层、移动端顶部栏 |
+| `app/templates/index.html` | 添加汉堡菜单 |
+| `app/static/js/chat.js` | 添加toggleSidebar、toggleMobileMenu等函数 |
+| `app/static/js/main.js` | 添加toggleNavMenu函数 |
+
+**设计参考**：
+
+- ChatGPT移动端：简洁聊天界面、底部输入框、圆形发送按钮
+- Gemini移动端：消息气泡样式、侧边栏抽屉
+- taste-skill：设计规范（配色、字体、动画、交互）
+
+**最后更新**: 2026-06-18
+**当前状态**: 移动端基础适配完成，UI效果待优化

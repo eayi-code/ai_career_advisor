@@ -55,8 +55,22 @@
             </form>
         </div>
     </aside>
-    
+
+    <!-- Sidebar overlay -->
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+
     <main class="main-content">
+        <!-- Mobile top bar -->
+        <div class="mobile-topbar" style="display: none;">
+            <button class="hamburger-btn" id="hamburgerBtn" onclick="toggleSidebar()" aria-label="Open menu">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M3 12h18M3 6h18M3 18h18"/>
+                </svg>
+            </button>
+            <span class="mobile-topbar-title">用户中心</span>
+            <div style="width: 40px;"></div>
+        </div>
+
         <div class="profile-header">
             <div class="profile-cover"></div>
             <div class="profile-info">
