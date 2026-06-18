@@ -1784,6 +1784,207 @@ while (true) {
 
 **待完成**：
 - ⏳ 前端UI/UX优化（需要更精细的设计调整）
-- ⏳ 生产环境部署测试
 - ⏳ Redis缓存配置（可选）
 - ⏳ CDN加速配置（可选）
+
+---
+
+## 十七、小主机部署记录
+
+### 2026-06-17 Deepin小主机部署
+
+**部署环境**：
+- 硬件：富士通Q558（i3-9100T, 8G RAM, 256G SSD）
+- 系统：Deepin Linux
+- IP地址：10.43.84.249
+- 部署方式：Docker + docker-compose
+
+**部署过程**：
+
+1. **代码推送到GitHub**
+   - 仓库地址：https://github.com/eayi-code/ai_career_advisor
+   - 分支：main
+
+2. **小主机环境配置**
+   - 安装Docker：`sudo apt install docker.io`
+   - 安装docker-compose：升级到v2.24.5
+   - 配置SSH：开启root登录和密码认证
+
+3. **Docker镜像加速**
+   - 配置国内镜像源（docker.1ms.run, dockerhub.icu等）
+   - 解决Docker Hub被墙问题
+
+4. **数据库初始化**
+   - 进入容器：`docker exec -it ai_career_advisor-app-1 bash`
+   - 执行迁移：`flask db upgrade`
+   - 初始化数据：`python init_data.py`
+
+5. **环境变量配置**
+   - SECRET_KEY：自动生成
+   - DATABASE_URL：mysql+pymysql://root:password@db:3306/career_advisor
+   - OPENAI_API_KEY：使用小米API
+   - OPENAI_BASE_URL：https://token-plan-cn.xiaomimimo.com/v1
+   - OPENAI_MODEL：mimo-v2.5-pro
+   - VISION_API_KEY：使用MiniMax API
+   - VISION_MODEL：MiniMax-M3
+
+**部署命令**：
+
+```bash
+# 克隆项目
+cd ~
+git clone https://github.com/eayi-code/ai_career_advisor.git
+cd ai_career_advisor
+
+# 配置环境变量
+cp .env.example .env
+nano .env  # 填入配置
+
+# 启动服务
+sudo docker-compose -f docker-compose.lan.yml up -d
+
+# 初始化数据库
+sudo docker exec -it ai_career_advisor-app-1 bash
+flask db upgrade
+python init_data.py
+exit
+
+# 重启服务
+sudo docker-compose -f docker-compose.lan.yml restart app
+```
+
+**访问地址**：
+- 局域网：http://10.43.84.249:5000
+- 手机访问：连接同一WiFi，浏览器输入地址
+
+**常见问题**：
+
+1. **docker-compose版本太旧**
+   - 症状：`Not supported URL scheme http+docker`
+   - 解决：升级到v2.24.5
+
+2. **Docker Hub被墙**
+   - 症状：下载镜像超时
+   - 解决：配置国内镜像加速器
+
+3. **数据库表不存在**
+   - 症状：`Table 'career_advisor.users' doesn't exist`
+   - 解决：进入容器执行`flask db upgrade`
+
+4. **sudo需要密码**
+   - 解决：使用`echo "password" | sudo -S command`
+
+**运维命令**：
+
+```bash
+# 查看服务状态
+sudo docker-compose -f docker-compose.lan.yml ps
+
+# 查看日志
+sudo docker-compose -f docker-compose.lan.yml logs -f
+
+# 重启服务
+sudo docker-compose -f docker-compose.lan.yml restart
+
+# 更新代码
+cd ~/ai_career_advisor
+git pull
+sudo docker-compose -f docker-compose.lan.yml up -d --build
+
+# 进入容器
+sudo docker exec -it ai_career_advisor-app-1 bash
+
+# 备份数据库
+sudo docker exec ai_career_advisor-db-1 mysqldump -u root -p career_advisor > backup.sql
+```
+
+**数据持久化**：
+- MySQL数据：`ai_career_advisor_mysql_data` 卷
+- ChromaDB数据：`ai_career_advisor_chroma_data` 卷
+- 应用日志：`ai_career_advisor_app_logs` 卷
+- 备份目录：`ai_career_advisor_backups` 卷
+
+**下一步**：
+- 配置Cloudflare Tunnel实现外网访问
+- 配置自动备份定时任务
+- 配置HTTPS证书
+
+---
+
+## 十八、部署文档
+
+### 已创建的文档
+
+1. **DEPLOYMENT.md** - 详细部署指南
+2. **DEPLOY_DEEPIN.md** - Deepin系统部署指南
+3. **DEPLOY_GUIDE.md** - 部署与运维指南（含求职技能点）
+
+### 文档内容概览
+
+| 文档 | 内容 |
+|------|------|
+| DEPLOYMENT.md | Docker部署、环境配置、常见问题 |
+| DEPLOY_DEEPIN.md | Deepin系统特定部署步骤 |
+| DEPLOY_GUIDE.md | 核心原理、部署流程、网络配置、运维命令、求职技能点 |
+
+### 求职技能点
+
+| 技能 | 说明 |
+|------|------|
+| Docker容器化 | 使用Docker部署Flask+MySQL应用 |
+| Docker Compose | 多容器编排和管理 |
+| Nginx反向代理 | 负载均衡和静态文件服务 |
+| Linux运维 | 命令行操作、服务管理 |
+| Git版本控制 | 代码管理和团队协作 |
+| CI/CD | 持续集成/持续部署 |
+| 内网穿透 | Cloudflare Tunnel配置 |
+| 数据库管理 | MySQL备份恢复 |
+
+---
+
+## 十九、PWA配置
+
+### 已完成
+
+- ✅ manifest.json - PWA应用清单
+- ✅ sw.js - Service Worker（离线缓存）
+- ✅ icon-*.png - 8种尺寸的应用图标
+- ✅ base.html - 添加PWA meta标签和Service Worker注册
+
+### PWA功能
+
+| 功能 | 说明 |
+|------|------|
+| 添加到主屏幕 | 手机用户可像APP一样使用 |
+| 离线访问 | 静态资源缓存，断网也能访问 |
+| 全屏模式 | 隐藏浏览器地址栏 |
+| 启动画面 | 类似原生APP的启动体验 |
+
+---
+
+## 二十、当前状态总结
+
+### 已完成
+
+- ✅ 22项Bug修复和安全加固
+- ✅ 部署配置（Docker、Nginx、日志）
+- ✅ Git配置优化
+- ✅ API限流配置（flask-limiter）
+- ✅ 数据库索引优化（7个索引）
+- ✅ 备份脚本（MySQL + ChromaDB）
+- ✅ 恢复脚本
+- ✅ 健康检查脚本
+- ✅ Docker健康检查配置
+- ✅ 日志轮转配置
+- ✅ PWA配置
+- ✅ Deepin小主机部署
+- ✅ 部署文档
+
+### 待完成
+
+- ⏳ 前端UI/UX优化（需要更精细的设计调整）
+- ⏳ Redis缓存配置（可选）
+- ⏳ CDN加速配置（可选）
+- ⏳ Cloudflare Tunnel配置（外网访问）
+- ⏳ 自动备份定时任务
+- ⏳ HTTPS证书配置

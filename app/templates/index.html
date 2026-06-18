@@ -630,6 +630,35 @@ body {
     .stats { grid-template-columns: repeat(2, 1fr); }
     .hero-actions { flex-direction: column; }
     .footer-content { flex-direction: column; gap: 12px; text-align: center; }
+
+    /* 移动端汉堡菜单 */
+    .hamburger-btn {
+        display: flex !important;
+    }
+
+    .nav-links {
+        display: none;
+        position: absolute;
+        top: 52px;
+        left: 0;
+        right: 0;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(20px);
+        border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+        flex-direction: column;
+        padding: 16px 20px;
+        gap: 12px;
+    }
+
+    .nav-links.active {
+        display: flex;
+    }
+
+    .nav-link, .nav-cta {
+        width: 100%;
+        text-align: center;
+        padding: 12px;
+    }
 }
 </style>
 
@@ -643,6 +672,12 @@ body {
             </svg>
             <span>CareerAI</span>
         </a>
+        <!-- 汉堡菜单按钮（移动端） -->
+        <button class="hamburger-btn" onclick="toggleNavMenu()" aria-label="打开菜单" style="display: none;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3 12h18M3 6h18M3 18h18"/>
+            </svg>
+        </button>
         <div class="nav-links">
             {% if current_user.is_authenticated %}
                 <a href="{{ url_for('career.chat') }}" class="nav-cta">Open App</a>

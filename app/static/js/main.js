@@ -415,3 +415,35 @@ const utils = {
         }).format(new Date(date));
     }
 };
+
+// ===== 移动端导航栏菜单切换 =====
+function toggleNavMenu() {
+    const navLinks = document.querySelector('.nav-links');
+    if (navLinks) {
+        navLinks.classList.toggle('active');
+    }
+}
+
+// 点击导航链接后自动关闭菜单（移动端）
+document.addEventListener('DOMContentLoaded', function() {
+    const navLinks = document.querySelectorAll('.nav-link');
+    navLinks.forEach(link => {
+        link.addEventListener('click', function() {
+            if (window.innerWidth <= 768) {
+                const navMenu = document.querySelector('.nav-links');
+                if (navMenu) {
+                    navMenu.classList.remove('active');
+                }
+            }
+        });
+    });
+
+    // 点击页面其他区域关闭导航菜单
+    document.addEventListener('click', function(e) {
+        const navbar = document.querySelector('.navbar');
+        const navLinks = document.querySelector('.nav-links');
+        if (navbar && navLinks && !navbar.contains(e.target)) {
+            navLinks.classList.remove('active');
+        }
+    });
+});

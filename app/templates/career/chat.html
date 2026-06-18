@@ -62,9 +62,17 @@
         </div>
     </aside>
     
+    <!-- 侧边栏遮罩层 -->
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+
     <main class="main-content">
         <div class="chat-container">
             <div class="chat-topbar">
+                <button class="hamburger-btn" id="hamburgerBtn" onclick="toggleSidebar()" aria-label="打开菜单">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 12h18M3 6h18M3 18h18"/>
+                    </svg>
+                </button>
                 <div class="chat-topbar-title" id="chatTitle">新对话</div>
                 <button class="toggle-panel-btn" onclick="toggleSidePanel()" title="推理详情">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">

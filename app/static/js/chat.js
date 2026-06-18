@@ -1647,3 +1647,38 @@ async function deleteConversation(id, e) {
         modal.toast('删除失败', 'error');
     }
 }
+
+// ===== 移动端侧边栏切换 =====
+function toggleSidebar() {
+    const sidebar = document.querySelector('.sidebar');
+    const overlay = document.getElementById('sidebarOverlay');
+    
+    if (!sidebar || !overlay) return;
+    
+    const isActive = sidebar.classList.contains('active');
+    
+    if (isActive) {
+        // 关闭侧边栏
+        sidebar.classList.remove('active');
+        overlay.classList.remove('active');
+        document.body.style.overflow = '';
+    } else {
+        // 打开侧边栏
+        sidebar.classList.add('active');
+        overlay.classList.add('active');
+        document.body.style.overflow = 'hidden';
+    }
+}
+
+// 点击侧边栏链接后自动关闭侧边栏（移动端）
+document.addEventListener('DOMContentLoaded', function() {
+    const sidebarLinks = document.querySelectorAll('.sidebar-link, .chat-history-link');
+    sidebarLinks.forEach(link => {
+        link.addEventListener('click', function() {
+            if (window.innerWidth <= 768) {
+                // 延迟关闭，让页面跳转先执行
+                setTimeout(() => toggleSidebar(), 100);
+            }
+        });
+    });
+});
