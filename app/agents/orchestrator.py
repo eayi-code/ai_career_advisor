@@ -437,10 +437,17 @@ class IntentClassifier:
         # ===== 计算总分和高置信度意图 =====
         total = sum(s["score"] for s in scores.values())
         high_confidence = []
+        
+        # 检测复合意图指示词
+        composite_indicators = ["并", "和", "同时", "也", "然后", "之后", "还要", "还需要", "顺便", "另外"]
+        has_composite_indicator = any(indicator in user_input for indicator in composite_indicators)
+        
+        # 动态调整阈值：有复合意图指示词时降低阈值
+        threshold = 0.25 if has_composite_indicator else 0.4
+        
         for name, data in scores.items():
             confidence = data["score"] / total
-            # 优化：提高阈值从0.25到0.4，减少被识别为"高置信度"的意图数量
-            if confidence >= 0.4:
+            if confidence >= threshold:
                 high_confidence.append({"name": name, "confidence": confidence, "keywords": data["keywords"]})
         
         # 按分数排序
@@ -452,8 +459,8 @@ class IntentClassifier:
             high_confidence.insert(0, {"name": "career", "confidence": 0.3, "keywords": ["目标岗位"]})
 
         # ===== 优化：主意图优先逻辑 =====
-        # 如果第一个意图的置信度明显高于第二个（>55%且领先15%以上），直接使用，不调用LLM
-        if len(high_confidence) >= 2:
+        # 如果第一个意图的置信度明显高于第二个（>55%且领先15%以上），且没有复合意图指示词，直接使用
+        if len(high_confidence) >= 2 and not has_composite_indicator:
             top = high_confidence[0]
             second = high_confidence[1]
             if top["confidence"] >= 0.55 and (top["confidence"] - second["confidence"]) >= 0.15:
