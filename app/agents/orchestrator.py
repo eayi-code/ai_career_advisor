@@ -210,9 +210,20 @@ class DAGResolver:
 # ==================== 智能意图识别器 ====================
 
 class IntentClassifier:
-    """智能意图识别器 - 增强版"""
+    """智能意图识别器 - 性能优化版
+
+    优化点：
+    1. 意图缓存：相同输入直接返回缓存结果，避免重复计算
+    2. 提高置信度阈值：从0.25提高到0.4，减少不必要的LLM调用
+    3. 主意图优先逻辑：某个意图明显领先时直接使用，不调用LLM
+    4. 优化关键词权重：提高区分度
+    """
 
     def __init__(self):
+        # 意图缓存（最近100条）
+        self._intent_cache = {}
+        self._cache_max_size = 100
+
         self.keyword_weights = {
             "career": {
                 "high": ["职业", "工作", "岗位", "求职", "offer", "公司", "就业", "全职", "薪资", "工资", "待遇", "发展前景",
@@ -289,7 +300,7 @@ class IntentClassifier:
         return scores
 
     def classify_with_llm(self, user_input: str, user_profile: Dict = None) -> Dict[str, Any]:
-        """使用LLM进行复合意图识别"""
+        """使用LLM进行复合意图识别（优化版：精简prompt减少token消耗）"""
         try:
             llm = ChatOpenAI(
                 model=current_app.config['OPENAI_MODEL'],
@@ -298,41 +309,30 @@ class IntentClassifier:
                 temperature=0
             )
 
+            # 优化：只传递关键字段，减少token消耗
             profile_context = ""
             if user_profile:
-                profile_context = f"\n用户档案信息：{json.dumps(user_profile, ensure_ascii=False)}"
+                key_fields = {}
+                if user_profile.get("target_job_title"):
+                    key_fields["目标岗位"] = user_profile["target_job_title"]
+                if user_profile.get("skills"):
+                    key_fields["技能"] = user_profile["skills"][:5]  # 最多5个技能
+                if user_profile.get("work_experience"):
+                    key_fields["工作年限"] = user_profile["work_experience"]
+                if key_fields:
+                    profile_context = f"\n用户背景：{json.dumps(key_fields, ensure_ascii=False)}"
 
-            prompt = f"""请分析以下用户问题，判断涉及哪些任务类别。可以返回多个类别。
+            prompt = f"""分析用户问题涉及哪些任务类别。
 
-类别定义：
-- career: 职业规划、求职、工作岗位、公司、薪资查询、职业发展等
-- skill: 技能学习、能力提升、培训课程、技能差距分析、学习路径等
-- side_job: 副业、兼职、额外收入、自由职业、被动收入等
-- resume: 简历优化、简历生成、简历解析、ATS评分、JD分析、简历模板等
-- interview: 面试准备、自我介绍、面试题、薪资谈判、offer谈判等
+类别：career(职业/求职), skill(技能/学习), side_job(副业/兼职), resume(简历), interview(面试)
 {profile_context}
 
-用户问题：{user_input}
+问题：{user_input}
 
-请返回JSON格式（严格遵循）：
-{{
-    "intents": ["类别1", "类别2"],
-    "reasoning": "识别理由",
-    "confidence": 0.9,
-    "subtasks": [
-        {{"agent": "类别", "task": "子任务描述", "order": 1, "depends_on": []}}
-    ],
-    "user_intent_summary": "用户意图简述"
-}}
+返回JSON：
+{{"intents": ["类别"], "reasoning": "理由", "confidence": 0.9}}
 
-规则：
-1. intents数组可以包含1-3个类别
-2. subtasks要具体明确，可独立执行
-3. depends_on引用其他subtask的order值
-4. 如果用户没有目标岗位且需要简历/面试服务，第一个subtask必须是career
-5. confidence表示识别置信度（0-1）
-
-只返回JSON，不要其他内容。"""
+规则：intents可含1-3个类别。只返回JSON。"""
 
             response = llm.invoke(prompt)
             content = response.content.strip()
@@ -374,11 +374,25 @@ class IntentClassifier:
 
     def classify(self, user_input: str, context: str = "", user_profile: Dict = None, 
                  last_agent: str = None, conversation_history: List = None) -> Dict[str, Any]:
-        """综合意图识别 - 增强版"""
-        # 第一步：关键词匹配
+        """综合意图识别 - 性能优化版
+
+        优化点：
+        1. 意图缓存：相同输入直接返回缓存结果
+        2. 提高置信度阈值：从0.25→0.4，减少不必要的LLM调用
+        3. 主意图优先：某个意图置信度>55%时直接使用，不调用LLM
+        """
+        # ===== 缓存检查 =====
+        cache_key = f"{user_input.strip()}|{last_agent or ''}"
+        if cache_key in self._intent_cache:
+            cached = self._intent_cache[cache_key]
+            # 深拷贝避免修改缓存
+            import copy
+            return copy.deepcopy(cached)
+
+        # ===== 第一步：关键词匹配 =====
         scores = self.classify_keywords(user_input, context)
         
-        # 第二步：检查是否需要Agent切换（基于上下文）
+        # ===== 第二步：检查是否需要Agent切换（基于上下文）=====
         if last_agent and conversation_history:
             switch_result = self._check_context_switch(user_input, last_agent, conversation_history)
             if switch_result:
@@ -387,7 +401,7 @@ class IntentClassifier:
                 scores[switch_result]["score"] += 5  # 给上下文切换加分
                 scores[switch_result]["keywords"].append("上下文切换")
 
-        # 检查用户档案，判断是否需要前置任务
+        # ===== 检查用户档案，判断是否需要前置任务 =====
         need_career_prefix = False
         if user_profile:
             has_target_job = bool(user_profile.get("target_job_title"))
@@ -396,10 +410,10 @@ class IntentClassifier:
             if not has_target_job and "interview" in scores:
                 need_career_prefix = True
 
+        # ===== 未匹配到关键词 =====
         if not scores:
-            # 未匹配到关键词时，根据上下文决定
             if last_agent:
-                return {
+                result = {
                     "intents": [last_agent],
                     "is_composite": False,
                     "confidence": 0.6,
@@ -407,21 +421,26 @@ class IntentClassifier:
                     "scores": {},
                     "subtasks": []
                 }
-            return {
-                "intents": ["career"],
-                "is_composite": False,
-                "confidence": 0.5,
-                "reasoning": "未匹配到关键词，默认使用职业规划",
-                "scores": {},
-                "subtasks": []
-            }
+            else:
+                result = {
+                    "intents": ["career"],
+                    "is_composite": False,
+                    "confidence": 0.5,
+                    "reasoning": "未匹配到关键词，默认使用职业规划",
+                    "scores": {},
+                    "subtasks": []
+                }
+            # 缓存结果
+            self._cache_intent(cache_key, result)
+            return result
 
-        # 计算总分和高置信度意图
+        # ===== 计算总分和高置信度意图 =====
         total = sum(s["score"] for s in scores.values())
         high_confidence = []
         for name, data in scores.items():
             confidence = data["score"] / total
-            if confidence >= 0.25:  # 降低阈值，更容易触发复合意图
+            # 优化：提高阈值从0.25到0.4，减少被识别为"高置信度"的意图数量
+            if confidence >= 0.4:
                 high_confidence.append({"name": name, "confidence": confidence, "keywords": data["keywords"]})
         
         # 按分数排序
@@ -432,7 +451,25 @@ class IntentClassifier:
             scores["career"] = {"score": 2, "keywords": ["目标岗位"]}
             high_confidence.insert(0, {"name": "career", "confidence": 0.3, "keywords": ["目标岗位"]})
 
-        # 多个高置信度意图，使用LLM确认
+        # ===== 优化：主意图优先逻辑 =====
+        # 如果第一个意图的置信度明显高于第二个（>55%且领先15%以上），直接使用，不调用LLM
+        if len(high_confidence) >= 2:
+            top = high_confidence[0]
+            second = high_confidence[1]
+            if top["confidence"] >= 0.55 and (top["confidence"] - second["confidence"]) >= 0.15:
+                # 主意图明确，直接使用
+                result = {
+                    "intents": [top["name"]],
+                    "is_composite": False,
+                    "confidence": top["confidence"],
+                    "reasoning": f"主意图明确: {top['name']}({top['confidence']:.0%})",
+                    "scores": scores,
+                    "subtasks": []
+                }
+                self._cache_intent(cache_key, result)
+                return result
+
+        # ===== 多个高置信度意图，使用LLM确认 =====
         if len(high_confidence) >= 2:
             try:
                 llm_result = self.classify_with_llm(user_input, user_profile)
@@ -441,7 +478,7 @@ class IntentClassifier:
                 if need_career_prefix and "career" not in llm_result["intents"]:
                     llm_result["intents"] = ["career"] + llm_result["intents"]
                 
-                return {
+                result = {
                     "intents": llm_result["intents"],
                     "is_composite": len(llm_result["intents"]) > 1,
                     "confidence": llm_result.get("confidence", 0.8),
@@ -450,12 +487,14 @@ class IntentClassifier:
                     "subtasks": llm_result.get("subtasks", []),
                     "user_intent_summary": llm_result.get("user_intent_summary", "")
                 }
+                self._cache_intent(cache_key, result)
+                return result
             except Exception as e:
                 # LLM调用失败，使用关键词匹配结果
                 print(f"LLM复合意图识别失败，使用关键词结果: {e}")
                 # 只取前两个最相关的意图
                 intents = [h["name"] for h in high_confidence[:2]]
-                return {
+                result = {
                     "intents": intents,
                     "is_composite": len(intents) > 1,
                     "confidence": 0.7,
@@ -463,13 +502,15 @@ class IntentClassifier:
                     "scores": scores,
                     "subtasks": []
                 }
+                self._cache_intent(cache_key, result)
+                return result
 
-        # 单意图
+        # ===== 单意图 =====
         best = max(scores.items(), key=lambda x: x[1]["score"])
 
         # 如果是resume/interview但没有目标岗位，转为复合意图
         if best[0] in ["resume", "interview"] and need_career_prefix:
-            return {
+            result = {
                 "intents": ["career", best[0]],
                 "is_composite": True,
                 "confidence": 0.8,
@@ -477,8 +518,10 @@ class IntentClassifier:
                 "scores": scores,
                 "subtasks": []
             }
+            self._cache_intent(cache_key, result)
+            return result
 
-        return {
+        result = {
             "intents": [best[0]],
             "is_composite": False,
             "confidence": best[1]["score"] / total if total > 0 else 0.5,
@@ -486,6 +529,18 @@ class IntentClassifier:
             "scores": scores,
             "subtasks": []
         }
+        self._cache_intent(cache_key, result)
+        return result
+
+    def _cache_intent(self, key: str, result: Dict[str, Any]):
+        """缓存意图识别结果"""
+        # 缓存满时清除最早的条目
+        if len(self._intent_cache) >= self._cache_max_size:
+            # 删除第一个条目（FIFO）
+            first_key = next(iter(self._intent_cache))
+            del self._intent_cache[first_key]
+        import copy
+        self._intent_cache[key] = copy.deepcopy(result)
     
     def _check_context_switch(self, user_input: str, last_agent: str, 
                               conversation_history: List) -> Optional[str]:
@@ -564,23 +619,20 @@ class ResultMerger:
             if len(outputs_summary) == 1:
                 return outputs_summary[0].split("\n", 1)[-1] if "\n" in outputs_summary[0] else outputs_summary[0]
 
-            prompt = f"""请将以下多个专业顾问的分析结果整合成一个连贯、完整的回复。
+            prompt = f"""整合多个顾问的分析结果为一个连贯回复。
 
-用户原始问题：{user_input}
+用户问题：{user_input}
 
-各顾问的分析结果：
+分析结果：
 {chr(10).join(outputs_summary)}
 
-整合要求：
-1. 保持各分析的核心观点和建议
-2. 消除重复内容
-3. 按逻辑顺序组织（如：先职业规划，再技能分析，最后简历建议）
-4. 添加过渡语句，使内容连贯
-5. 在最后添加综合建议
-6. 使用自然流畅的中文，不要过于正式
-7. 适当使用Markdown格式（标题、列表、加粗）增强可读性
+要求：
+1. 保留核心观点，消除重复
+2. 按逻辑顺序组织（职业规划→技能分析→简历建议）
+3. 使用Markdown格式增强可读性
+4. 在最后添加综合建议
 
-请直接返回整合后的内容，不要添加"整合结果："等前缀。"""
+直接返回整合内容，不要前缀。"""
 
             response = llm.invoke(prompt)
             # 始终返回合并后的内容，确保内容能被保存到数据库
@@ -1035,8 +1087,155 @@ class AgentOrchestrator:
             status=TaskStatus.FAILED
         )
 
+    def _try_hardcoded_split(self, user_input: str, intents: List[str], context: SharedContext) -> Optional[List[SubTask]]:
+        """尝试硬编码拆分常见复合意图，避免LLM调用
+
+        常见复合意图：
+        - career + resume：先确定目标岗位，再生成简历
+        - career + interview：先确定目标岗位，再准备面试
+        - career + skill：先确定目标岗位，再分析技能差距
+        - resume + interview：先优化简历，再准备面试
+        """
+        intent_set = set(intents)
+        has_target_job = bool(context.user_profile.get("target_job_title"))
+        tasks = []
+        task_id_counter = 0
+
+        def next_task_id():
+            nonlocal task_id_counter
+            task_id_counter += 1
+            return f"task_{task_id_counter}"
+
+        # career + resume
+        if intent_set == {"career", "resume"}:
+            if not has_target_job:
+                # 需要先确定目标岗位
+                tasks.append(SubTask(
+                    task_id=next_task_id(), agent="career",
+                    task="了解用户背景，确定目标岗位",
+                    order=1, depends_on=[], can_parallel=False
+                ))
+                tasks.append(SubTask(
+                    task_id=next_task_id(), agent="resume",
+                    task="根据目标岗位生成简历",
+                    order=2, depends_on=["task_1"], can_parallel=False
+                ))
+            else:
+                # 已有目标岗位，直接生成简历
+                tasks.append(SubTask(
+                    task_id=next_task_id(), agent="resume",
+                    task=f"根据目标岗位'{context.user_profile.get('target_job_title')}'生成简历",
+                    order=1, depends_on=[], can_parallel=False
+                ))
+            return tasks
+
+        # career + interview
+        if intent_set == {"career", "interview"}:
+            if not has_target_job:
+                tasks.append(SubTask(
+                    task_id=next_task_id(), agent="career",
+                    task="了解用户背景，确定目标岗位",
+                    order=1, depends_on=[], can_parallel=False
+                ))
+                tasks.append(SubTask(
+                    task_id=next_task_id(), agent="interview",
+                    task="根据目标岗位准备面试",
+                    order=2, depends_on=["task_1"], can_parallel=False
+                ))
+            else:
+                tasks.append(SubTask(
+                    task_id=next_task_id(), agent="interview",
+                    task=f"根据目标岗位'{context.user_profile.get('target_job_title')}'准备面试",
+                    order=1, depends_on=[], can_parallel=False
+                ))
+            return tasks
+
+        # career + skill
+        if intent_set == {"career", "skill"}:
+            if not has_target_job:
+                tasks.append(SubTask(
+                    task_id=next_task_id(), agent="career",
+                    task="了解用户背景，确定目标岗位",
+                    order=1, depends_on=[], can_parallel=False
+                ))
+                tasks.append(SubTask(
+                    task_id=next_task_id(), agent="skill",
+                    task="根据目标岗位分析技能差距",
+                    order=2, depends_on=["task_1"], can_parallel=False
+                ))
+            else:
+                # 已有目标岗位，可以并行
+                tasks.append(SubTask(
+                    task_id=next_task_id(), agent="career",
+                    task="分析目标岗位的市场情况",
+                    order=1, depends_on=[], can_parallel=True
+                ))
+                tasks.append(SubTask(
+                    task_id=next_task_id(), agent="skill",
+                    task=f"分析与目标岗位'{context.user_profile.get('target_job_title')}'的技能差距",
+                    order=1, depends_on=[], can_parallel=True
+                ))
+            return tasks
+
+        # resume + interview（无career）
+        if intent_set == {"resume", "interview"}:
+            tasks.append(SubTask(
+                task_id=next_task_id(), agent="resume",
+                task="优化简历",
+                order=1, depends_on=[], can_parallel=True
+            ))
+            tasks.append(SubTask(
+                task_id=next_task_id(), agent="interview",
+                task="准备面试",
+                order=1, depends_on=[], can_parallel=True
+            ))
+            return tasks
+
+        # career + resume + interview（三意图）
+        if intent_set == {"career", "resume", "interview"}:
+            if not has_target_job:
+                tasks.append(SubTask(
+                    task_id=next_task_id(), agent="career",
+                    task="了解用户背景，确定目标岗位",
+                    order=1, depends_on=[], can_parallel=False
+                ))
+                tasks.append(SubTask(
+                    task_id=next_task_id(), agent="resume",
+                    task="根据目标岗位生成简历",
+                    order=2, depends_on=["task_1"], can_parallel=True
+                ))
+                tasks.append(SubTask(
+                    task_id=next_task_id(), agent="interview",
+                    task="根据目标岗位准备面试",
+                    order=2, depends_on=["task_1"], can_parallel=True
+                ))
+            else:
+                tasks.append(SubTask(
+                    task_id=next_task_id(), agent="resume",
+                    task=f"根据目标岗位'{context.user_profile.get('target_job_title')}'生成简历",
+                    order=1, depends_on=[], can_parallel=True
+                ))
+                tasks.append(SubTask(
+                    task_id=next_task_id(), agent="interview",
+                    task=f"根据目标岗位'{context.user_profile.get('target_job_title')}'准备面试",
+                    order=1, depends_on=[], can_parallel=True
+                ))
+            return tasks
+
+        # 不是常见复合意图，返回None让LLM处理
+        return None
+
     def _split_composite_task(self, user_input: str, intents: List[str], context: SharedContext) -> List[SubTask]:
-        """拆分复合任务，生成子任务列表"""
+        """拆分复合任务，生成子任务列表
+
+        优化：常见复合意图直接硬编码拆分，避免LLM调用
+        """
+        # ===== 常见复合意图硬编码（避免LLM调用）=====
+        hardcoded = self._try_hardcoded_split(user_input, intents, context)
+        if hardcoded:
+            return hardcoded
+
+        # ===== 复杂复合意图使用LLM拆分 =====
         try:
             llm = ChatOpenAI(
                 model=current_app.config['OPENAI_MODEL'],
@@ -1073,45 +1272,23 @@ class AgentOrchestrator:
                 intents = ["career"] + intents
                 agents_str = f"career(职业规划顾问), {agents_str}"
 
-            prompt = f"""请将以下用户问题拆分为多个子任务，每个子任务对应一个Agent。
+            prompt = f"""拆分用户问题为子任务列表。
 
 可用Agent：{agents_str}
 {profile_context}
 
-用户问题：{user_input}
+问题：{user_input}
 
-请返回JSON格式的子任务列表（严格按此格式）：
-[
-    {{
-        "task_id": "task_1",
-        "agent": "agent_name",
-        "task": "子任务描述",
-        "order": 1,
-        "depends_on": [],
-        "priority": 1,
-        "can_parallel": true,
-        "fallback_agent": ""
-    }}
-]
-
-字段说明：
-- task_id: 唯一标识符（task_1, task_2, ...）
-- agent: Agent名称
-- task: 具体明确的子任务描述
-- order: 执行顺序（1,2,3...）
-- depends_on: 依赖的task_id列表（如["task_1"]）
-- priority: 优先级（1=高, 2=中, 3=低）
-- can_parallel: 是否可与其他任务并行执行
-- fallback_agent: 降级Agent（可选）
+返回JSON数组：
+[{{"task_id":"task_1","agent":"agent_name","task":"子任务描述","order":1,"depends_on":[],"can_parallel":true}}]
 
 规则：
-1. 每个子任务应该独立可执行
-2. 任务描述要具体明确
-3. 如果用户没有目标岗位且需要简历/面试服务，第一个任务必须是career
-4. 有依赖关系的任务必须串行执行（can_parallel=false）
-5. 无依赖关系的任务可以并行执行
+1. 子任务独立可执行
+2. 无目标岗位时，简历/面试任务前必须先有career任务
+3. depends_on引用其他task_id
+4. can_parallel: 无依赖=true，有依赖=false
 
-只返回JSON，不要其他内容。"""
+只返回JSON。"""
 
             response = llm.invoke(prompt)
             content = response.content.strip()
