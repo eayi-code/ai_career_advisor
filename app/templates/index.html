@@ -624,12 +624,18 @@ body {
 
 @media (max-width: 768px) {
     .nav { padding: 0 20px; }
-    .hero { padding: 120px 20px 80px; }
-    .section { padding: 80px 20px; }
+    .hero { padding: 100px 20px 72px; }
+    .section { padding: 72px 20px; }
     .features { grid-template-columns: 1fr; }
     .stats { grid-template-columns: repeat(2, 1fr); }
     .hero-actions { flex-direction: column; }
     .footer-content { flex-direction: column; gap: 12px; text-align: center; }
+
+    /* 收紧 hero 主标题下限，避免 ≤360px 屏单行汉字溢出 */
+    .hero h1 {
+        font-size: clamp(36px, 9vw, 56px);
+        line-height: 1.15;
+    }
 
     /* 移动端汉堡菜单 */
     .hamburger-btn {

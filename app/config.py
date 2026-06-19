@@ -4,6 +4,20 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+# 修复 SSL 证书路径：系统级 SSL_CERT_FILE 可能指向不存在的文件（
+# 例如 Windows 上 miniconda 遗留路径），导致 langchain_openai/httpx 创建
+# SSL 上下文时报 FileNotFoundError，AI 调用全部失败。
+# 自动检测：若系统变量指向的文件不存在，用 certifi 提供的正确证书覆盖，
+# 跨平台兼容（Windows/Linux/Mac），不影响 Docker 部署。
+_ssl_cert = os.environ.get('SSL_CERT_FILE', '')
+if _ssl_cert and not os.path.isfile(_ssl_cert):
+    try:
+        import certifi
+        os.environ['SSL_CERT_FILE'] = certifi.where()
+        os.environ.setdefault('REQUESTS_CA_BUNDLE', certifi.where())
+    except ImportError:
+        pass
+
 
 class Config:
     SECRET_KEY = os.getenv('SECRET_KEY') or secrets.token_hex(32)

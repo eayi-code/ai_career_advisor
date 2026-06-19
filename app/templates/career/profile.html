@@ -348,7 +348,7 @@
                             <div class="form-row">
                                 <div class="form-group">
                                     <label class="form-label">目标薪资范围 (K)</label>
-                                    <div style="display: flex; gap: 8px; align-items: center;">
+                                    <div class="salary-range">
                                         <input type="number" name="target_salary_min" class="form-input" value="{{ (current_user.profile.target_salary_min|int) if current_user.profile and current_user.profile.target_salary_min else '' }}" placeholder="最低" min="0" style="flex: 1;">
                                         <span>-</span>
                                         <input type="number" name="target_salary_max" class="form-input" value="{{ (current_user.profile.target_salary_max|int) if current_user.profile and current_user.profile.target_salary_max else '' }}" placeholder="最高" min="0" style="flex: 1;">
@@ -797,6 +797,13 @@
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 1.25rem;
+}
+
+/* 薪资区间输入框（桌面双列，移动端在 mobile.css 改纵向） */
+.salary-range {
+    display: flex;
+    gap: 8px;
+    align-items: center;
 }
 
 .form-hint {
