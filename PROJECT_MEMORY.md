@@ -28,6 +28,10 @@
 - 对话状态保持，支持继续历史对话
 - 打断生成功能
 - Toast消息提示
+- **移动端响应式适配**（768px断点，抽屉式侧边栏，浮动输入框）
+- **意图识别缓存**（相同查询0ms响应）
+- **常见复合意图硬编码拆分**（避免LLM调用）
+- **SSL证书自动检测修复**（certifi跨平台兼容）
 
 ---
 
@@ -1979,10 +1983,13 @@ sudo docker exec ai_career_advisor-db-1 mysqldump -u root -p career_advisor > ba
 - ✅ PWA配置
 - ✅ Deepin小主机部署
 - ✅ 部署文档
+- ✅ 移动端全面优化（7个布局Bug + 视觉打磨 + 触摸优化）
+- ✅ SSL证书自动修复（certifi跨平台）
+- ✅ 性能优化（意图识别缓存 + 并行执行 + Prompt精简）
+- ✅ 聊天界面简化（移除内联推理时间线）
 
 ### 待完成
 
-- ⏳ 前端UI/UX优化（需要更精细的设计调整）
 - ⏳ Redis缓存配置（可选）
 - ⏳ CDN加速配置（可选）
 - ⏳ Cloudflare Tunnel配置（外网访问）
@@ -2064,5 +2071,122 @@ sudo docker exec ai_career_advisor-db-1 mysqldump -u root -p career_advisor > ba
 - Gemini移动端：消息气泡样式、侧边栏抽屉
 - taste-skill：设计规范（配色、字体、动画、交互）
 
-**最后更新**: 2026-06-18
-**当前状态**: 移动端基础适配完成，UI效果待优化
+**最后更新**: 2026-06-19
+**当前状态**: 移动端全面优化完成，性能优化完成，UI简化完成
+
+---
+
+## 二十二、移动端全面优化与性能优化
+
+### 2026-06-19 移动端优化 + 性能优化 + UI简化
+
+**目标**：修复移动端布局Bug、优化响应速度、简化聊天界面
+
+#### 22.1 移动端布局Bug修复（7项）
+
+| Bug | 问题 | 修复 |
+|-----|------|------|
+| Bug1 | profile页 `.profile-header` 负margin导致横向溢出 | mobile.css重置 `.main-content` padding + 收口 `.profile-header/info/content` |
+| Bug2 | `.anchor-cards` 在mobile.css被强制改回2列 | 改为 `1fr` 单列 |
+| Bug3 | 薪资区间双数字框在窄屏并排 | profile.html抽出 `.salary-range` class，移动端纵向堆叠 |
+| Bug4 | `.resume-paper` 的3rem padding在全屏预览挤压内容 | mobile.css覆盖为1rem |
+| Bug5 | `.modal-*` / `.toast*` 零移动端适配 | modal.css补768px媒体查询块 |
+| Bug6 | mobile.css缓存版本 `?v=1.0.0` 与其他不同步 | base.html全部bump到 `?v=1.0.4` |
+| Bug7 | chat.css的 `@keyframes glowGold` 有乱码残留+重复定义 | 删除损坏段，保留唯一完整版 |
+
+#### 22.2 移动端视觉与交互打磨
+
+**对话页**：
+- 侧边栏宽度改为 `min(300px, 85vw)`
+- 发送按钮用SVG上箭头图标替代 `::after` 三角hack
+- 气泡配色保持（用户浅灰 #F0F0F0，AI透明）
+
+**用户中心**：
+- 折叠面板、Next Action卡片padding收紧
+- 决策锚点改为单列
+- 薪资输入框移动端纵向堆叠
+
+**落地页**：
+- hero标题下限收紧到 `clamp(36px,9vw,56px)`
+- 防≤360px屏溢出
+
+**登录页**：
+- `#toastContainer` 加 `left/right` 兜底防右侧溢出
+
+**执行步骤/时间线**：
+- 推理面板内执行步骤、时间线字号/padding/换行适配窄屏
+
+#### 22.3 触摸与无障碍
+
+- 触摸目标列表扩充到18类元素（min 44px）
+- 统一 `:active scale(0.98)` 按压反馈
+- `prefers-reduced-motion` 覆盖面扩充到所有新增动画元素
+
+#### 22.4 SSL证书自动修复
+
+**问题**：系统环境变量 `SSL_CERT_FILE` 指向不存在的miniconda证书路径，导致AI调用失败
+
+**修复**：
+- `config.py`：自动检测坏SSL路径，用certifi跨平台修复
+- `load_dotenv()` 不带 `override`，不影响Docker部署
+
+#### 22.5 性能优化（意图识别 + 并行执行 + Prompt精简）
+
+**意图识别优化**：
+- 添加意图缓存（最近100条结果，相同查询0ms）
+- 动态置信度阈值：有复合意图指示词时降低到0.25
+- 主意图优先逻辑（>55%且领先15%时直接使用）
+- 复合意图指示词检测（"并"、"和"、"同时"等）
+
+**并行执行优化**：
+- 常见复合意图硬编码拆分（避免LLM调用）
+  - career + resume
+  - career + interview
+  - career + skill
+  - resume + interview
+  - career + resume + interview
+
+**Prompt优化**：
+- 意图识别prompt精简（减少~60% token）
+- 任务拆分prompt精简（减少~50% token）
+- 结果合并prompt精简（减少~40% token）
+
+**预期效果**：
+- 简单单意图：无LLM意图识别调用，响应时间减少10-15秒
+- 常见复合意图：无LLM任务拆分调用，响应时间减少10-15秒
+- 相同查询：缓存命中，0ms
+
+#### 22.6 UI简化（聊天界面）
+
+**问题**：
+- 聊天气泡内的推理时间线和右侧推理面板重复展示相同内容
+- 加载状态显示冗余
+
+**优化**：
+- 移除聊天气泡内的内联推理时间线（reasoning-timeline）
+- 简化为纯进度指示器（loading dots + 动态文字）
+- 加载文字随步骤更新：正在思考... → 意图分析... → 调用Agent...
+- 保留右侧推理面板供需要查看详情的用户
+
+#### 22.7 提交记录
+
+| Commit | 内容 |
+|--------|------|
+| `fb45cd0` | 移动端优化 + SSL修复 |
+| `cc48c57` | 性能优化（意图识别+并行执行+Prompt精简） |
+| `6b75500` | 修复复合意图识别问题 |
+| `bbd0937` | 简化聊天气泡加载状态，移除内联推理时间线 |
+
+**相关文件**：
+
+| 文件 | 修改内容 |
+|------|----------|
+| `app/static/css/mobile.css` | +197行，全面移动端适配 |
+| `app/static/css/modal.css` | +54行，弹窗/Toast移动端适配 |
+| `app/static/css/chat.css` | -9行，删除损坏的glowGold代码 |
+| `app/templates/base.html` | CSS版本号统一到v=1.0.4 |
+| `app/templates/career/profile.html` | 薪资容器class化+基础样式 |
+| `app/templates/index.html` | 落地页hero标题收紧+间距优化 |
+| `app/config.py` | SSL证书自动检测修复 |
+| `app/agents/orchestrator.py` | 意图识别优化+并行执行优化+Prompt精简 |
+| `app/static/js/chat.js` | 移除内联推理时间线，简化加载状态 |
