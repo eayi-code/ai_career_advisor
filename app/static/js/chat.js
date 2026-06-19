@@ -393,13 +393,9 @@ function stopProcessing() {
         const loadingDots = loadingEl.querySelector('.loading-dots');
         if (loadingDots) loadingDots.remove();
         
-        const liveReasoning = loadingEl.querySelector('.reasoning-timeline');
-        if (liveReasoning) {
-            const runningDots = liveReasoning.querySelector('.loading-dots');
-            if (runningDots) runningDots.remove();
-            const liveProgress = liveReasoning.querySelector('#liveProgress');
-            if (liveProgress) liveProgress.textContent = '已停止生成';
-        }
+        // 更新进度文字为已停止
+        const progressText = loadingEl.querySelector('#progressText');
+        if (progressText) progressText.textContent = '已停止生成';
         
         // 移除ID防篡改，并使消息内容显示正常
         loadingEl.removeAttribute('id');
@@ -1255,18 +1251,10 @@ async function sendMessage() {
     load.className = 'message message-agent';
     load.id = 'loading';
     load.innerHTML = '<div class="message-avatar">AI</div><div class="message-bubble">' +
-        '<div class="reasoning-timeline" id="liveReasoning">' +
-            '<div class="reasoning-header" onclick="toggleReasoningTimeline(this)">' +
-                '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6"/><path d="M9 16h6"/></svg>' +
-                '<span id="liveProgress">正在分析您的问题...</span>' +
-                '<svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" style="margin-left: auto; transition: transform 0.4s;"><path d="M6 9l6 6 6-6"/></svg>' +
-            '</div>' +
-            '<div class="reasoning-body" id="liveStepsBody"></div>' +
-        '</div>' +
         '<div class="message-content" id="loadingContent">' +
             '<div class="progress-indicator">' +
                 '<div class="loading-dots"><span></span><span></span><span></span></div>' +
-                '<span class="progress-text">正在分析您的问题...</span>' +
+                '<span class="progress-text" id="progressText">正在思考...</span>' +
             '</div>' +
         '</div>' +
     '</div>';
@@ -1383,7 +1371,7 @@ function handleSSEEvent(eventType, data, allSteps) {
             break;
             
         case 'progress':
-            const progressEl = activeLoadingBubble ? activeLoadingBubble.querySelector('#liveProgress') : document.getElementById('liveProgress');
+            const progressEl = activeLoadingBubble ? activeLoadingBubble.querySelector('#progressText') : document.getElementById('progressText');
             if (progressEl) progressEl.textContent = data.message;
             break;
             
@@ -1398,7 +1386,13 @@ function handleSSEEvent(eventType, data, allSteps) {
                 allSteps.push(data);
             }
             
-            updateLiveSteps(allSteps);
+            // 更新加载文字为当前步骤
+            const progressText = activeLoadingBubble ? activeLoadingBubble.querySelector('#progressText') : document.getElementById('progressText');
+            if (progressText && data.title) {
+                progressText.textContent = data.title + '...';
+            }
+            
+            // 更新右侧推理面板
             updateExecutionSteps(allSteps);
             
             // 实时更新工具调用信息
@@ -1438,22 +1432,12 @@ function appendStreamContent(token) {
     const loadingContent = activeLoadingBubble ? activeLoadingBubble.querySelector('.message-content') : document.getElementById('loadingContent');
     if (!loadingContent) return;
     
-    // 如果是第一次接收到token，清除进度指示器并加上流式光标样式，并优雅折叠时间线
+    // 如果是第一次接收到token，清除进度指示器并加上流式光标样式
     const indicator = loadingContent.querySelector('.progress-indicator');
     if (indicator) {
         loadingContent.innerHTML = '';
         currentStreamedText = '';
         loadingContent.classList.add('streaming-active');
-        
-        // 自动折叠推理时间线，使用手风琴收起效果
-        const liveReasoning = activeLoadingBubble ? activeLoadingBubble.querySelector('.reasoning-timeline') : document.getElementById('liveReasoning');
-        if (liveReasoning) {
-            liveReasoning.classList.add('collapsed');
-            const liveProgress = liveReasoning.querySelector('#liveProgress');
-            if (liveProgress) {
-                liveProgress.textContent = '思考完毕，已开始回答';
-            }
-        }
     }
     
     currentStreamedText += token;
@@ -1482,58 +1466,9 @@ function appendStreamContent(token) {
     smartScrollToBottom();
 }
 
-function updateLiveSteps(steps) {
-    const body = activeLoadingBubble ? activeLoadingBubble.querySelector('#liveStepsBody') : document.getElementById('liveStepsBody');
-    if (!body) return;
-    
-    const iconMap = {
-        'intent_analysis': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>',
-        'agent_call': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M12 2a4 4 0 014 4v2a4 4 0 01-8 0V6a4 4 0 014-4z"/><path d="M6 10v8a6 6 0 0012 0v-8"/></svg>',
-        'task_split': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M16 3h5v5"/><path d="M8 3H3v5"/><path d="M12 22v-8.3a4 4 0 00-1.172-2.872L3 3"/><path d="m15 9 6-6"/></svg>',
-        'quality_check': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>',
-        'result_merge': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M8 6h13"/><path d="M8 12h13"/><path d="M8 18h13"/><path d="M3 6h.01"/><path d="M3 12h.01"/><path d="M3 18h.01"/></svg>',
-        'tool': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>'
-    };
-    
-    const typeClassMap = {
-        'intent_analysis': 'intent',
-        'agent_call': 'agent',
-        'task_split': 'split',
-        'quality_check': 'check',
-        'result_merge': 'merge',
-        'tool': 'tool'
-    };
-    
-    let html = '';
-    steps.forEach((step, index) => {
-        const stepType = step.type || (step.action ? 'tool' : 'intent_analysis');
-        const stepTitle = step.title || step.action || '处理中';
-        const stepDetail = step.detail || step.output || '';
-        const stepStatus = step.status || 'completed';
-        
-        const icon = iconMap[stepType] || iconMap['tool'];
-        const typeClass = typeClassMap[stepType] || 'intent';
-        const statusClass = stepStatus === 'running' ? 'running' : '';
-        
-        html += '<div class="timeline-step" style="animation: fadeInUp 0.3s ease-out;">';
-        if (index < steps.length - 1) {
-            html += '<div class="timeline-line"></div>';
-        }
-        html += `<div class="timeline-dot ${typeClass} ${statusClass}">${icon}</div>`;
-        html += '<div class="timeline-content">';
-        html += `<div class="timeline-title">${stepTitle}</div>`;
-        
-        if (stepDetail) {
-            const truncated = stepDetail.length > 100 ? stepDetail.substring(0, 100) + '...' : stepDetail;
-            html += `<div class="timeline-detail">${truncated}</div>`;
-        }
-        
-        html += '</div></div>';
-    });
-    
-    body.innerHTML = html;
-    smartScrollToBottom();
-}
+// updateLiveSteps 已移除 - 内联推理时间线已简化为纯进度文字
+
+// updateLiveSteps 已移除 - 内联推理时间线已简化为纯进度文字
 
 // 任务完成处理
 async function handleTaskCompleted(result, originalMessage) {
@@ -1560,14 +1495,6 @@ async function handleTaskCompleted(result, originalMessage) {
     const toolsFromIntermediate = intermediateSteps.filter(s => s.action).map(s => s.action);
     const toolsUsed = [...new Set([...toolsFromSteps, ...toolsFromIntermediate].filter(Boolean))];
     updateTools(toolsUsed);
-    
-    const liveReasoning = document.getElementById('liveReasoning');
-    if (liveReasoning && allSteps.length > 0) {
-        const finalTimeline = buildReasoningTimeline(allSteps);
-        liveReasoning.outerHTML = finalTimeline;
-    } else if (liveReasoning) {
-        liveReasoning.remove();
-    }
     
     // 使用result.output或currentStreamedText（流式输出的内容）
     const fullContent = result.output || currentStreamedText || '';
