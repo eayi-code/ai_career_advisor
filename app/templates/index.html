@@ -681,9 +681,7 @@ body {
         </a>
         <!-- 汉堡菜单按钮（移动端） -->
         <button class="hamburger-btn" onclick="toggleNavMenu()" aria-label="打开菜单" style="display: none;">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M3 12h18M3 6h18M3 18h18"/>
-            </svg>
+            <span class="material-symbols-rounded">menu</span>
         </button>
         <div class="nav-links">
             {% if current_user.is_authenticated %}
@@ -721,28 +719,22 @@ body {
         
         <div class="features fade-up">
             <div class="feature">
-                <div class="feature-icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                        <path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
-                    </svg>
+                <div class="feature-icon" style="color: var(--accent); display: flex; align-items: center; justify-content: center;">
+                    <span class="material-symbols-rounded" style="font-size: 28px;">work</span>
                 </div>
                 <h3>职业匹配</h3>
                 <p>分析技能与兴趣，智能匹配最适合的职业方向</p>
             </div>
             <div class="feature">
-                <div class="feature-icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                        <path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/>
-                    </svg>
+                <div class="feature-icon" style="color: var(--accent); display: flex; align-items: center; justify-content: center;">
+                    <span class="material-symbols-rounded" style="font-size: 28px;">payments</span>
                 </div>
                 <h3>副业分析</h3>
                 <p>发现适合的副业机会，计算投资回报率</p>
             </div>
             <div class="feature">
-                <div class="feature-icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                        <path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
-                    </svg>
+                <div class="feature-icon" style="color: var(--accent); display: flex; align-items: center; justify-content: center;">
+                    <span class="material-symbols-rounded" style="font-size: 28px;">analytics</span>
                 </div>
                 <h3>技能分析</h3>
                 <p>识别技能缺口，获取个性化学习路径</p>
