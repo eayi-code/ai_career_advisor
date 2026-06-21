@@ -185,7 +185,7 @@
                 <div class="dashboard-card">
                     <div class="dashboard-card-header">
                         <span class="dashboard-card-title">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            <span class="material-symbols-rounded">check_circle</span>
                             决策里程碑
                         </span>
                     </div>
@@ -194,8 +194,8 @@
                             {% for h in histories[:10] %}
                             <div class="milestone" onclick="location.href='/chat?id={{ h.conversation_id }}'">
                                 <span class="milestone-date">{{ h.updated_at.strftime('%m-%d') if h.updated_at else h.created_at.strftime('%m-%d') }}</span>
-                                <span class="milestone-icon">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+                                <span class="milestone-icon" style="display: flex; align-items: center; justify-content: center;">
+                                    <span class="material-symbols-rounded" style="font-size: 14px;">chat_bubble</span>
                                 </span>
                                 <span class="milestone-title">{{ h.title or '进行了对话' }}</span>
                             </div>
@@ -208,7 +208,7 @@
                 <div class="dashboard-card">
                     <div class="dashboard-card-header">
                         <span class="dashboard-card-title">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+                            <span class="material-symbols-rounded">bolt</span>
                             建议行动
                         </span>
                     </div>
@@ -229,9 +229,7 @@
                         <h2>基本信息</h2>
                         <p>管理你的账号和个人资料</p>
                     </div>
-                    <svg class="collapse-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M6 9l6 6 6-6"/>
-                    </svg>
+                    <span class="material-symbols-rounded collapse-icon">expand_more</span>
                 </div>
                 <div class="collapse-content">
                     <div class="info-grid">
@@ -267,9 +265,7 @@
                         <h2>职业档案</h2>
                         <p>完善信息让 AI 提供更精准的建议</p>
                     </div>
-                    <svg class="collapse-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M6 9l6 6 6-6"/>
-                    </svg>
+                    <span class="material-symbols-rounded collapse-icon">expand_more</span>
                 </div>
                 <div class="collapse-content">
                     <form onsubmit="saveProfile(event)" class="profile-form">
@@ -277,7 +273,7 @@
                         <!-- 基本信息 -->
                         <div class="form-section">
                             <h3 class="form-section-title">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                                <span class="material-symbols-rounded">person</span>
                                 基本信息
                             </h3>
                             <div class="form-row">
@@ -318,7 +314,7 @@
                         <!-- 求职意向 -->
                         <div class="form-section">
                             <h3 class="form-section-title">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+                                <span class="material-symbols-rounded">schedule</span>
                                 求职意向
                             </h3>
                             
@@ -408,7 +404,7 @@
                         <!-- 项目经历 -->
                         <div class="form-section">
                             <h3 class="form-section-title">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
+                                <span class="material-symbols-rounded">folder</span>
                                 项目经历
                                 <small style="color: var(--text-tertiary); font-weight: normal; font-size: 0.8125rem;">（可选，用于简历生成）</small>
                             </h3>
@@ -442,7 +438,7 @@
                                 {% endif %}
                             </div>
                             <button type="button" class="btn btn-secondary" onclick="addProject()" style="margin-top: 8px;">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M12 4v16m8-8H4"/></svg>
+                                <span class="material-symbols-rounded">add</span>
                                 添加项目
                             </button>
                         </div>
@@ -450,7 +446,7 @@
                         <!-- 证书资质 -->
                         <div class="form-section">
                             <h3 class="form-section-title">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/></svg>
+                                <span class="material-symbols-rounded">workspace_premium</span>
                                 证书资质
                                 <small style="color: var(--text-tertiary); font-weight: normal; font-size: 0.8125rem;">（可选）</small>
                             </h3>
@@ -463,7 +459,7 @@
                         <!-- 副业信息 -->
                         <div class="form-section">
                             <h3 class="form-section-title">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+                                <span class="material-symbols-rounded">monetization_on</span>
                                 副业信息
                                 <small style="color: var(--text-tertiary); font-weight: normal; font-size: 0.8125rem;">（可选，用于副业推荐）</small>
                             </h3>
@@ -482,7 +478,7 @@
                         <!-- 职业目标 -->
                         <div class="form-section">
                             <h3 class="form-section-title">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                                <span class="material-symbols-rounded">flag</span>
                                 职业目标
                             </h3>
                             <div class="form-group">
