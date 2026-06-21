@@ -1,30 +1,31 @@
 /* ===== 全局变量 ===== */
 :root {
     --bg-primary: #ffffff;
-    --bg-secondary: #f8f9fa;
-    --bg-tertiary: #f1f3f4;
+    --bg-secondary: #f0f4f9;
+    --bg-tertiary: #e8eaed;
     --bg-elevated: #ffffff;
-    --text-primary: #202124;
+    --text-primary: #1f1f1f;
     --text-secondary: #5f6368;
-    --text-tertiary: #80868b;
-    --accent: #1a73e8;
-    --accent-hover: #174ea6;
+    --text-tertiary: #70757a;
+    --accent: #0b57d0;
+    --accent-hover: #0842a0;
     --accent-muted: #e8f0fe;
-    --accent-border: #d2e3fc;
-    --border: #dadce0;
-    --border-hover: #bdc1c6;
+    --accent-border: #c2e7ff;
+    --border: #e0e2e6;
+    --border-hover: #c4c7c5;
     --shadow-sm: 0 1px 2px 0 rgba(60,64,67,0.3), 0 1px 3px 1px rgba(60,64,67,0.15);
     --shadow-md: 0 4px 6px rgba(60,64,67,0.15), 0 1px 3px rgba(60,64,67,0.2);
     --shadow-lg: 0 12px 28px rgba(60,64,67,0.15), 0 8px 10px rgba(60,64,67,0.1);
-    --radius-sm: 4px;
-    --radius-md: 8px;
+    --radius-sm: 6px;
+    --radius-md: 12px;
     --radius-lg: 16px;
-    --radius-xl: 24px;
-    --font-sans: 'Google Sans', 'Roboto', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+    --radius-xl: 28px;
+    --font-sans: 'Plus Jakarta Sans', 'Google Sans', 'Roboto', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', sans-serif;
     --font-mono: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
-    --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
-    --transition-normal: 250ms cubic-bezier(0.4, 0, 0.2, 1);
-    --transition-slow: 400ms cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-fast: 150ms cubic-bezier(0.2, 0, 0, 1);
+    --transition-normal: 280ms cubic-bezier(0.2, 0, 0, 1);
+    --transition-slow: 400ms cubic-bezier(0.2, 0, 0, 1);
+    --transition-spring: 350ms cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 /* ===== 重置与基础 ===== */
@@ -235,16 +236,21 @@ a:hover {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 0.5rem;
+    gap: 0.6rem;
     padding: 0.625rem 1.5rem;
     font-size: 0.875rem;
-    font-weight: 500;
+    font-weight: 600;
     font-family: var(--font-sans);
     border: none;
     border-radius: var(--radius-xl);
     cursor: pointer;
-    transition: all var(--transition-fast);
+    transition: transform var(--transition-fast), background-color var(--transition-normal), box-shadow var(--transition-normal), border-color var(--transition-normal);
     white-space: nowrap;
+    outline: none;
+}
+
+.btn:active {
+    transform: scale(0.96);
 }
 
 .btn-primary {
@@ -254,7 +260,7 @@ a:hover {
 
 .btn-primary:hover {
     background: var(--accent-hover);
-    box-shadow: 0 1px 3px 0 rgba(60,64,67,0.3), 0 4px 8px 3px rgba(60,64,67,0.15);
+    box-shadow: 0 2px 4px 0 rgba(11,87,208,0.2), 0 4px 12px 0 rgba(11,87,208,0.15);
 }
 
 .btn-secondary {
@@ -265,7 +271,7 @@ a:hover {
 
 .btn-secondary:hover {
     background: var(--accent-muted);
-    border-color: transparent;
+    border-color: var(--accent-border);
     color: var(--accent-hover);
 }
 
@@ -276,11 +282,11 @@ a:hover {
 
 .btn-ghost:hover {
     color: var(--accent);
-    background: var(--accent-muted);
+    background: var(--bg-secondary);
 }
 
 .btn-lg {
-    padding: 0.875rem 2rem;
+    padding: 0.875rem 2.25rem;
     font-size: 1rem;
 }
 

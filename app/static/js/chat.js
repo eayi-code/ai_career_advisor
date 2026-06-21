@@ -408,7 +408,7 @@ function setProcessingState(processing) {
     const glowEl = document.getElementById('inputGlow');
     
     if (processing) {
-        sendBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>';
+        sendBtn.innerHTML = '<span class="material-symbols-rounded" style="font-size: 20px;">stop</span>';
         sendBtn.classList.add('stop-btn');
         sendBtn.onclick = stopProcessing;
         chatInput.disabled = true;
@@ -420,7 +420,7 @@ function setProcessingState(processing) {
             glowEl.classList.add('glow-active');
         }
     } else {
-        sendBtn.innerHTML = '发送';
+        sendBtn.innerHTML = '<span class="material-symbols-rounded" style="font-size: 20px;">send</span>';
         sendBtn.classList.remove('stop-btn');
         sendBtn.onclick = sendMessage;
         chatInput.disabled = false;

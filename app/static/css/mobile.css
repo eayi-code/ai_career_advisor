@@ -5,20 +5,20 @@
 /* ===== CSS Variables ===== */
 :root {
     --m-bg: #FFFFFF;
-    --m-bg-secondary: #F7F7F8;
-    --m-text-primary: #1A1A1A;
-    --m-text-secondary: #6B6B6B;
-    --m-text-tertiary: #8E8E8E;
-    --m-border: #E5E5E5;
-    --m-accent: #1A73E8;
-    --m-accent-light: #E8F0FE;
-    --m-user-bubble: #F0F0F0;
+    --m-bg-secondary: #f0f4f9;
+    --m-text-primary: #1f1f1f;
+    --m-text-secondary: #5f6368;
+    --m-text-tertiary: #70757a;
+    --m-border: #e0e2e6;
+    --m-accent: #0b57d0;
+    --m-accent-light: #e8f0fe;
+    --m-user-bubble: #f0f4f9;
     --m-ai-bubble: transparent;
     --m-radius: 12px;
     --m-radius-sm: 8px;
     --m-radius-lg: 16px;
-    --m-transition: cubic-bezier(0.4, 0, 0.2, 1);
-    --m-spring: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    --m-transition: cubic-bezier(0.2, 0, 0, 1);
+    --m-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
     --m-topbar-height: 52px;
     --m-input-height: 56px;
     --m-safe-bottom: env(safe-area-inset-bottom, 0px);

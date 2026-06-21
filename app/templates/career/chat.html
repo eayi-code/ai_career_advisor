@@ -5,19 +5,18 @@
 <div class="app-layout chat-layout">
     <aside class="sidebar">
         <div class="sidebar-brand">
-            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M12 2L2 7l10 5 10-5-10-5z" fill="#0066cc"/>
-                <path d="M2 17l10 5 10-5" stroke="#0066cc" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M2 12l10 5 10-5" stroke="#0066cc" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <svg viewBox="0 0 32 32" width="22" height="22" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M6 26C6 26 12 16 20 16" stroke="#4285f4" stroke-width="3" stroke-linecap="round" />
+                <path d="M20 16H25V11" stroke="#34a853" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+                <path d="M25 6C25 7.10457 24.1046 8 23 8C24.1046 8 25 8.89543 25 10C25 8.89543 25.8954 8 27 8C25.8954 8 25 7.10457 25 6Z" fill="#fbbc05" />
+                <path d="M6 26H25" stroke="#ea4335" stroke-width="3" stroke-linecap="round" />
             </svg>
             <span>CareerAI</span>
         </div>
         
         <div class="sidebar-section">
             <a href="{{ url_for('career.chat') }}" class="sidebar-link new-chat-btn">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M12 4v16m8-8H4"/>
-                </svg>
+                <span class="material-symbols-rounded">add</span>
                 新建对话
             </a>
         </div>
@@ -29,15 +28,11 @@
                 <div class="chat-history-item {% if conversation_id == h.conversation_id %}active{% endif %}" 
                      id="history-{{ h.conversation_id }}">
                     <a href="{{ url_for('career.chat', id=h.conversation_id) }}" class="chat-history-link">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
-                        </svg>
+                        <span class="material-symbols-rounded">chat_bubble</span>
                         <span class="chat-history-title">{{ h.title or '新对话' }}</span>
                     </a>
                     <button class="chat-history-delete" onclick="deleteConversation('{{ h.conversation_id }}', event)" title="删除">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                        </svg>
+                        <span class="material-symbols-rounded">delete</span>
                     </button>
                 </div>
                 {% endfor %}
@@ -46,16 +41,12 @@
         
         <div class="sidebar-footer">
             <a href="{{ url_for('career.profile') }}" class="sidebar-link">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
-                </svg>
+                <span class="material-symbols-rounded">account_circle</span>
                 用户中心
             </a>
             <form method="POST" action="{{ url_for('auth.logout') }}" style="margin: 0;">
                 <button type="submit" class="sidebar-link" style="border: none; background: none; cursor: pointer; width: 100%; text-align: left;">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
-                    </svg>
+                    <span class="material-symbols-rounded">logout</span>
                     退出登录
                 </button>
             </form>
@@ -69,17 +60,11 @@
         <div class="chat-container">
             <div class="chat-topbar">
                 <button class="hamburger-btn" id="hamburgerBtn" onclick="toggleSidebar()" aria-label="打开菜单">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M3 12h18M3 6h18M3 18h18"/>
-                    </svg>
+                    <span class="material-symbols-rounded">menu</span>
                 </button>
                 <div class="chat-topbar-title" id="chatTitle">新对话</div>
                 <button class="toggle-panel-btn" onclick="toggleSidePanel()" title="推理详情">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/>
-                        <rect x="9" y="3" width="6" height="4" rx="1"/>
-                        <path d="M9 12h6"/><path d="M9 16h6"/>
-                    </svg>
+                    <span class="material-symbols-rounded">psychology</span>
                 </button>
             </div>
             <div class="chat-messages" id="chatMessages">
@@ -93,49 +78,37 @@
                     <div class="welcome-cards">
                         <div class="welcome-card" onclick="askQuestion('搜索数据分析师职位')">
                             <div class="welcome-card-icon" style="background: rgba(59, 130, 246, 0.1); color: #3b82f6;">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                                    <path d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
-                                </svg>
+                                <span class="material-symbols-rounded">work</span>
                             </div>
                             <span>搜索职位</span>
                         </div>
                         <div class="welcome-card" onclick="askQuestion('Python开发工程师薪资多少')">
                             <div class="welcome-card-icon" style="background: rgba(16, 185, 129, 0.1); color: #10b981;">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                                    <path d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                </svg>
+                                <span class="material-symbols-rounded">payments</span>
                             </div>
                             <span>薪资查询</span>
                         </div>
                         <div class="welcome-card" onclick="askQuestion('我有Python技能，有什么副业推荐')">
                             <div class="welcome-card-icon" style="background: rgba(245, 158, 11, 0.1); color: #f59e0b;">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                                    <path d="M13 10V3L4 14h7v7l9-11h-7z"/>
-                                </svg>
+                                <span class="material-symbols-rounded">bolt</span>
                             </div>
                             <span>副业推荐</span>
                         </div>
                         <div class="welcome-card" onclick="askQuestion('分析数据分析师的技能差距')">
                             <div class="welcome-card-icon" style="background: rgba(139, 92, 246, 0.1); color: #8b5cf6;">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                                    <path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
-                                </svg>
+                                <span class="material-symbols-rounded">analytics</span>
                             </div>
                             <span>技能分析</span>
                         </div>
                         <div class="welcome-card" onclick="askQuestion('帮我生成一份简历')">
                             <div class="welcome-card-icon" style="background: rgba(236, 72, 153, 0.1); color: #ec4899;">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                                    <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                                </svg>
+                                <span class="material-symbols-rounded">description</span>
                             </div>
                             <span>生成简历</span>
                         </div>
                         <div class="welcome-card" onclick="askQuestion('优化我的简历')">
                             <div class="welcome-card-icon" style="background: rgba(6, 182, 212, 0.1); color: #06b6d4;">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                                    <path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-                                </svg>
+                                <span class="material-symbols-rounded">edit_document</span>
                             </div>
                             <span>优化简历</span>
                         </div>
@@ -233,7 +206,9 @@
                     </button>
 
                     <textarea id="chatInput" class="chat-input" placeholder="输入你的问题..." rows="1"></textarea>
-                    <button id="sendBtn" class="btn btn-primary">发送</button>
+                    <button id="sendBtn" class="btn btn-primary" title="发送">
+                        <span class="material-symbols-rounded" style="font-size: 20px;">send</span>
+                    </button>
                 </div>
 
                 <!-- Mobile Plus Menu Popup -->
