@@ -1481,7 +1481,19 @@ class AgentOrchestrator:
                     break
 
             # 提取专业
-            major_match = re.search(r'(?:专业[是为：:]|我是)\s*(.+?)(?:专业|毕业|学生|[，。,.]|$)', user_input)
+            major_match = None
+            major_patterns = [
+                r'专业是\s*(.+?)(?:专业|[，。,.]|$)',
+                r'专业为\s*(.+?)(?:专业|[，。,.]|$)',
+                r'专业：\s*(.+?)(?:专业|[，。,.]|$)',
+                r'专业:\s*(.+?)(?:专业|[，。,.]|$)',
+                r'我是\s*([^，。,.]+?)(?:专业)'
+            ]
+            for pattern in major_patterns:
+                match = re.search(pattern, user_input)
+                if match:
+                    major_match = match
+                    break
             if major_match:
                 profile.major = major_match.group(1).strip()
                 updated_fields.append(f"专业：{profile.major}")
@@ -1489,8 +1501,16 @@ class AgentOrchestrator:
             # 提取当前职位
             job_match = re.search(r'(?:我是|职位[是为：:]|担任)\s*(.+?)(?:工程师|开发|设计师|经理|主管|[，。,.]|$)', user_input)
             if job_match:
-                profile.current_job_title = job_match.group(0).strip()
-                updated_fields.append(f"当前职位：{profile.current_job_title}")
+                title_val = job_match.group(1).strip()
+                # 进一步提取具体的职位后缀，如果 group(0) 匹配到了关键字，拼接上关键字以保持完整性
+                matched_kw = re.search(r'(工程师|开发|设计师|经理|主管)$', job_match.group(0))
+                if matched_kw:
+                    title_val += matched_kw.group(1)
+                
+                # 排除干扰性词汇如“经验”、“年”及长度过长的描述，确保只保留真实职位
+                if not any(k in title_val for k in ["经验", "年", "岁", "年限"]) and len(title_val) < 15:
+                    profile.current_job_title = title_val
+                    updated_fields.append(f"当前职位：{profile.current_job_title}")
 
             # 提取目标岗位
             target_job_patterns = [
