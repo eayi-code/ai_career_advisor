@@ -225,6 +225,15 @@
     align-items: flex-start;
 }
 
+.resume-paper-wrapper {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    margin: 0 auto;
+}
+
 .resume-paper {
     width: 800px;
     min-width: 800px;
@@ -233,6 +242,7 @@
     border-radius: 4px;
     transform-origin: top center;
     transition: transform 0.3s ease;
+    flex-shrink: 0;
 }
 
 .resume-paper iframe {
@@ -244,29 +254,9 @@
     background: white;
 }
 
-/* 小窗口时缩放简历 */
-@media (max-width: 900px) {
-    .resume-paper {
-        transform: scale(0.85);
-        transform-origin: top center;
-    }
-}
-
 @media (max-width: 768px) {
     .resume-modal-body {
         padding: 0.5rem;
-    }
-    
-    .resume-paper {
-        transform: scale(0.65);
-        transform-origin: top center;
-    }
-}
-
-@media (max-width: 480px) {
-    .resume-paper {
-        transform: scale(0.5);
-        transform-origin: top center;
     }
 }
 

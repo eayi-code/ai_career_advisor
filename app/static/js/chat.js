@@ -653,22 +653,24 @@ function renderResumeContent(content) {
     }
 }
 
+
+
 // 简历预览模态框
 function showResumeInPanel(contentId) {
     const content = window[contentId];
     if (!content) return;
     
     currentResumeContent = content;
-    currentZoomLevel = 1;
+    resumeZoomMultiplier = 1.0;
     currentTemplate = 'default';
     
-    const isHTML = content.includes('<!DOCTYPE html>') || content.includes('<html') || content.includes('tailwindcss');
+    const isHTML = content.includes('<!DOCTYPE html>') || content.includes('<html') || content.includes('tailwindcss') || content.includes('<div');
     const previewContainer = document.getElementById('resumePreviewContent');
     
     if (isHTML) {
         const iframe = document.createElement('iframe');
         iframe.style.width = '100%';
-        iframe.style.height = '100%';
+        iframe.style.height = '1100px'; // 初始高度
         iframe.style.border = 'none';
         iframe.style.background = 'white';
         iframe.style.display = 'block';
@@ -676,22 +678,41 @@ function showResumeInPanel(contentId) {
         
         previewContainer.innerHTML = '';
         previewContainer.appendChild(iframe);
+        
+        iframe.onload = () => {
+            adjustIframeHeight(iframe);
+            // 监听 iframe 内容的变化，动态调整高度
+            const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+            if (iframeDoc && iframeDoc.body) {
+                const observer = new MutationObserver(() => {
+                    adjustIframeHeight(iframe);
+                });
+                observer.observe(iframeDoc.body, { childList: true, subtree: true, characterData: true });
+            }
+        };
+        
         iframe.srcdoc = content;
     } else {
         previewContainer.innerHTML = renderResumeContent(content);
+        // 如果是纯文本，让外层 div 样式还原
+        previewContainer.style.height = 'auto';
+        setTimeout(adjustResumeScale, 100);
     }
     
     document.getElementById('zoomLevel').textContent = '100%';
-    previewContainer.style.transform = 'scale(1)';
     
     // 重置模板选择UI
     document.querySelectorAll('.template-option').forEach(opt => {
         opt.classList.remove('active');
     });
-    document.querySelector('.template-option').classList.add('active');
+    const defaultOpt = document.querySelector('.template-option');
+    if (defaultOpt) defaultOpt.classList.add('active');
     
     document.getElementById('resumeModal').style.display = 'flex';
     document.body.style.overflow = 'hidden';
+    
+    // 延迟进行 scale 计算以确保尺寸就绪
+    setTimeout(adjustResumeScale, 200);
 }
 
 // 获取简历中的文本内容（去除HTML标签）
@@ -931,20 +952,75 @@ function renderResumeWithTemplate(templateName) {
 let isEditMode = false;
 let currentTemplate = 'default';
 
+let resumeZoomMultiplier = 1.0;
+
 function closeResumeModal() {
     document.getElementById('resumeModal').style.display = 'none';
     document.body.style.overflow = '';
     currentResumeContent = null;
-    currentZoomLevel = 1;
+    resumeZoomMultiplier = 1.0;
+    document.getElementById('zoomLevel').textContent = '100%';
     isEditMode = false;
     currentTemplate = 'default';
 }
 
+// 动态根据简历预览 Modal body 宽度对 800px width 的简历进行 transform 缩放
+function adjustResumeScale() {
+    const modalBody = document.querySelector('.resume-modal-body');
+    const paper = document.getElementById('resumePreviewContent');
+    if (!modalBody || !paper) return;
+    
+    const containerWidth = modalBody.clientWidth;
+    const padding = window.innerWidth <= 768 ? 16 : 32; // 移动端 16px 间距，PC端 32px 间距
+    const targetWidth = 800;
+    
+    // 计算刚好贴合容器宽度的基础比例
+    let baselineScale = (containerWidth - padding) / targetWidth;
+    if (baselineScale > 1) baselineScale = 1;
+    
+    // 应用用户的缩放系数
+    const finalScale = baselineScale * resumeZoomMultiplier;
+    
+    // 缩放 resume-paper
+    paper.style.transform = `scale(${finalScale})`;
+    
+    // 调整外层 wrapper 的尺寸以完全消除 transform 导致的高度塌陷/底部空白
+    const paperWrapper = document.getElementById('resumePaperWrapper') || paper.parentElement;
+    const iframe = paper.querySelector('iframe');
+    const originalHeight = iframe ? (iframe.offsetHeight || 1100) : (paper.scrollHeight || 1100);
+    
+    paperWrapper.style.height = (originalHeight * finalScale) + 'px';
+    paperWrapper.style.width = (targetWidth * finalScale) + 'px';
+}
+
 function zoomResume(delta) {
-    currentZoomLevel = Math.max(0.5, Math.min(2, currentZoomLevel + delta));
-    const previewContainer = document.getElementById('resumePreviewContent');
-    previewContainer.style.transform = `scale(${currentZoomLevel})`;
-    document.getElementById('zoomLevel').textContent = Math.round(currentZoomLevel * 100) + '%';
+    resumeZoomMultiplier = Math.max(0.5, Math.min(2.0, resumeZoomMultiplier + delta));
+    adjustResumeScale();
+    document.getElementById('zoomLevel').textContent = Math.round(resumeZoomMultiplier * 100) + '%';
+}
+
+// 动态拉伸 iframe 高度，消除内部滚动条，杜绝双滚动条
+function adjustIframeHeight(iframe) {
+    try {
+        const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+        if (iframeDoc && iframeDoc.body) {
+            // 临时将高度置为 auto，以获取准确的 scrollHeight
+            iframeDoc.body.style.height = 'auto';
+            iframeDoc.documentElement.style.height = 'auto';
+            const contentHeight = Math.max(
+                iframeDoc.body.scrollHeight,
+                iframeDoc.documentElement.scrollHeight,
+                iframeDoc.body.offsetHeight,
+                iframeDoc.documentElement.offsetHeight
+            );
+            iframe.style.height = (contentHeight + 20) + 'px';
+            
+            // 高度改变后，必须重新计算外部 transform 和 wrapper 大小
+            adjustResumeScale();
+        }
+    } catch (e) {
+        console.error('动态拉伸iframe高度失败:', e);
+    }
 }
 
 // 切换编辑模式
@@ -1167,6 +1243,144 @@ function applyTemplate(templateName) {
     }
 }
 
+// 后台离线捕获已渲染 iframe 的内容为 Canvas（固定宽度 794px，保持 A4 纸张排版）
+function captureIframeContent(sourceIframe, width = 794) {
+    return new Promise((resolve, reject) => {
+        try {
+            const tempIframe = document.createElement('iframe');
+            tempIframe.style.position = 'fixed';
+            tempIframe.style.left = '-9999px';
+            tempIframe.style.top = '0';
+            tempIframe.style.width = width + 'px';
+            tempIframe.style.height = '1200px'; // 初始高度
+            tempIframe.style.border = 'none';
+            tempIframe.style.zIndex = '99999';
+            
+            document.body.appendChild(tempIframe);
+            
+            const sourceDoc = sourceIframe.contentDocument || sourceIframe.contentWindow.document;
+            const tempDoc = tempIframe.contentDocument || tempIframe.contentWindow.document;
+            
+            // 写入完整的 documentElement HTML
+            tempDoc.open();
+            tempDoc.write(sourceDoc.documentElement.outerHTML);
+            tempDoc.close();
+            
+            const executeCapture = async () => {
+                try {
+                    await new Promise(r => setTimeout(r, 600));
+                    
+                    const body = tempDoc.body;
+                    const html = tempDoc.documentElement;
+                    const height = Math.max(body.scrollHeight, body.offsetHeight, html.clientHeight, html.scrollHeight, html.offsetHeight);
+                    tempIframe.style.height = height + 'px';
+                    
+                    // 等待重绘完成
+                    await new Promise(r => setTimeout(r, 200));
+                    
+                    const canvas = await html2canvas(tempDoc.body, {
+                        scale: 2,
+                        useCORS: true,
+                        logging: false,
+                        backgroundColor: '#ffffff',
+                        allowTaint: true,
+                        width: width,
+                        height: height,
+                        windowWidth: width,
+                        windowHeight: height
+                    });
+                    
+                    document.body.removeChild(tempIframe);
+                    resolve(canvas);
+                } catch (err) {
+                    if (tempIframe.parentNode) {
+                        document.body.removeChild(tempIframe);
+                    }
+                    reject(err);
+                }
+            };
+            
+            tempIframe.onload = executeCapture;
+            // 兜底执行，防止 onload 未触发
+            setTimeout(() => {
+                if (tempIframe.parentNode) {
+                    executeCapture();
+                }
+            }, 800);
+            
+        } catch (e) {
+            reject(e);
+        }
+    });
+}
+
+// 后台离线捕获原生 HTML 字符串内容为 Canvas（固定宽度 794px）
+function captureHTMLContent(htmlContent, width = 794) {
+    return new Promise((resolve, reject) => {
+        try {
+            const tempIframe = document.createElement('iframe');
+            tempIframe.style.position = 'fixed';
+            tempIframe.style.left = '-9999px';
+            tempIframe.style.top = '0';
+            tempIframe.style.width = width + 'px';
+            tempIframe.style.height = '1200px';
+            tempIframe.style.border = 'none';
+            tempIframe.style.zIndex = '99999';
+            
+            document.body.appendChild(tempIframe);
+            
+            const tempDoc = tempIframe.contentDocument || tempIframe.contentWindow.document;
+            
+            tempDoc.open();
+            tempDoc.write(htmlContent);
+            tempDoc.close();
+            
+            const executeCapture = async () => {
+                try {
+                    await new Promise(r => setTimeout(r, 600));
+                    
+                    const body = tempDoc.body;
+                    const html = tempDoc.documentElement;
+                    const height = Math.max(body.scrollHeight, body.offsetHeight, html.clientHeight, html.scrollHeight, html.offsetHeight);
+                    tempIframe.style.height = height + 'px';
+                    
+                    await new Promise(r => setTimeout(r, 200));
+                    
+                    const canvas = await html2canvas(tempDoc.body, {
+                        scale: 2,
+                        useCORS: true,
+                        logging: false,
+                        backgroundColor: '#ffffff',
+                        allowTaint: true,
+                        width: width,
+                        height: height,
+                        windowWidth: width,
+                        windowHeight: height
+                    });
+                    
+                    document.body.removeChild(tempIframe);
+                    resolve(canvas);
+                } catch (err) {
+                    if (tempIframe.parentNode) {
+                        document.body.removeChild(tempIframe);
+                    }
+                    reject(err);
+                }
+            };
+            
+            tempIframe.onload = executeCapture;
+            setTimeout(() => {
+                if (tempIframe.parentNode) {
+                    executeCapture();
+                }
+            }, 800);
+            
+        } catch (e) {
+            reject(e);
+        }
+    });
+}
+
 // 下载功能
 async function downloadResumeAsImage() {
     if (!currentResumeContent) return;
@@ -1174,38 +1388,34 @@ async function downloadResumeAsImage() {
     try {
         modal.toast('正在生成图片...', 'info');
         
-        // 创建临时容器，使用固定宽度（A4比例）
-        const tempContainer = document.createElement('div');
-        tempContainer.style.position = 'fixed';
-        tempContainer.style.left = '-9999px';
-        tempContainer.style.top = '0';
-        tempContainer.style.width = '794px'; // A4纸宽度（96dpi）
-        tempContainer.style.background = 'white';
-        tempContainer.style.zIndex = '99999';
-        document.body.appendChild(tempContainer);
+        const previewContainer = document.getElementById('resumePreviewContent');
+        const existingIframe = previewContainer ? previewContainer.querySelector('iframe') : null;
         
-        const isHTML = currentResumeContent.includes('<!DOCTYPE html>') || currentResumeContent.includes('<html') || currentResumeContent.includes('tailwindcss');
-        
-        if (isHTML) {
-            tempContainer.innerHTML = currentResumeContent;
+        let canvas = null;
+        if (existingIframe) {
+            canvas = await captureIframeContent(existingIframe, 794);
         } else {
-            tempContainer.innerHTML = renderResumeContent(currentResumeContent);
+            const isHTML = currentResumeContent.includes('<!DOCTYPE html>') || currentResumeContent.includes('<html') || currentResumeContent.includes('tailwindcss') || currentResumeContent.includes('<div');
+            let finalHTML = currentResumeContent;
+            if (!isHTML) {
+                finalHTML = `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="UTF-8">
+                    <style>
+                        body { font-family: 'Microsoft YaHei', 'SimSun', Arial, sans-serif; padding: 40px; line-height: 1.6; }
+                    </style>
+                </head>
+                <body>
+                    ${renderResumeContent(currentResumeContent)}
+                </body>
+                </html>`;
+            }
+            canvas = await captureHTMLContent(finalHTML, 794);
         }
         
-        // 等待内容渲染
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        const canvas = await html2canvas(tempContainer, {
-            scale: 2,
-            useCORS: true,
-            logging: false,
-            backgroundColor: '#ffffff',
-            width: 794,
-            windowWidth: 794
-        });
-        
-        // 清理临时容器
-        document.body.removeChild(tempContainer);
+        if (!canvas) throw new Error('无法生成Canvas');
         
         const link = document.createElement('a');
         link.download = 'resume.png';
@@ -1237,56 +1447,27 @@ async function downloadResumeAsPDF(content) {
         
         let canvas = null;
         
-        if (existingIframe && existingIframe.contentDocument && existingIframe.contentDocument.body) {
-            const iframeDoc = existingIframe.contentDocument;
-            if (iframeDoc.body.innerHTML.trim()) {
-                canvas = await html2canvas(iframeDoc.body, {
-                    scale: 2,
-                    useCORS: true,
-                    logging: true,
-                    backgroundColor: '#ffffff',
-                    allowTaint: true,
-                    useOverflow: true,
-                    scrollX: 0,
-                    scrollY: 0
-                });
+        if (content === currentResumeContent && existingIframe) {
+            canvas = await captureIframeContent(existingIframe, 794);
+        } else {
+            const isHTML = content.includes('<!DOCTYPE html>') || content.includes('<html') || content.includes('tailwindcss') || content.includes('<div');
+            let finalHTML = content;
+            if (!isHTML) {
+                finalHTML = `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="UTF-8">
+                    <style>
+                        body { font-family: 'Microsoft YaHei', 'SimSun', Arial, sans-serif; padding: 40px; line-height: 1.6; }
+                    </style>
+                </head>
+                <body>
+                    ${renderResumeContent(content)}
+                </body>
+                </html>`;
             }
-        }
-        
-        if (!canvas) {
-            const tempContainer = document.createElement('div');
-            tempContainer.id = 'temp-pdf-container';
-            tempContainer.style.position = 'fixed';
-            tempContainer.style.left = '0';
-            tempContainer.style.top = '0';
-            tempContainer.style.width = '794px';
-            tempContainer.style.height = 'auto';
-            tempContainer.style.background = 'white';
-            tempContainer.style.zIndex = '99999';
-            tempContainer.style.opacity = '0.01';
-            document.body.appendChild(tempContainer);
-            
-            const isHTML = content.includes('<!DOCTYPE html>') || content.includes('<html') || content.includes('tailwindcss');
-            
-            if (isHTML) {
-                tempContainer.innerHTML = content;
-            } else {
-                tempContainer.innerHTML = renderResumeContent(content);
-                tempContainer.style.fontFamily = "'Microsoft YaHei', 'SimSun', Arial, sans-serif";
-                tempContainer.style.padding = '40px';
-            }
-            
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            
-            canvas = await html2canvas(tempContainer, {
-                scale: 2,
-                useCORS: true,
-                logging: true,
-                backgroundColor: '#ffffff',
-                allowTaint: true
-            });
-            
-            document.body.removeChild(tempContainer);
+            canvas = await captureHTMLContent(finalHTML, 794);
         }
         
         if (!canvas) throw new Error('无法生成Canvas');
@@ -2226,6 +2407,13 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }, { passive: true });
     }
+
+    // 监听窗口大小变化以动态调整简历缩放
+    window.addEventListener('resize', () => {
+        if (document.getElementById('resumeModal').style.display === 'flex') {
+            adjustResumeScale();
+        }
+    });
 });
 
 // ==================== 任务持久化和恢复 ====================

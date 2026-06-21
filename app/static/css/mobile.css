@@ -810,11 +810,11 @@
         padding: 0;
     }
 
-    /* 简历正文 padding 收紧，避免全屏预览时左右留白过大挤压内容 */
     .resume-paper {
-        padding: 1rem !important;
-        max-width: 100% !important;
         border-radius: 0 !important;
+        width: 800px !important;
+        min-width: 800px !important;
+        box-shadow: none !important;
     }
 
     .resume-modal-footer {
