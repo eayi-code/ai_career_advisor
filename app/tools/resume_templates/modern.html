@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>现代简约简历</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'PingFang SC', 'Microsoft YaHei', 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            color: #333;
+            line-height: 1.6;
+        }
+        .resume {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 40px;
+            box-shadow: 0 2px 20px rgba(0,0,0,0.1);
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 3px solid #2c3e50;
+        }
+        .name-section h1 {
+            font-size: 32px;
+            font-weight: 700;
+            color: #2c3e50;
+            margin-bottom: 8px;
+        }
+        .name-section .subtitle {
+            font-size: 16px;
+            color: #7f8c8d;
+            font-weight: 400;
+        }
+        .contact-section {
+            text-align: right;
+            font-size: 14px;
+            color: #555;
+        }
+        .contact-section p {
+            margin-bottom: 4px;
+        }
+        .section {
+            margin-bottom: 25px;
+        }
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 15px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #3498db;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .section-title::before {
+            content: '';
+            width: 4px;
+            height: 20px;
+            background: #3498db;
+            border-radius: 2px;
+        }
+        .item {
+            margin-bottom: 15px;
+        }
+        .item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: 5px;
+        }
+        .item-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+        .item-date {
+            font-size: 14px;
+            color: #95a5a6;
+        }
+        .item-subtitle {
+            font-size: 14px;
+            color: #7f8c8d;
+            margin-bottom: 8px;
+        }
+        .item-content {
+            font-size: 14px;
+            color: #555;
+            line-height: 1.8;
+        }
+        .item-content ul {
+            padding-left: 20px;
+        }
+        .item-content li {
+            margin-bottom: 5px;
+        }
+        .skills-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+        .skill-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+        }
+        .skill-dot {
+            width: 8px;
+            height: 8px;
+            background: #3498db;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+        .highlight {
+            color: #e74c3c;
+            font-weight: 600;
+        }
+        @media print {
+            body { background: white; }
+            .resume { box-shadow: none; padding: 20px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="resume">
+        <header class="header">
+            <div class="name-section">
+                <h1>{{姓名}}</h1>
+                <p class="subtitle">{{职位}} · {{经验年限}}</p>
+            </div>
+            <div class="contact-section">
+                <p>{{电话}}</p>
+                <p>{{邮箱}}</p>
+                <p>{{GitHub/LinkedIn}}</p>
+            </div>
+        </header>
+
+        <section class="section">
+            <p style="font-size: 15px; color: #555; line-height: 1.8;">{{个人简介}}</p>
+        </section>
+
+        <section class="section">
+            <h2 class="section-title">工作经验</h2>
+            {{工作经验列表}}
+        </section>
+
+        <section class="section">
+            <h2 class="section-title">项目经历</h2>
+            {{项目经历列表}}
+        </section>
+
+        <section class="section">
+            <h2 class="section-title">教育背景</h2>
+            {{教育背景}}
+        </section>
+
+        <section class="section">
+            <h2 class="section-title">专业技能</h2>
+            {{技能列表}}
+        </section>
+
+        <section class="section">
+            <h2 class="section-title">荣誉证书</h2>
+            {{荣誉证书}}
+        </section>
+    </div>
+</body>
+</html>

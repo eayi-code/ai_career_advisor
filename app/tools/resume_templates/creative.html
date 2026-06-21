@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>创意设计简历</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 40px 20px;
+        }
+        .resume {
+            width: 100%;
+            max-width: 800px;
+            background: white;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+        .header h1 {
+            font-size: 36px;
+            font-weight: 700;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+        .header .subtitle {
+            font-size: 18px;
+            opacity: 0.9;
+            margin-bottom: 20px;
+        }
+        .contact-info {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            font-size: 14px;
+            opacity: 0.9;
+        }
+        .contact-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .content {
+            padding: 30px 40px;
+        }
+        .section {
+            margin-bottom: 30px;
+        }
+        .section-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #667eea;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .section-title::after {
+            content: '';
+            flex: 1;
+            height: 2px;
+            background: linear-gradient(to right, #667eea, transparent);
+        }
+        .item {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f8f9ff;
+            border-radius: 12px;
+            border-left: 4px solid #667eea;
+        }
+        .item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: 8px;
+        }
+        .item-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #2d3748;
+        }
+        .item-date {
+            font-size: 13px;
+            color: #a0aec0;
+            background: #edf2f7;
+            padding: 2px 10px;
+            border-radius: 12px;
+        }
+        .item-subtitle {
+            font-size: 14px;
+            color: #718096;
+            margin-bottom: 8px;
+        }
+        .item-content {
+            font-size: 14px;
+            color: #4a5568;
+            line-height: 1.8;
+        }
+        .item-content ul {
+            padding-left: 18px;
+        }
+        .item-content li {
+            margin-bottom: 5px;
+        }
+        .skills-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .skill-tag {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 500;
+        }
+        .highlight {
+            color: #e53e3e;
+            font-weight: 600;
+        }
+        @media print {
+            body { background: white; padding: 0; }
+            .resume { box-shadow: none; border-radius: 0; }
+            .header { background: #667eea !important; -webkit-print-color-adjust: exact; }
+            .skill-tag { background: #667eea !important; -webkit-print-color-adjust: exact; }
+        }
+    </style>
+</head>
+<body>
+    <div class="resume">
+        <header class="header">
+            <h1>{{姓名}}</h1>
+            <p class="subtitle">{{职位}} · {{经验年限}}</p>
+            <div class="contact-info">
+                <span class="contact-item">{{电话}}</span>
+                <span class="contact-item">{{邮箱}}</span>
+                <span class="contact-item">{{GitHub/LinkedIn}}</span>
+            </div>
+        </header>
+
+        <div class="content">
+            <section class="section">
+                <h2 class="section-title">个人简介</h2>
+                <p style="font-size: 15px; color: #4a5568; line-height: 1.8;">{{个人简介}}</p>
+            </section>
+
+            <section class="section">
+                <h2 class="section-title">工作经验</h2>
+                {{工作经验列表}}
+            </section>
+
+            <section class="section">
+                <h2 class="section-title">项目经历</h2>
+                {{项目经历列表}}
+            </section>
+
+            <section class="section">
+                <h2 class="section-title">教育背景</h2>
+                {{教育背景}}
+            </section>
+
+            <section class="section">
+                <h2 class="section-title">专业技能</h2>
+                <div class="skills-container">
+                    {{技能列表}}
+                </div>
+            </section>
+
+            <section class="section">
+                <h2 class="section-title">荣誉证书</h2>
+                {{荣誉证书}}
+            </section>
+        </div>
+    </div>
+</body>
+</html>

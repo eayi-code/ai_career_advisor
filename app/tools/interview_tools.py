@@ -173,11 +173,101 @@ def analyze_job_description(jd_text: str) -> str:
         return f"分析JD失败: {str(e)}"
 
 
+@tool("mock_interview", return_direct=False)
+def mock_interview(job_title: str, question: str, user_answer: str = "") -> str:
+    """模拟面试对话。输入职位、面试问题、用户回答（可选）。"""
+    try:
+        llm = ChatOpenAI(
+            model=current_app.config['OPENAI_MODEL'],
+            api_key=current_app.config['OPENAI_API_KEY'],
+            base_url=current_app.config['OPENAI_BASE_URL'],
+            temperature=0.7
+        )
+
+        if user_answer:
+            prompt = f"""你是一位资深面试官，正在进行{job_title}职位的面试。
+
+面试问题：{question}
+候选人回答：{user_answer}
+
+请对候选人的回答进行评价：
+1. 回答的优点
+2. 回答的不足
+3. 改进建议
+4. 参考答案要点
+5. 追问建议（如果需要深入考察）
+
+请用专业但友好的语气回复。"""
+        else:
+            prompt = f"""你是一位资深面试官，正在进行{job_title}职位的面试。
+
+面试问题：{question}
+
+请提供：
+1. 这个问题的考察点
+2. 回答框架建议
+3. 参考答案要点
+4. 常见错误
+5. 加分回答技巧
+
+请用专业但友好的语气回复。"""
+
+        response = llm.invoke(prompt)
+        return response.content
+
+    except Exception as e:
+        return f"模拟面试失败: {str(e)}"
+
+
+@tool("interview_checklist", return_direct=False)
+def interview_checklist(job_title: str, interview_type: str = "技术面") -> str:
+    """生成面试清单。输入职位和面试类型（技术面/HR面/终面）。"""
+    try:
+        llm = ChatOpenAI(
+            model=current_app.config['OPENAI_MODEL'],
+            api_key=current_app.config['OPENAI_API_KEY'],
+            base_url=current_app.config['OPENAI_BASE_URL'],
+            temperature=0.7
+        )
+
+        prompt = f"""请为{job_title}职位的{interview_type}生成一份详细的面试准备清单。
+
+请包含：
+1. 面试前准备
+   - 需要复习的知识点
+   - 需要准备的项目案例
+   - 需要了解的公司信息
+
+2. 面试中注意事项
+   - 自我介绍要点
+   - 回答问题的技巧
+   - 需要避免的错误
+
+3. 面试后跟进
+   - 感谢信模板
+   - 后续跟进时机
+
+4. 常见问题及应对
+   - 优缺点回答
+   - 离职原因回答
+   - 职业规划回答
+
+请用Markdown格式输出。"""
+
+        response = llm.invoke(prompt)
+        return response.content
+
+    except Exception as e:
+        return f"生成面试清单失败: {str(e)}"
+
+
 def get_interview_tools():
     """获取所有面试相关工具"""
     return [
         generate_interview_questions,
         optimize_self_intro,
         salary_negotiation_tips,
-        analyze_job_description
+        analyze_job_description,
+        mock_interview,
+        interview_checklist
     ]

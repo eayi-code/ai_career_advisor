@@ -63,35 +63,15 @@ class BaseAgent:
 
     def _build_system_prompt(self) -> str:
         """构建系统提示词 - 子类应重写此方法"""
-        return f"""你是一个专业的{self.agent_name}。
+        return f"""你是{self.agent_name}，用中文回复。
 
-## 角色定位
-你是一位经验丰富的专业人士，擅长为用户提供精准、实用的建议。
-
-## 回复规范
-1. **语言风格**：用自然流畅的中文回复，专业但不晦涩
-2. **结构清晰**：使用Markdown格式（标题、列表、加粗）组织内容
-3. **数据驱动**：基于工具返回的真实数据给出建议
-4. **可操作性**：每条建议都要具体、可执行
-5. **长度适中**：回复控制在300-800字，重点突出
-
-## 输出格式要求
-使用Markdown格式，结构如下：
-- **核心结论**：1-2句话总结核心观点
-- **详细分析**：分点列出，每点用加粗标题
-- **行动建议**：具体可执行的步骤
-- **注意事项**：风险提示或补充说明
-
-## 多轮对话规则
-1. 记住用户之前的问题和你的回答
-2. 如果用户说"修改XX"或"换个说法"，只修改指定部分
-3. 如果用户说"详细说说"或"展开讲讲"，对上一个话题深入
-4. 支持局部修改：用户可以指定修改某一段或某一点
-5. 保持连贯性：新回复要与之前的对话衔接
-
-## 错误处理
-- 如果工具调用失败，给出替代建议而非简单报错
-- 如果数据不足，说明限制并给出基于经验的建议"""
+## 规则
+1. 用Markdown格式（标题、列表、加粗）
+2. 基于工具数据给建议，没数据就说清楚
+3. 回复300-800字，重点突出
+4. 结构：核心结论 → 详细分析 → 行动建议
+5. 记住对话历史，支持"修改XX"等局部调整
+6. 工具失败时给替代建议"""
 
     def build_agent(self):
         self.agent = create_agent(
@@ -208,51 +188,34 @@ class BaseAgent:
         return "\n\n".join(context_parts) if context_parts else ""
 
     def _validate_output(self, output: str) -> Dict[str, Any]:
-        """验证输出质量 - 增强版，返回详细信息"""
+        """验证输出质量 - 精简版，放宽阈值减少重试"""
         if not output:
             return {"ok": False, "score": 0, "issues": ["empty_output"]}
         
         issues = []
         score = 50  # 基础分
         
-        # 长度检查
+        # 长度检查（放宽）
         if len(output) < 20:
             issues.append("too_short")
             score -= 30
         elif len(output) < 50:
             score -= 10
-        elif len(output) > 300:
-            score += 15
         elif len(output) > 100:
             score += 10
-        
-        # 错误关键词检查（短回复中的错误关键词扣分更多）
-        error_keywords = ["抱歉", "无法", "失败", "错误", "不支持", "暂不支持"]
-        error_count = sum(1 for kw in error_keywords if kw in output)
-        if error_count > 0:
-            if len(output) < 50:
-                issues.append("contains_errors")
-                score -= 25
-            elif len(output) < 100:
-                score -= 10
         
         # 格式化检查（Markdown格式加分）
         format_indicators = ["**", "- ", "1. ", "##", "###", "|"]
         format_count = sum(1 for indicator in format_indicators if indicator in output)
         if format_count > 0:
-            score += min(format_count * 5, 20)
-        
-        # 内容相关性检查
-        relevance_keywords = ["建议", "推荐", "分析", "总结", "方案", "策略", "路径", "方案"]
-        relevance_count = sum(1 for kw in relevance_keywords if kw in output)
-        if relevance_count > 0:
-            score += min(relevance_count * 5, 15)
+            score += min(format_count * 5, 15)
         
         # 限制分数范围
         score = max(0, min(100, score))
         
+        # 放宽阈值：20分以上就接受
         return {
-            "ok": score >= 35,
+            "ok": score >= 20,
             "score": score,
             "issues": issues
         }

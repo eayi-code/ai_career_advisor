@@ -16,3 +16,5 @@ pypdf>=4.0.0
 python-docx>=1.0.0
 xhtml2pdf>=0.2.11
 gunicorn>=21.2.0
+requests>=2.31.0
+beautifulsoup4>=4.12.0

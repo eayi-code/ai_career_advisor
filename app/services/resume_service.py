@@ -12,12 +12,42 @@ from flask import send_file
 class ResumeService:
     """简历服务类"""
     
+    # 缓存模型列表，避免每次都调用API
+    _cached_models = None
+    _cache_timestamp = 0
+    
+    @staticmethod
+    def _compress_image(image_bytes, max_size=800):
+        """压缩图像，减少base64数据量"""
+        try:
+            from PIL import Image
+            import io
+            
+            img = Image.open(io.BytesIO(image_bytes))
+            
+            # 转换为RGB（如果是RGBA）
+            if img.mode in ('RGBA', 'P'):
+                img = img.convert('RGB')
+            
+            # 调整大小
+            if max(img.size) > max_size:
+                img.thumbnail((max_size, max_size), Image.Resampling.LANCZOS)
+            
+            # 压缩为JPEG
+            output = io.BytesIO()
+            img.save(output, format='JPEG', quality=80, optimize=True)
+            return output.getvalue()
+        except Exception:
+            # 压缩失败，返回原图
+            return image_bytes
+    
     @staticmethod
     def _extract_text_from_image_bytes(image_bytes, mimetype, filename):
-        """调用LLM Vision接口提取图片中的招聘岗位信息或文字内容"""
+        """调用LLM Vision接口提取图片中的招聘岗位信息或文字内容（优化版）"""
         from flask import current_app
         from openai import OpenAI
         import base64
+        import time
         
         api_key = current_app.config.get('VISION_API_KEY') or current_app.config['OPENAI_API_KEY']
         base_url = current_app.config.get('VISION_BASE_URL') or current_app.config['OPENAI_BASE_URL']
@@ -27,42 +57,26 @@ class ResumeService:
             base_url=base_url
         )
         
-        img_base64 = base64.b64encode(image_bytes).decode('utf-8')
+        # 压缩图像（减少数据量）
+        compressed_bytes = ResumeService._compress_image(image_bytes)
+        img_base64 = base64.b64encode(compressed_bytes).decode('utf-8')
         
         if not mimetype or 'image' not in mimetype:
             mimetype = 'image/jpeg'
             
-        prompt = """你是一个专业的文字提取和招聘专家。请从这张工作岗位招聘截图（如Boss直聘、猎聘、拉勾等招聘软件截图，或简历图片）中，准确提取并整理出所有的文字内容。
-如果这是招聘岗位信息，请务必详细整理出：
-1. 岗位名称
-2. 职责描述
-3. 任职资格/要求
-4. 薪资待遇及工作地点等其他核心信息
+        # 精简prompt（减少token消耗）
+        prompt = """提取图片中的文字内容。
+如果是招聘岗位，整理出：岗位名称、职责、要求、薪资、地点。
+如果是简历，提取个人信息、工作经历、技能。
+只输出提取的文本，不要解释。"""
 
-请将提取出的信息以清晰可读的格式输出。如果是普通简历图片，请直接完整提取简历上的个人信息、求职意向和工作经历等。只输出提取和整理后的文本，不需要包含任何解释。"""
-
-        # 收集可能支持多模态的候选模型列表
+        # 直接使用配置的模型，不获取模型列表（节省一次API调用）
         configured_model = current_app.config.get('VISION_MODEL') or current_app.config['OPENAI_MODEL']
-        models_to_try = [configured_model]
         
-        # 尝试获取当前密钥支持的全部模型，筛选出多模态模型
-        api_models = []
-        try:
-            model_list = client.models.list()
-            api_models = [m.id for m in model_list.data]
-        except Exception:
-            pass
-            
-        vision_keywords = ['vision', 'vl', 'gpt-4o', 'claude-3-5', 'gemini-1.5', 'multimodal']
-        for m_id in api_models:
-            if any(kw in m_id.lower() for kw in vision_keywords):
-                if m_id not in models_to_try:
-                    models_to_try.append(m_id)
-                    
-        # 常见模型兜底
-        for fallback in ["gpt-4o-mini", "gpt-4o", "gpt-4-vision-preview"]:
-            if fallback not in models_to_try:
-                models_to_try.append(fallback)
+        # 只尝试1-2个模型，不串行尝试所有
+        models_to_try = [configured_model]
+        if configured_model != 'gpt-4o-mini':
+            models_to_try.append('gpt-4o-mini')  # 快速兜底
                 
         last_err = None
         for model_name in models_to_try:
@@ -85,7 +99,7 @@ class ResumeService:
                             ]
                         }
                     ],
-                    max_tokens=1500,
+                    max_tokens=1000,  # 减少max_tokens
                     temperature=0.1
                 )
                 return response.choices[0].message.content.strip()
@@ -93,12 +107,8 @@ class ResumeService:
                 last_err = e
                 continue
                 
-        available_models_str = ", ".join(api_models) if api_models else "获取失败"
         raise RuntimeError(
-            f"多模态大模型解析失败。\n"
-            f"已尝试模型列表: {models_to_try}\n"
-            f"最后一次尝试报错: {str(last_err)}\n"
-            f"该 API 密钥支持的所有模型列表: [{available_models_str}]。若列表包含其他支持图片的模型，请在 .env 中进行配置。"
+            f"图像解析失败: {str(last_err)}"
         )
 
     @staticmethod

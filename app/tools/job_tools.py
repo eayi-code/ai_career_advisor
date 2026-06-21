@@ -1,6 +1,7 @@
 from langchain.tools import tool
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from app.models.job import Job, JobSkill
+import json
 
 
 @tool("search_jobs", return_direct=False)
@@ -248,5 +249,322 @@ def update_user_profile(field: str, value: str) -> str:
         return f"更新档案失败: {str(e)}"
 
 
+@tool("fetch_job_from_url", return_direct=False)
+def fetch_job_from_url(url: str) -> str:
+    """从职位链接抓取职位信息。输入职位页面的URL地址。"""
+    try:
+        import requests
+        from bs4 import BeautifulSoup
+        
+        # 设置请求头，模拟浏览器访问
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
+        }
+        
+        # 发送请求
+        response = requests.get(url, headers=headers, timeout=10)
+        response.encoding = response.apparent_encoding
+        
+        # 解析HTML
+        soup = BeautifulSoup(response.text, 'html.parser')
+        
+        # 移除script和style标签
+        for script in soup(["script", "style"]):
+            script.decompose()
+        
+        # 获取文本内容
+        text = soup.get_text()
+        
+        # 清理文本
+        lines = (line.strip() for line in text.splitlines())
+        chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
+        text = '\n'.join(chunk for chunk in chunks if chunk)
+        
+        # 限制长度
+        if len(text) > 5000:
+            text = text[:5000] + "..."
+        
+        return f"页面内容:\n{text}"
+        
+    except requests.exceptions.Timeout:
+        return "抓取失败：请求超时，请检查网络连接或稍后重试"
+    except requests.exceptions.RequestException as e:
+        return f"抓取失败：网络错误 - {str(e)}"
+    except Exception as e:
+        return f"抓取失败：{str(e)}"
+
+
+@tool("parse_job_text", return_direct=False)
+def parse_job_text(text: str, platform: str = "其他") -> str:
+    """解析职位文本，提取结构化信息。输入职位描述文本和来源平台（Boss直聘/58同城/其他）。"""
+    try:
+        from langchain_openai import ChatOpenAI
+        from flask import current_app
+        
+        llm = ChatOpenAI(
+            model=current_app.config['OPENAI_MODEL'],
+            api_key=current_app.config['OPENAI_API_KEY'],
+            base_url=current_app.config['OPENAI_BASE_URL'],
+            temperature=0
+        )
+        
+        prompt = f"""请从以下职位文本中提取结构化信息。
+
+来源平台：{platform}
+
+职位文本：
+{text}
+
+请提取以下信息并返回JSON格式：
+{{
+    "job_title": "职位名称",
+    "company_name": "公司名称",
+    "location": "工作地点",
+    "salary_min": "最低薪资（数字，单位K）",
+    "salary_max": "最高薪资（数字，单位K）",
+    "experience_years": "经验要求（数字，单位年）",
+    "education": "学历要求（本科/硕士/博士/大专/不限）",
+    "skills": ["技能要求1", "技能要求2"],
+    "job_description": "工作描述（一句话总结）",
+    "benefits": ["福利1", "福利2"],
+    "contact_info": "联系方式（如有）"
+}}
+
+注意：
+1. 如果某个字段无法提取，使用null
+2. 薪资请转换为K为单位（如1万-1.5万转换为10K-15K）
+3. 经验请转换为年（如3-5年转换为3）
+4. 只返回JSON，不要其他内容"""
+
+        response = llm.invoke(prompt)
+        return response.content
+        
+    except Exception as e:
+        return f"解析职位文本失败: {str(e)}"
+
+
+@tool("verify_job", return_direct=False)
+def verify_job(job_info: str) -> str:
+    """判断职位信息的真假。输入JSON格式的职位信息。"""
+    try:
+        from langchain_openai import ChatOpenAI
+        from flask import current_app
+        
+        llm = ChatOpenAI(
+            model=current_app.config['OPENAI_MODEL'],
+            api_key=current_app.config['OPENAI_API_KEY'],
+            base_url=current_app.config['OPENAI_BASE_URL'],
+            temperature=0
+        )
+        
+        prompt = f"""请分析以下职位信息，判断其真假。
+
+职位信息：
+{job_info}
+
+请从以下维度分析：
+
+1. **薪资合理性**：
+   - 普通岗位月薪是否超过5万？
+   - 是否存在"高薪诚聘"、"月入过万"等模糊描述？
+   - 薪资与经验要求是否匹配？
+
+2. **职位描述**：
+   - 是否有具体的工作内容？
+   - 是否存在"轻松赚钱"、"无需经验"等异常描述？
+   - 要求是否合理？
+
+3. **公司信息**：
+   - 公司名称是否完整？
+   - 是否有明确的工作地点？
+   - 联系方式是否正常（只留微信/QQ可能是假）？
+
+4. **其他特征**：
+   - 是否要求缴纳费用？
+   - 是否存在"先培训后上岗"？
+   - 是否有异常的福利承诺？
+
+请返回以下格式：
+{{
+    "is_real": true/false,
+    "confidence": 0.0-1.0,
+    "risk_level": "低/中/高",
+    "analysis": {{
+        "salary": "薪资分析",
+        "description": "描述分析",
+        "company": "公司分析",
+        "other": "其他分析"
+    }},
+    "reasons": ["判断理由1", "判断理由2"],
+    "warnings": ["风险提示1", "风险提示2"]
+}}
+
+只返回JSON，不要其他内容。"""
+
+        response = llm.invoke(prompt)
+        return response.content
+        
+    except Exception as e:
+        return f"验证职位失败: {str(e)}"
+
+
+@tool("analyze_job_from_text", return_direct=False)
+def analyze_job_from_text(text: str, platform: str = "其他") -> str:
+    """分析职位信息（一站式）。输入职位文本和来源平台，自动提取信息并判断真假。返回Markdown格式的分析结果。"""
+    try:
+        from langchain_openai import ChatOpenAI
+        from flask import current_app
+        
+        llm = ChatOpenAI(
+            model=current_app.config['OPENAI_MODEL'],
+            api_key=current_app.config['OPENAI_API_KEY'],
+            base_url=current_app.config['OPENAI_BASE_URL'],
+            temperature=0
+        )
+        
+        prompt = f"""请分析以下职位信息，提取关键信息并判断真假。
+
+来源平台：{platform}
+
+职位文本：
+{text}
+
+请完成以下任务：
+
+1. 提取职位信息（职位名称、公司、地点、薪资、经验、学历、技能、描述）
+2. 判断职位真假（分析薪资合理性、描述真实性、公司信息完整性）
+3. 给出风险提示
+
+请返回Markdown格式：
+
+## 职位分析结果
+
+| 项目 | 内容 |
+|------|------|
+| 职位名称 | ... |
+| 公司名称 | ... |
+| 工作地点 | ... |
+| 薪资范围 | ... |
+| 经验要求 | ... |
+| 学历要求 | ... |
+| 技能要求 | ... |
+
+### 真伪判断
+
+**判断结果**：真实职位 ✓ / 疑似虚假 ✗
+
+**判断理由**：
+- ...
+- ...
+
+**风险提示**：
+- ...
+- ...
+
+请用中文回复。"""
+
+        response = llm.invoke(prompt)
+        return response.content
+        
+    except Exception as e:
+        return f"分析职位失败: {str(e)}"
+
+
+@tool("get_job_market_trends", return_direct=False)
+def get_job_market_trends(industry: str = "互联网", city: str = "全国") -> str:
+    """获取职位市场趋势。输入行业和城市。"""
+    try:
+        from app import db
+        db.session.rollback()
+        
+        query = Job.query
+        if industry and industry != "全部":
+            query = query.filter(Job.industry.contains(industry))
+        if city and city != "全国":
+            query = query.filter(Job.city == city)
+        
+        jobs = query.all()
+        if not jobs:
+            return f"暂无{industry}行业的职位数据"
+        
+        # 统计热门职位
+        job_titles = {}
+        for job in jobs:
+            job_titles[job.title] = job_titles.get(job.title, 0) + 1
+        
+        sorted_titles = sorted(job_titles.items(), key=lambda x: x[1], reverse=True)[:10]
+        
+        # 统计薪资分布
+        salaries = [j.salary_avg for j in jobs if j.salary_avg]
+        avg_salary = sum(salaries) // len(salaries) if salaries else 0
+        
+        # 统计城市分布
+        cities = {}
+        for job in jobs:
+            cities[job.city] = cities.get(job.city, 0) + 1
+        
+        sorted_cities = sorted(cities.items(), key=lambda x: x[1], reverse=True)[:5]
+        
+        output = f"【{industry}行业】市场趋势分析:\n\n"
+        output += f"数据样本: {len(jobs)}个职位\n\n"
+        
+        output += "热门职位TOP10:\n"
+        for i, (title, count) in enumerate(sorted_titles, 1):
+            jobs_with_title = [j for j in jobs if j.title == title]
+            avg = sum(j.salary_avg for j in jobs_with_title if j.salary_avg) // len(jobs_with_title) if jobs_with_title else 0
+            output += f"{i}. {title} ({count}个职位, 平均薪资{avg//1000}K)\n"
+        
+        output += f"\n整体薪资水平: 平均{avg_salary//1000}K\n"
+        
+        output += "\n热门城市:\n"
+        for city, count in sorted_cities:
+            output += f"  - {city}: {count}个职位\n"
+        
+        return output
+    except Exception as e:
+        return f"获取市场趋势失败: {str(e)}"
+
+
+@tool("recommend_career_path", return_direct=False)
+def recommend_career_path(current_position: str, target_position: str, years_experience: int = 0) -> str:
+    """推荐职业发展路径。输入当前职位、目标职位、工作年限。"""
+    try:
+        from langchain_openai import ChatOpenAI
+        from flask import current_app
+        
+        llm = ChatOpenAI(
+            model=current_app.config['OPENAI_MODEL'],
+            api_key=current_app.config['OPENAI_API_KEY'],
+            base_url=current_app.config['OPENAI_BASE_URL'],
+            temperature=0.7
+        )
+        
+        prompt = f"""你是一位资深职业规划顾问。请为以下用户推荐职业发展路径。
+
+当前职位: {current_position}
+目标职位: {target_position}
+工作年限: {years_experience}年
+
+请提供：
+1. 可行的职业发展路径（短期1-2年、中期3-5年、长期5年以上）
+2. 每个阶段需要掌握的关键技能
+3. 建议的学习资源和实践项目
+4. 可能的薪资增长预期
+5. 需要注意的风险和挑战
+
+请用自然流畅的中文回复，使用Markdown格式。"""
+
+        response = llm.invoke(prompt)
+        return response.content
+    except Exception as e:
+        return f"生成职业路径失败: {str(e)}"
+
+
 def get_job_tools():
-    return [search_jobs, query_salary, compare_jobs, save_target_job, update_user_profile]
+    return [
+        search_jobs, query_salary, compare_jobs, save_target_job, update_user_profile,
+        fetch_job_from_url, parse_job_text, verify_job, analyze_job_from_text,
+        get_job_market_trends, recommend_career_path
+    ]

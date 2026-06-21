@@ -279,12 +279,6 @@
                         <p style="font-size: 0.8125rem; color: var(--text-tertiary);">发送消息后展示</p>
                     </div>
                 </div>
-                <div class="panel-section">
-                    <div class="panel-title">使用工具</div>
-                    <div id="toolsPanel">
-                        <p style="font-size: 0.8125rem; color: var(--text-tertiary);">工具调用信息</p>
-                    </div>
-                </div>
             </div>
         </div>
         
@@ -294,6 +288,28 @@
                 <div class="resume-modal-header">
                     <span class="resume-modal-title">简历预览</span>
                     <div class="resume-modal-controls">
+                        <!-- 模板选择 -->
+                        <div class="resume-template-selector">
+                            <button class="resume-template-btn" onclick="toggleTemplatePanel()" title="选择模板">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                                模板
+                            </button>
+                            <div id="templatePanel" class="template-panel" style="display: none;">
+                                <div class="template-option active" onclick="switchTemplate('default')">默认模板</div>
+                                <div class="template-option" onclick="switchTemplate('modern')">现代简约</div>
+                                <div class="template-option" onclick="switchTemplate('professional')">专业商务</div>
+                                <div class="template-option" onclick="switchTemplate('creative')">创意设计</div>
+                                <div class="template-option" onclick="switchTemplate('minimalist')">简洁商务</div>
+                                <div class="template-option" onclick="switchTemplate('tech')">科技风格</div>
+                                <div class="template-option" onclick="switchTemplate('elegant')">优雅风格</div>
+                                <div class="template-option" onclick="switchTemplate('duotone')">双色现代</div>
+                            </div>
+                        </div>
+                        <!-- 编辑按钮 -->
+                        <button class="resume-edit-btn" onclick="toggleEditMode()" title="编辑简历">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                            <span id="editBtnText">编辑</span>
+                        </button>
                         <button class="resume-zoom-btn" onclick="zoomResume(-0.1)" title="缩小">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/><path d="M8 11h6"/></svg>
                         </button>
@@ -310,7 +326,7 @@
                     <div id="resumePreviewContent" class="resume-paper"></div>
                 </div>
                 <div class="resume-modal-footer">
-                    <button class="btn btn-primary" onclick="downloadFromPanel('html')">
+                    <button class="btn btn-secondary" onclick="downloadFromPanel('html')">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/><path d="M16 13H8"/><path d="M16 17H8"/><path d="M10 9H8"/></svg>
                         下载 HTML
                     </button>
@@ -322,10 +338,25 @@
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
                         下载图片
                     </button>
+                    <button class="btn btn-primary" id="saveEditBtn" style="display: none;" onclick="saveResumeEdit()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                        保存修改
+                    </button>
                 </div>
             </div>
         </div>
     </main>
+</div>
+
+<!-- 浮动任务状态栏 -->
+<div id="taskStatusBar" class="task-status-bar" style="display: none;">
+    <div class="task-status-content">
+        <div class="task-status-icon">
+            <div class="task-status-spinner"></div>
+        </div>
+        <div class="task-status-text">任务正在后台执行中...</div>
+        <button class="task-status-btn" onclick="handleTaskStatusBarClick()">返回对话</button>
+    </div>
 </div>
 {% endblock %}
 

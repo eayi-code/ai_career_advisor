@@ -500,3 +500,77 @@ async function updateSkill(skill, action) {
         modal.toast('请求失败', 'error');
     }
 }
+
+// 职业档案表单AJAX保存（避免整页刷新）
+async function saveProfile(e) {
+    e.preventDefault();
+    
+    const form = e.target;
+    const formData = new FormData(form);
+    const data = {};
+    
+    // 收集简单字段
+    for (const [key, value] of formData.entries()) {
+        if (key.endsWith('[]')) continue; // 跳过数组字段，后面单独处理
+        if (value !== '' && value !== null) {
+            // 数字字段转换
+            if (['work_experience', 'target_salary_min', 'target_salary_max', 
+                 'available_hours_per_week', 'side_job_income_target'].includes(key)) {
+                data[key] = Number(value);
+            } else {
+                data[key] = value;
+            }
+        }
+    }
+    
+    // 处理技能（逗号分隔字符串 → 数组）
+    if (data.skills !== undefined) {
+        data.skills = data.skills.split(/[,，]/).map(s => s.trim()).filter(Boolean);
+    }
+    
+    // 处理证书（逗号分隔字符串 → 数组）
+    if (data.certifications !== undefined) {
+        data.certifications = data.certifications.split(/[,，]/).map(s => s.trim()).filter(Boolean);
+    }
+    
+    // 收集项目经历
+    const projectNames = formData.getAll('project_name[]');
+    const projectRoles = formData.getAll('project_role[]');
+    const projectTechs = formData.getAll('project_tech[]');
+    const projectAchievements = formData.getAll('project_achievement[]');
+    if (projectNames.length > 0) {
+        data.projects = projectNames.map((name, i) => ({
+            name: name,
+            role: projectRoles[i] || '',
+            tech_stack: projectTechs[i] || '',
+            achievement: projectAchievements[i] || ''
+        })).filter(p => p.name); // 只保留有名称的项目
+    }
+    
+    try {
+        const btn = form.querySelector('button[type="submit"]');
+        const originalText = btn.textContent;
+        btn.textContent = '保存中...';
+        btn.disabled = true;
+        
+        const res = await fetch('/api/profile/update', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(data)
+        });
+        const result = await res.json();
+        
+        btn.textContent = originalText;
+        btn.disabled = false;
+        
+        if (result.code === 200) {
+            modal.toast('档案保存成功', 'success');
+            // 刷新完善度
+            loadProfileCompletion();
+        } else {
+            modal.toast(result.error || '保存失败', 'error');
+        }
+    } catch (err) {
+        modal.toast('请求失败，请重试', 'error');
+    }
+}

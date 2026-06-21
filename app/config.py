@@ -49,3 +49,11 @@ class Config:
     
     # 业务配置
     MAX_MESSAGE_LENGTH = 10000  # 最大消息长度
+    
+    # 缓存配置
+    CACHE_TYPE = 'simple'
+    CACHE_DEFAULT_TIMEOUT = 300  # 5分钟
+    
+    # 日志配置
+    LOG_LEVEL = os.getenv('LOG_LEVEL', 'INFO')
+    LOG_FILE = os.getenv('LOG_FILE', 'app.log')

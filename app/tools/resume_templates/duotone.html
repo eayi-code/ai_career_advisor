@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>双色现代简历</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background: #f0f2f5;
+            color: #333;
+            line-height: 1.6;
+        }
+        .resume {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            display: grid;
+            grid-template-columns: 280px 1fr;
+            min-height: 1000px;
+            box-shadow: 0 4px 30px rgba(0,0,0,0.1);
+        }
+        .sidebar {
+            background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%);
+            color: white;
+            padding: 40px 25px;
+        }
+        .main-content {
+            padding: 40px 35px;
+        }
+        .profile-section {
+            text-align: center;
+            margin-bottom: 35px;
+        }
+        .avatar-placeholder {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #e94560 0%, #0f3460 100%);
+            margin: 0 auto 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 36px;
+            font-weight: 700;
+            color: white;
+            border: 3px solid rgba(255,255,255,0.3);
+        }
+        .profile-section h1 {
+            font-size: 22px;
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+        .profile-section .subtitle {
+            font-size: 14px;
+            color: #a0aec0;
+        }
+        .sidebar-section {
+            margin-bottom: 30px;
+        }
+        .sidebar-title {
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            color: #e94560;
+            margin-bottom: 15px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .contact-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 12px;
+            font-size: 13px;
+            color: #cbd5e0;
+        }
+        .contact-icon {
+            width: 16px;
+            height: 16px;
+            color: #e94560;
+        }
+        .skill-item {
+            margin-bottom: 15px;
+        }
+        .skill-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 6px;
+            font-size: 13px;
+        }
+        .skill-name {
+            color: #e2e8f0;
+        }
+        .skill-level {
+            color: #a0aec0;
+        }
+        .skill-bar {
+            height: 6px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        .skill-progress {
+            height: 100%;
+            background: linear-gradient(90deg, #e94560 0%, #0f3460 100%);
+            border-radius: 3px;
+        }
+        .section {
+            margin-bottom: 30px;
+        }
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1a1a2e;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .section-title::before {
+            content: '';
+            width: 4px;
+            height: 24px;
+            background: linear-gradient(180deg, #e94560 0%, #0f3460 100%);
+            border-radius: 2px;
+        }
+        .item {
+            margin-bottom: 20px;
+            padding: 18px;
+            background: #f8fafc;
+            border-radius: 10px;
+            border-left: 4px solid #e94560;
+        }
+        .item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: 6px;
+        }
+        .item-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #1a1a2e;
+        }
+        .item-date {
+            font-size: 12px;
+            color: #94a3b8;
+            background: #e2e8f0;
+            padding: 2px 10px;
+            border-radius: 12px;
+        }
+        .item-subtitle {
+            font-size: 13px;
+            color: #64748b;
+            margin-bottom: 8px;
+        }
+        .item-content {
+            font-size: 13px;
+            color: #475569;
+            line-height: 1.7;
+        }
+        .item-content ul {
+            padding-left: 16px;
+        }
+        .item-content li {
+            margin-bottom: 4px;
+        }
+        .highlight {
+            color: #e94560;
+            font-weight: 600;
+        }
+        @media print {
+            body { background: white; }
+            .resume { box-shadow: none; }
+            .sidebar { background: #1a1a2e !important; -webkit-print-color-adjust: exact; }
+        }
+        @media (max-width: 768px) {
+            .resume {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="resume">
+        <aside class="sidebar">
+            <div class="profile-section">
+                <div class="avatar-placeholder">{{姓氏}}</div>
+                <h1>{{姓名}}</h1>
+                <p class="subtitle">{{职位}}</p>
+            </div>
+
+            <div class="sidebar-section">
+                <h3 class="sidebar-title">联系方式</h3>
+                <div class="contact-item">
+                    <span>{{电话}}</span>
+                </div>
+                <div class="contact-item">
+                    <span>{{邮箱}}</span>
+                </div>
+                <div class="contact-item">
+                    <span>{{GitHub/LinkedIn}}</span>
+                </div>
+            </div>
+
+            <div class="sidebar-section">
+                <h3 class="sidebar-title">教育背景</h3>
+                {{教育背景}}
+            </div>
+
+            <div class="sidebar-section">
+                <h3 class="sidebar-title">专业技能</h3>
+                {{技能列表}}
+            </div>
+
+            <div class="sidebar-section">
+                <h3 class="sidebar-title">荣誉证书</h3>
+                {{荣誉证书}}
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <section class="section">
+                <h2 class="section-title">个人简介</h2>
+                <p style="font-size: 14px; color: #475569; line-height: 1.8;">{{个人简介}}</p>
+            </section>
+
+            <section class="section">
+                <h2 class="section-title">工作经验</h2>
+                {{工作经验列表}}
+            </section>
+
+            <section class="section">
+                <h2 class="section-title">项目经历</h2>
+                {{项目经历列表}}
+            </section>
+        </main>
+    </div>
+</body>
+</html>

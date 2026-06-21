@@ -21,6 +21,8 @@ from langchain_openai import ChatOpenAI
 from flask import current_app
 import json
 import time
+import re
+import copy
 
 
 # ==================== 数据结构定义 ====================
@@ -338,7 +340,6 @@ class IntentClassifier:
             content = response.content.strip()
             
             # 尝试提取JSON（可能被包裹在```json ... ```中）
-            import re
             json_match = re.search(r'```(?:json)?\s*([\s\S]*?)\s*```', content)
             if json_match:
                 content = json_match.group(1).strip()
@@ -386,7 +387,6 @@ class IntentClassifier:
         if cache_key in self._intent_cache:
             cached = self._intent_cache[cache_key]
             # 深拷贝避免修改缓存
-            import copy
             return copy.deepcopy(cached)
 
         # ===== 第一步：关键词匹配 =====
@@ -459,11 +459,11 @@ class IntentClassifier:
             high_confidence.insert(0, {"name": "career", "confidence": 0.3, "keywords": ["目标岗位"]})
 
         # ===== 优化：主意图优先逻辑 =====
-        # 如果第一个意图的置信度明显高于第二个（>55%且领先15%以上），且没有复合意图指示词，直接使用
+        # 如果第一个意图的置信度明显高于第二个（>60%且领先20%以上），且没有复合意图指示词，直接使用
         if len(high_confidence) >= 2 and not has_composite_indicator:
             top = high_confidence[0]
             second = high_confidence[1]
-            if top["confidence"] >= 0.55 and (top["confidence"] - second["confidence"]) >= 0.15:
+            if top["confidence"] >= 0.60 and (top["confidence"] - second["confidence"]) >= 0.20:
                 # 主意图明确，直接使用
                 result = {
                     "intents": [top["name"]],
@@ -546,7 +546,6 @@ class IntentClassifier:
             # 删除第一个条目（FIFO）
             first_key = next(iter(self._intent_cache))
             del self._intent_cache[first_key]
-        import copy
         self._intent_cache[key] = copy.deepcopy(result)
     
     def _check_context_switch(self, user_input: str, last_agent: str, 
@@ -1301,7 +1300,6 @@ class AgentOrchestrator:
             content = response.content.strip()
             
             # 尝试提取JSON（可能被包裹在```json ... ```中）
-            import re
             json_match = re.search(r'```(?:json)?\s*([\s\S]*?)\s*```', content)
             if json_match:
                 content = json_match.group(1).strip()
@@ -1433,7 +1431,6 @@ class AgentOrchestrator:
             from flask_login import current_user
             from app.models.profile import UserProfile
             from app import db
-            import re
 
             db.session.rollback()
 

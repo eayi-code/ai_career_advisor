@@ -7,6 +7,7 @@ let currentAbortController = null;
 let isProcessing = false;
 let uploadedFileContent = null;
 let uploadedFileName = null;
+let uploadedFilePreview = null; // 新增：图片预览base64
 let currentResumeContent = null;
 let currentZoomLevel = 1;
 let lastUsedAgent = null;
@@ -14,6 +15,21 @@ let currentStreamedText = '';
 let activeLoadingBubble = null;
 let currentTaskId = null;
 let isNewConversation = false;
+
+// 任务持久化相关
+const TASK_STORAGE_KEY = 'ai_career_task';
+const TASK_RESTORE_INTERVAL = 2000; // 任务恢复轮询间隔（毫秒）
+let taskRestoreTimer = null;
+
+// 浮动任务状态栏相关
+let taskStatusBarVisible = false;
+
+// XSS防护：转义HTML特殊字符
+function escapeHtml(text) {
+    if (!text) return '';
+    const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+    return String(text).replace(/[&<>"']/g, c => map[c]);
+}
 
 // DOM元素引用（需要在DOMContentLoaded后初始化）
 let chatMessages, chatInput, sendBtn, fileInput, filePreview;
@@ -71,7 +87,7 @@ function copyCodeBlock(button) {
 }
 
 // 初始化函数
-function initChatPage(conversationId, autoMsg) {
+async function initChatPage(conversationId, autoMsg) {
     currentConversationId = conversationId;
     isNewConversation = !currentConversationId;
     autoMessage = autoMsg;
@@ -83,7 +99,7 @@ function initChatPage(conversationId, autoMsg) {
     filePreview = document.getElementById('filePreview');
     
     if (currentConversationId) {
-        loadConversation(currentConversationId);
+        await loadConversation(currentConversationId);
     }
     
     if (autoMessage) {
@@ -126,6 +142,20 @@ function initChatPage(conversationId, autoMsg) {
     
     // 初始化文件拖拽高亮上传动效
     initDragAndDropUpload();
+    
+    // 点击外部关闭Agent下拉菜单
+    document.addEventListener('click', function(e) {
+        const selector = document.getElementById('agentSelector');
+        if (selector && !selector.contains(e.target)) {
+            const dropdown = document.getElementById('agentDropdown');
+            const btn = document.getElementById('agentSelectorBtn');
+            if (dropdown) dropdown.classList.remove('show');
+            if (btn) btn.classList.remove('active');
+        }
+    });
+    
+    // 初始化任务持久化和恢复机制
+    initTaskPersistence();
 }
 
 // 欢迎卡片 3D 视差倾斜效果
@@ -242,11 +272,25 @@ async function handleFileUpload(e) {
         return;
     }
     
+    const isImage = ['.png', '.jpg', '.jpeg', '.webp', '.bmp'].includes(ext);
+    
+    // 如果是图片，先生成预览
+    if (isImage) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            uploadedFilePreview = e.target.result; // 保存base64用于预览
+            // 更新预览区域显示图片
+            updateFilePreviewUI(file.name, true);
+        };
+        reader.readAsDataURL(file);
+    } else {
+        uploadedFilePreview = null;
+    }
+    
     const formData = new FormData();
     formData.append('file', file);
     
     try {
-        const isImage = ['.png', '.jpg', '.jpeg', '.webp', '.bmp'].includes(ext);
         modal.toast(isImage ? '正在使用AI智能识别截图岗位信息...' : '正在解析文件...', 'info');
         const res = await fetch('/api/upload/resume', {
             method: 'POST',
@@ -257,23 +301,59 @@ async function handleFileUpload(e) {
         if (data.code === 200) {
             uploadedFileContent = data.data.content;
             uploadedFileName = data.data.filename;
-            document.getElementById('fileName').textContent = uploadedFileName;
-            filePreview.style.display = 'block';
+            updateFilePreviewUI(uploadedFileName, isImage);
             chatInput.placeholder = '输入优化要求，或直接发送以解析简历...';
             modal.toast('文件解析成功', 'success');
         } else {
             modal.toast(data.error || '文件解析失败', 'error');
             fileInput.value = '';
+            uploadedFilePreview = null;
         }
     } catch (err) {
         modal.toast('文件上传失败', 'error');
         fileInput.value = '';
+        uploadedFilePreview = null;
     }
+}
+
+// 更新文件预览UI
+function updateFilePreviewUI(fileName, isImage) {
+    const previewEl = document.getElementById('filePreview');
+    if (!previewEl) return;
+    
+    if (isImage && uploadedFilePreview) {
+        previewEl.innerHTML = `
+            <div class="file-preview-image">
+                <img src="${uploadedFilePreview}" alt="预览" />
+                <div class="file-preview-info">
+                    <span class="file-name">${escapeHtml(fileName)}</span>
+                    <span class="file-status">解析完成</span>
+                </div>
+                <button class="file-remove-btn" onclick="removeFile()" title="移除">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                </button>
+            </div>
+        `;
+    } else {
+        previewEl.innerHTML = `
+            <div class="file-preview-doc">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+                    <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/>
+                </svg>
+                <span class="file-name">${escapeHtml(fileName)}</span>
+                <button class="file-remove-btn" onclick="removeFile()" title="移除">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                </button>
+            </div>
+        `;
+    }
+    previewEl.style.display = 'block';
 }
 
 function removeFile() {
     uploadedFileContent = null;
     uploadedFileName = null;
+    uploadedFilePreview = null;
     fileInput.value = '';
     filePreview.style.display = 'none';
     chatInput.placeholder = '输入你的问题...';
@@ -312,11 +392,9 @@ async function loadConversation(id) {
                 const toolsUsed = [...new Set([...toolsUsedFromMsg, ...toolsFromExecSteps, ...reasonSteps.filter(s => s.action).map(s => s.action)])];
                 
                 updateExecutionSteps(execSteps);
-                updateTools(toolsUsed);
             } else {
                 // 清空为默认占位符
                 document.getElementById('executionStepsPanel').innerHTML = '<p style="font-size: 0.8125rem; color: var(--text-tertiary);">发送消息后展示</p>';
-                document.getElementById('toolsPanel').innerHTML = '<p style="font-size: 0.8125rem; color: var(--text-tertiary);">工具调用信息</p>';
             }
         }
     } catch (e) { console.error(e); }
@@ -379,6 +457,8 @@ function stopProcessing() {
             .catch(err => console.error('Failed to abort task on server:', err));
         currentTaskId = null;
     }
+    // 清除localStorage中的任务状态
+    clearTaskFromStorage();
     if (currentAbortController) {
         currentAbortController.abort();
         currentAbortController = null;
@@ -405,7 +485,7 @@ function stopProcessing() {
 }
 
 // 添加消息
-function addMessage(content, isUser, agent, steps, index = 0) {
+function addMessage(content, isUser, agent, steps, index = 0, imagePreview = null) {
     const div = document.createElement('div');
     div.className = 'message ' + (isUser ? 'message-user' : 'message-agent');
     div.style.setProperty('--msg-index', index);
@@ -419,6 +499,16 @@ function addMessage(content, isUser, agent, steps, index = 0) {
     let displayContent = content;
     let previewCard = '';
     let showCopyBtn = copyBtn;
+    let imagePreviewHtml = '';
+    
+    // 如果有图片预览，生成HTML
+    if (imagePreview) {
+        imagePreviewHtml = `
+            <div class="message-image-preview">
+                <img src="${imagePreview}" alt="上传的图片" onclick="showImageModal('${imagePreview}')" />
+            </div>
+        `;
+    }
     
     if (isResume) {
         const resumeOnly = extractResumeContent(content);
@@ -445,13 +535,13 @@ function addMessage(content, isUser, agent, steps, index = 0) {
     div.innerHTML = '<div class="message-avatar">' + (isUser ? '我' : 'AI') + '</div>' +
         '<div class="message-bubble">' +
             reasoningContainer +
+            imagePreviewHtml +
             '<div class="message-content">' + formatMessageContent(displayContent) + '</div>' +
             previewCard +
             showCopyBtn +
         '</div>';
     chatMessages.appendChild(div);
     chatMessages.scrollTop = chatMessages.scrollHeight;
-    if (steps?.length) updateReasoning(steps);
     
     if (isResume && previewCard) {
         const contentId = Object.keys(window).filter(k => k.startsWith('resume-content-')).pop();
@@ -570,6 +660,7 @@ function showResumeInPanel(contentId) {
     
     currentResumeContent = content;
     currentZoomLevel = 1;
+    currentTemplate = 'default';
     
     const isHTML = content.includes('<!DOCTYPE html>') || content.includes('<html') || content.includes('tailwindcss');
     const previewContainer = document.getElementById('resumePreviewContent');
@@ -581,6 +672,7 @@ function showResumeInPanel(contentId) {
         iframe.style.border = 'none';
         iframe.style.background = 'white';
         iframe.style.display = 'block';
+        iframe.style.flex = '1';
         
         previewContainer.innerHTML = '';
         previewContainer.appendChild(iframe);
@@ -592,15 +684,260 @@ function showResumeInPanel(contentId) {
     document.getElementById('zoomLevel').textContent = '100%';
     previewContainer.style.transform = 'scale(1)';
     
+    // 重置模板选择UI
+    document.querySelectorAll('.template-option').forEach(opt => {
+        opt.classList.remove('active');
+    });
+    document.querySelector('.template-option').classList.add('active');
+    
     document.getElementById('resumeModal').style.display = 'flex';
     document.body.style.overflow = 'hidden';
 }
+
+// 获取简历中的文本内容（去除HTML标签）
+function extractResumeText(html) {
+    const temp = document.createElement('div');
+    temp.innerHTML = html;
+    return temp.textContent || temp.innerText || '';
+}
+
+// 使用模板重新渲染简历
+function renderResumeWithTemplate(templateName) {
+    if (!currentResumeContent) return;
+    
+    const previewContainer = document.getElementById('resumePreviewContent');
+    const iframe = previewContainer.querySelector('iframe');
+    
+    if (!iframe) return;
+    
+    // 如果是默认模板，使用原始内容
+    if (templateName === 'default') {
+        iframe.srcdoc = currentResumeContent;
+        return;
+    }
+    
+    try {
+        // 从原始简历内容中提取body内容
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(currentResumeContent, 'text/html');
+        const bodyContent = doc.body.innerHTML;
+        
+        // 通用SVG图标样式
+        const svgStyle = `
+            svg { width: 16px; height: 16px; display: inline-block; vertical-align: middle; flex-shrink: 0; max-width: 16px; }
+            svg[width="20"], svg[width="18"] { width: 18px; height: 18px; max-width: 18px; }
+            svg[width="14"] { width: 14px; height: 14px; max-width: 14px; }
+            h2 svg, h3 svg { width: 18px; height: 18px; margin-right: 6px; max-width: 18px; }
+            section svg { width: 16px; height: 16px; max-width: 16px; }
+        `;
+        
+        // 获取模板样式
+        const templateStyles = {
+            'modern': `
+                ${svgStyle}
+                body { font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif; background: #f5f5f5; margin: 0; padding: 20px; }
+                .resume-container { max-width: 800px; margin: 0 auto; background: white; padding: 40px; box-shadow: 0 2px 20px rgba(0,0,0,0.1); border-radius: 8px; }
+                h1 { font-size: 28px; font-weight: 700; color: #1f2937; margin: 0 0 8px 0; padding-bottom: 12px; border-bottom: 3px solid #3b82f6; }
+                h2 { font-size: 18px; font-weight: 600; color: #1f2937; margin: 24px 0 12px 0; padding-bottom: 8px; border-bottom: 2px solid #e5e7eb; display: flex; align-items: center; gap: 8px; }
+                h3 { font-size: 16px; font-weight: 600; color: #374151; margin: 16px 0 8px 0; display: flex; align-items: center; gap: 6px; }
+                p, li { font-size: 14px; color: #4b5563; line-height: 1.8; margin: 4px 0; }
+                ul { padding-left: 20px; }
+                strong { color: #1f2937; }
+            `,
+            'professional': `
+                ${svgStyle}
+                body { font-family: 'Georgia', 'SimSun', serif; background: #f9fafb; margin: 0; padding: 20px; color: #1f2937; }
+                .resume-container { max-width: 800px; margin: 0 auto; background: white; padding: 50px 60px; box-shadow: 0 2px 20px rgba(0,0,0,0.08); }
+                h1 { font-size: 28px; font-weight: 700; color: #111827; text-align: center; letter-spacing: 4px; margin: 0 0 8px 0; padding-bottom: 16px; border-bottom: 2px solid #d1d5db; }
+                h2 { font-size: 16px; font-weight: 700; color: #374151; text-transform: uppercase; letter-spacing: 2px; margin: 28px 0 12px 0; padding-bottom: 8px; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; gap: 8px; }
+                h3 { font-size: 15px; font-weight: 600; color: #1f2937; margin: 16px 0 6px 0; display: flex; align-items: center; gap: 6px; }
+                p, li { font-size: 14px; color: #4b5563; line-height: 1.8; margin: 4px 0; }
+                ul { padding-left: 20px; }
+                strong { color: #111827; }
+            `,
+            'creative': `
+                ${svgStyle}
+                body { font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif; background: #ecfdf5; margin: 0; padding: 20px; }
+                .resume-container { max-width: 800px; margin: 0 auto; background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 24px rgba(0,0,0,0.08); }
+                .resume-header { background: #059669; color: white; padding: 30px 40px; }
+                .resume-header h1 { font-size: 32px; font-weight: 700; color: white; margin: 0 0 8px 0; border: none; padding: 0; }
+                .resume-header p { color: rgba(255,255,255,0.9); margin: 4px 0; }
+                .resume-body { padding: 30px 40px; }
+                h2 { font-size: 20px; font-weight: 600; color: #059669; margin: 24px 0 12px 0; display: flex; align-items: center; gap: 10px; }
+                h2 svg { color: #059669; }
+                h2::after { content: ''; flex: 1; height: 2px; background: linear-gradient(to right, #059669, transparent); }
+                h3 { font-size: 16px; font-weight: 600; color: #1f2937; margin: 16px 0 8px 0; display: flex; align-items: center; gap: 6px; }
+                p, li { font-size: 14px; color: #4b5563; line-height: 1.8; margin: 4px 0; }
+                ul { padding-left: 20px; }
+                strong { color: #1f2937; }
+            `,
+            'minimalist': `
+                ${svgStyle}
+                body { font-family: 'Helvetica Neue', 'Arial', 'PingFang SC', sans-serif; background: #f5f5f5; margin: 0; padding: 20px; }
+                .resume-container { max-width: 800px; margin: 0 auto; background: white; display: grid; grid-template-columns: 240px 1fr; min-height: 800px; box-shadow: 0 2px 16px rgba(0,0,0,0.08); }
+                .resume-sidebar { background: #1e293b; color: white; padding: 30px 20px; }
+                .resume-sidebar h1 { font-size: 22px; font-weight: 700; color: white; margin: 0 0 8px 0; letter-spacing: 2px; border: none; padding: 0; }
+                .resume-sidebar h3 { font-size: 12px; font-weight: 600; color: #60a5fa; text-transform: uppercase; letter-spacing: 2px; margin: 20px 0 10px 0; padding-bottom: 6px; border-bottom: 1px solid rgba(255,255,255,0.1); display: flex; align-items: center; gap: 6px; }
+                .resume-sidebar svg { color: #60a5fa; }
+                .resume-sidebar p, .resume-sidebar li { font-size: 13px; color: #cbd5e1; line-height: 1.7; margin: 3px 0; }
+                .resume-main { padding: 30px; }
+                .resume-main h2 { font-size: 18px; font-weight: 600; color: #1e293b; margin: 24px 0 12px 0; padding-bottom: 8px; border-bottom: 2px solid #3b82f6; display: flex; align-items: center; gap: 8px; }
+                .resume-main h3 { font-size: 15px; font-weight: 600; color: #374151; margin: 14px 0 6px 0; display: flex; align-items: center; gap: 6px; }
+                .resume-main p, .resume-main li { font-size: 14px; color: #4b5563; line-height: 1.7; margin: 4px 0; }
+                ul { padding-left: 18px; }
+                strong { color: #1f2937; }
+            `,
+            'tech': `
+                ${svgStyle}
+                body { font-family: 'SF Pro Display', 'PingFang SC', sans-serif; background: #f8fafc; margin: 0; padding: 20px; color: #334155; }
+                .resume-container { max-width: 800px; margin: 0 auto; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.06); border: 1px solid #e2e8f0; }
+                .resume-header { background: #0f172a; padding: 30px 40px; }
+                .resume-header h1 { font-size: 30px; font-weight: 700; color: white; margin: 0 0 8px 0; border: none; padding: 0; }
+                .resume-header p { color: #94a3b8; margin: 4px 0; }
+                .resume-body { padding: 30px 40px; }
+                h2 { font-size: 18px; font-weight: 600; color: #0f172a; margin: 24px 0 12px 0; padding-bottom: 8px; border-bottom: 2px solid #3b82f6; display: flex; align-items: center; gap: 8px; }
+                h2 svg { color: #3b82f6; }
+                h3 { font-size: 16px; font-weight: 600; color: #1e293b; margin: 14px 0 6px 0; display: flex; align-items: center; gap: 6px; }
+                p, li { font-size: 14px; color: #475569; line-height: 1.8; margin: 4px 0; }
+                ul { padding-left: 20px; }
+                strong { color: #0f172a; }
+                li::marker { color: #3b82f6; }
+            `,
+            'elegant': `
+                ${svgStyle}
+                body { font-family: 'Georgia', 'SimSun', serif; background: #fefce8; margin: 0; padding: 20px; color: #333; }
+                .resume-container { max-width: 800px; margin: 0 auto; background: white; padding: 50px 60px; box-shadow: 0 4px 24px rgba(0,0,0,0.06); border: 1px solid #e5e7eb; }
+                h1 { font-size: 32px; font-weight: 400; color: #1f2937; text-align: center; letter-spacing: 6px; margin: 0 0 12px 0; padding-bottom: 16px; border-bottom: 1px solid #d1d5db; }
+                h2 { font-size: 15px; font-weight: 400; color: #6b7280; text-transform: uppercase; letter-spacing: 3px; text-align: center; margin: 28px 0 16px 0; position: relative; display: flex; align-items: center; justify-content: center; gap: 10px; }
+                h2::before, h2::after { content: ''; width: 50px; height: 1px; background: #d1d5db; }
+                h2 svg { display: none; }
+                h3 { font-size: 15px; font-weight: 600; color: #1f2937; margin: 14px 0 6px 0; display: flex; align-items: center; gap: 6px; }
+                p, li { font-size: 14px; color: #4b5563; line-height: 1.8; margin: 4px 0; }
+                ul { padding-left: 20px; }
+                strong { color: #1f2937; }
+                .resume-item { text-align: center; margin-bottom: 20px; }
+                .resume-item h3 { margin-bottom: 4px; }
+                .resume-item p { color: #6b7280; }
+            `,
+            'duotone': `
+                ${svgStyle}
+                body { font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif; background: #f5f5f5; margin: 0; padding: 20px; }
+                .resume-container { max-width: 800px; margin: 0 auto; background: white; display: grid; grid-template-columns: 250px 1fr; min-height: 800px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+                .resume-sidebar { background: #1e3a5f; color: white; padding: 30px 20px; }
+                .resume-sidebar h1 { font-size: 22px; font-weight: 700; color: white; margin: 0 0 8px 0; border: none; padding: 0; }
+                .resume-sidebar h3 { font-size: 11px; font-weight: 600; color: #60a5fa; text-transform: uppercase; letter-spacing: 2px; margin: 18px 0 10px 0; padding-bottom: 6px; border-bottom: 1px solid rgba(255,255,255,0.15); display: flex; align-items: center; gap: 6px; }
+                .resume-sidebar svg { color: #60a5fa; }
+                .resume-sidebar p, .resume-sidebar li { font-size: 13px; color: #cbd5e1; line-height: 1.6; margin: 3px 0; }
+                .resume-main { padding: 30px; }
+                .resume-main h2 { font-size: 17px; font-weight: 600; color: #1e3a5f; margin: 22px 0 10px 0; display: flex; align-items: center; gap: 10px; }
+                .resume-main h2::before { content: ''; width: 4px; height: 18px; background: #2563eb; border-radius: 2px; }
+                .resume-main h3 { font-size: 15px; font-weight: 600; color: #1f2937; margin: 12px 0 6px 0; display: flex; align-items: center; gap: 6px; }
+                .resume-main p, .resume-main li { font-size: 14px; color: #4b5563; line-height: 1.7; margin: 4px 0; }
+                ul { padding-left: 18px; }
+                strong { color: #1f2937; }
+            `
+        };
+        
+        // 创建新的HTML内容
+        const style = templateStyles[templateName] || '';
+        
+        // 包装内容
+        let newHTML;
+        if (['minimalist', 'duotone'].includes(templateName)) {
+            // 双栏布局模板 - 从原始内容中提取侧边栏和主内容
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = bodyContent;
+            
+            // 找到第一个section或h2作为分界点
+            let sidebarContent = '';
+            let mainContent = '';
+            let foundFirstSection = false;
+            
+            // 获取所有直接子元素
+            const children = Array.from(tempDiv.children);
+            for (const child of children) {
+                // 检查是否是section或包含h2
+                const isSection = child.tagName === 'SECTION' || child.classList.contains('section');
+                const hasH2 = child.querySelector('h2') || child.tagName === 'H2';
+                
+                if (!foundFirstSection && (isSection || hasH2)) {
+                    foundFirstSection = true;
+                }
+                
+                if (!foundFirstSection) {
+                    sidebarContent += child.outerHTML;
+                } else {
+                    mainContent += child.outerHTML;
+                }
+            }
+            
+            // 如果没有明确分离，使用默认分离（第一个div作为侧边栏）
+            if (!sidebarContent || !mainContent) {
+                // 尝试找到header或第一个div
+                const header = tempDiv.querySelector('header, .header, [class*="header"]');
+                if (header) {
+                    sidebarContent = header.outerHTML;
+                    mainContent = bodyContent.replace(header.outerHTML, '');
+                } else {
+                    sidebarContent = '<h1>姓名</h1><p>联系方式</p>';
+                    mainContent = bodyContent;
+                }
+            }
+            
+            newHTML = `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>${style}</style>
+</head>
+<body>
+    <div class="resume-container">
+        <div class="resume-sidebar">
+            ${sidebarContent}
+        </div>
+        <div class="resume-main">
+            ${mainContent}
+        </div>
+    </div>
+</body>
+</html>`;
+        } else {
+            // 单栏布局模板
+            newHTML = `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>${style}</style>
+</head>
+<body>
+    <div class="resume-container">
+        ${bodyContent}
+    </div>
+</body>
+</html>`;
+        }
+        
+        iframe.srcdoc = newHTML;
+        
+    } catch (e) {
+        console.error('应用模板失败:', e);
+        modal.toast('模板应用失败', 'error');
+    }
+}
+
+// 简历编辑和模板相关变量
+let isEditMode = false;
+let currentTemplate = 'default';
 
 function closeResumeModal() {
     document.getElementById('resumeModal').style.display = 'none';
     document.body.style.overflow = '';
     currentResumeContent = null;
     currentZoomLevel = 1;
+    isEditMode = false;
+    currentTemplate = 'default';
 }
 
 function zoomResume(delta) {
@@ -610,38 +947,270 @@ function zoomResume(delta) {
     document.getElementById('zoomLevel').textContent = Math.round(currentZoomLevel * 100) + '%';
 }
 
+// 切换编辑模式
+function toggleEditMode() {
+    isEditMode = !isEditMode;
+    const previewContainer = document.getElementById('resumePreviewContent');
+    const editBtnText = document.getElementById('editBtnText');
+    const saveEditBtn = document.getElementById('saveEditBtn');
+    const iframe = previewContainer.querySelector('iframe');
+    
+    if (isEditMode) {
+        editBtnText.textContent = '取消编辑';
+        saveEditBtn.style.display = 'inline-flex';
+        
+        if (iframe) {
+            // 在iframe中启用编辑
+            try {
+                const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                iframeDoc.body.contentEditable = 'true';
+                iframeDoc.body.style.outline = '2px dashed #1a73e8';
+                iframeDoc.body.style.outlineOffset = '4px';
+                iframeDoc.body.style.cursor = 'text';
+                
+                // 添加编辑提示
+                const hint = iframeDoc.createElement('div');
+                hint.id = 'editHint';
+                hint.style.cssText = 'position:fixed;top:10px;left:50%;transform:translateX(-50%);background:#1a73e8;color:white;padding:8px 16px;border-radius:6px;font-size:14px;z-index:9999;';
+                hint.textContent = '点击任意文字即可编辑';
+                iframeDoc.body.appendChild(hint);
+                setTimeout(() => hint.remove(), 3000);
+            } catch (e) {
+                console.error('无法启用iframe编辑:', e);
+                modal.toast('编辑模式不支持此简历格式', 'error');
+                isEditMode = false;
+                editBtnText.textContent = '编辑';
+                saveEditBtn.style.display = 'none';
+            }
+        }
+    } else {
+        editBtnText.textContent = '编辑';
+        saveEditBtn.style.display = 'none';
+        
+        if (iframe) {
+            try {
+                const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                iframeDoc.body.contentEditable = 'false';
+                iframeDoc.body.style.outline = 'none';
+                iframeDoc.body.style.cursor = 'default';
+            } catch (e) {
+                console.error('无法关闭iframe编辑:', e);
+            }
+        }
+    }
+}
+
+// 保存简历编辑
+function saveResumeEdit() {
+    const previewContainer = document.getElementById('resumePreviewContent');
+    const iframe = previewContainer.querySelector('iframe');
+    
+    if (iframe) {
+        try {
+            const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+            const editedContent = iframeDoc.documentElement.outerHTML;
+            currentResumeContent = editedContent;
+            
+            // 关闭编辑模式
+            isEditMode = false;
+            document.getElementById('editBtnText').textContent = '编辑';
+            document.getElementById('saveEditBtn').style.display = 'none';
+            iframeDoc.body.contentEditable = 'false';
+            iframeDoc.body.style.outline = 'none';
+            
+            modal.toast('修改已保存', 'success');
+        } catch (e) {
+            console.error('保存编辑失败:', e);
+            modal.toast('保存失败', 'error');
+        }
+    }
+}
+
+// 切换模板面板
+function toggleTemplatePanel() {
+    const panel = document.getElementById('templatePanel');
+    panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+}
+
+// 切换模板
+function switchTemplate(templateName) {
+    currentTemplate = templateName;
+    
+    // 更新模板选择UI
+    document.querySelectorAll('.template-option').forEach(opt => {
+        opt.classList.remove('active');
+    });
+    event.target.classList.add('active');
+    
+    // 隐藏模板面板
+    document.getElementById('templatePanel').style.display = 'none';
+    
+    // 应用模板样式
+    applyTemplate(templateName);
+    
+    // 重新渲染简历
+    renderResumeWithTemplate(templateName);
+    
+    modal.toast('已切换到' + getTemplateName(templateName) + '模板', 'success');
+}
+
+// 获取模板名称
+function getTemplateName(template) {
+    const names = {
+        'default': '默认模板',
+        'modern': '现代简约',
+        'professional': '专业商务',
+        'creative': '创意设计',
+        'minimalist': '简洁商务',
+        'tech': '科技风格',
+        'elegant': '优雅风格',
+        'duotone': '双色现代'
+    };
+    return names[template] || template;
+}
+
+// 应用模板样式
+function applyTemplate(templateName) {
+    const previewContainer = document.getElementById('resumePreviewContent');
+    const iframe = previewContainer.querySelector('iframe');
+    
+    if (!iframe) return;
+    
+    try {
+        const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+        const style = iframeDoc.getElementById('templateStyle') || iframeDoc.createElement('style');
+        style.id = 'templateStyle';
+        
+        const templates = {
+            'default': '',
+            'modern': `
+                body { font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif; background: #f5f5f5; }
+                .resume { max-width: 800px; margin: 0 auto; background: white; padding: 40px; box-shadow: 0 2px 20px rgba(0,0,0,0.1); }
+                h1 { font-size: 32px; font-weight: 700; color: #2c3e50; margin-bottom: 8px; }
+                h2 { font-size: 18px; font-weight: 600; color: #2c3e50; margin-bottom: 15px; padding-bottom: 8px; border-bottom: 2px solid #3498db; }
+                h3 { font-size: 16px; font-weight: 600; color: #2c3e50; margin-bottom: 5px; }
+                p, li { font-size: 14px; color: #555; line-height: 1.8; }
+            `,
+            'professional': `
+                body { font-family: 'Georgia', 'SimSun', serif; background: #f5f5f5; color: #333; }
+                .resume { max-width: 800px; margin: 0 auto; background: white; padding: 50px 60px; box-shadow: 0 2px 20px rgba(0,0,0,0.1); }
+                h1 { font-size: 32px; font-weight: 700; color: #1a365d; text-align: center; letter-spacing: 4px; margin-bottom: 8px; }
+                h2 { font-size: 16px; font-weight: 700; color: #1a365d; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 12px; padding-bottom: 6px; border-bottom: 1px solid #e2e8f0; }
+                h3 { font-size: 15px; font-weight: 700; color: #2d3748; margin-bottom: 5px; }
+                p, li { font-size: 14px; color: #4a5568; line-height: 1.8; }
+            `,
+            'creative': `
+                body { font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif; background: #f0fdf4; color: #333; }
+                .resume { max-width: 800px; margin: 0 auto; background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 24px rgba(0,0,0,0.08); }
+                header { background: #059669; color: white; padding: 40px; text-align: center; }
+                h1 { font-size: 36px; font-weight: 700; color: white; margin-bottom: 10px; }
+                h2 { font-size: 20px; font-weight: 600; color: #059669; margin-bottom: 15px; display: flex; align-items: center; gap: 10px; }
+                h2::after { content: ''; flex: 1; height: 2px; background: linear-gradient(to right, #059669, transparent); }
+                h3 { font-size: 16px; font-weight: 600; color: #1f2937; margin-bottom: 5px; }
+                p, li { font-size: 14px; color: #4b5563; line-height: 1.8; }
+                section { padding: 0 40px 30px; }
+            `,
+            'minimalist': `
+                body { font-family: 'Helvetica Neue', 'Arial', 'PingFang SC', sans-serif; background: #f5f5f5; color: #333; }
+                .resume { max-width: 800px; margin: 0 auto; background: white; display: grid; grid-template-columns: 250px 1fr; min-height: 1000px; box-shadow: 0 2px 20px rgba(0,0,0,0.1); }
+                header, .sidebar { background: #2c3e50; color: white; padding: 40px 25px; }
+                main, .main-content { padding: 40px 35px; }
+                h1 { font-size: 24px; font-weight: 700; color: white; letter-spacing: 2px; margin-bottom: 8px; }
+                h2 { font-size: 18px; font-weight: 600; color: #2c3e50; margin-bottom: 15px; padding-bottom: 8px; border-bottom: 2px solid #3498db; }
+                h3 { font-size: 14px; font-weight: 600; color: #3498db; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 15px; }
+                p, li { font-size: 13px; color: #555; line-height: 1.7; }
+            `,
+            'tech': `
+                body { font-family: 'SF Pro Display', 'PingFang SC', sans-serif; background: #f8fafc; color: #334155; }
+                .resume { max-width: 800px; margin: 0 auto; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.08); border: 1px solid #e2e8f0; }
+                header { background: #1e293b; padding: 40px; }
+                h1 { font-size: 32px; font-weight: 700; color: white; margin-bottom: 10px; }
+                h2 { font-size: 18px; font-weight: 600; color: #1e293b; margin-bottom: 15px; padding-bottom: 8px; border-bottom: 2px solid #3b82f6; }
+                h3 { font-size: 16px; font-weight: 600; color: #334155; margin-bottom: 5px; }
+                p, li { font-size: 14px; color: #475569; line-height: 1.8; }
+                section { padding: 30px 40px; }
+                .item { background: #f8fafc; border: 1px solid #e2e8f0; border-left: 4px solid #3b82f6; border-radius: 8px; padding: 18px; margin-bottom: 20px; }
+            `,
+            'elegant': `
+                body { font-family: 'Georgia', 'SimSun', serif; background: #f5f0eb; color: #333; }
+                .resume { max-width: 800px; margin: 0 auto; background: white; padding: 50px 60px; box-shadow: 0 4px 30px rgba(0,0,0,0.1); border: 1px solid #e0d5c7; }
+                h1 { font-size: 36px; font-weight: 400; color: #2c2c2c; letter-spacing: 8px; text-align: center; margin-bottom: 10px; }
+                h2 { font-size: 16px; font-weight: 400; color: #8b7355; text-transform: uppercase; letter-spacing: 4px; text-align: center; margin-bottom: 20px; position: relative; }
+                h2::before, h2::after { content: ''; position: absolute; top: 50%; width: 60px; height: 1px; background: #d4c5b2; }
+                h2::before { left: 0; }
+                h2::after { right: 0; }
+                h3 { font-size: 16px; font-weight: 600; color: #2c2c2c; margin-bottom: 5px; }
+                p, li { font-size: 14px; color: #555; line-height: 1.8; }
+                .item { text-align: center; margin-bottom: 25px; }
+            `,
+            'duotone': `
+                body { font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif; background: #f5f5f5; color: #333; }
+                .resume { max-width: 800px; margin: 0 auto; background: white; display: grid; grid-template-columns: 260px 1fr; min-height: 1000px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+                header, .sidebar { background: #1e3a5f; color: white; padding: 35px 25px; }
+                main, .main-content { padding: 35px 30px; }
+                h1 { font-size: 22px; font-weight: 700; color: white; margin-bottom: 6px; }
+                h2 { font-size: 17px; font-weight: 600; color: #1e3a5f; margin-bottom: 15px; display: flex; align-items: center; gap: 10px; }
+                h2::before { content: ''; width: 4px; height: 20px; background: #2563eb; border-radius: 2px; }
+                h3 { font-size: 12px; font-weight: 600; color: #2563eb; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 12px; padding-bottom: 6px; border-bottom: 1px solid rgba(255,255,255,0.15); }
+                p, li { font-size: 13px; color: #4b5563; line-height: 1.7; }
+                .item { background: #f9fafb; border-left: 3px solid #2563eb; border-radius: 8px; padding: 16px; margin-bottom: 18px; }
+            `
+        };
+        
+        style.textContent = templates[templateName] || '';
+        
+        if (!iframeDoc.getElementById('templateStyle')) {
+            iframeDoc.head.appendChild(style);
+        }
+    } catch (e) {
+        console.error('应用模板失败:', e);
+    }
+}
+
 // 下载功能
 async function downloadResumeAsImage() {
     if (!currentResumeContent) return;
     
     try {
-        const previewContainer = document.getElementById('resumePreviewContent');
-        const iframe = previewContainer.querySelector('iframe');
+        modal.toast('正在生成图片...', 'info');
         
-        if (iframe) {
-            const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-            const canvas = await html2canvas(iframeDoc.body, {
-                scale: 2,
-                useCORS: true,
-                logging: false
-            });
-            
-            const link = document.createElement('a');
-            link.download = 'resume.png';
-            link.href = canvas.toDataURL('image/png');
-            link.click();
+        // 创建临时容器，使用固定宽度（A4比例）
+        const tempContainer = document.createElement('div');
+        tempContainer.style.position = 'fixed';
+        tempContainer.style.left = '-9999px';
+        tempContainer.style.top = '0';
+        tempContainer.style.width = '794px'; // A4纸宽度（96dpi）
+        tempContainer.style.background = 'white';
+        tempContainer.style.zIndex = '99999';
+        document.body.appendChild(tempContainer);
+        
+        const isHTML = currentResumeContent.includes('<!DOCTYPE html>') || currentResumeContent.includes('<html') || currentResumeContent.includes('tailwindcss');
+        
+        if (isHTML) {
+            tempContainer.innerHTML = currentResumeContent;
         } else {
-            const canvas = await html2canvas(previewContainer, {
-                scale: 2,
-                useCORS: true,
-                logging: false
-            });
-            
-            const link = document.createElement('a');
-            link.download = 'resume.png';
-            link.href = canvas.toDataURL('image/png');
-            link.click();
+            tempContainer.innerHTML = renderResumeContent(currentResumeContent);
         }
+        
+        // 等待内容渲染
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        const canvas = await html2canvas(tempContainer, {
+            scale: 2,
+            useCORS: true,
+            logging: false,
+            backgroundColor: '#ffffff',
+            width: 794,
+            windowWidth: 794
+        });
+        
+        // 清理临时容器
+        document.body.removeChild(tempContainer);
+        
+        const link = document.createElement('a');
+        link.download = 'resume.png';
+        link.href = canvas.toDataURL('image/png');
+        link.click();
         
         modal.toast('图片下载成功', 'success');
     } catch (err) {
@@ -767,50 +1336,8 @@ function toggleSidePanel() {
     }
 }
 
-async function downloadFromPanel(format = 'html') {
-    if (!currentResumeContent) return;
-    
-    if (format === 'pdf') {
-        await downloadResumeAsPDF(currentResumeContent);
-        return;
-    }
-    
-    try {
-        const res = await fetch('/api/download/resume', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ content: currentResumeContent, filename: 'resume', format: format })
-        });
-        
-        if (res.ok) {
-            const blob = await res.blob();
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'resume.' + format;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            window.URL.revokeObjectURL(url);
-            modal.toast('下载成功', 'success');
-        } else {
-            const data = await res.json();
-            modal.toast(data.error || '下载失败', 'error');
-        }
-    } catch (err) {
-        modal.toast('下载失败', 'error');
-    }
-}
-
-async function downloadResume(contentId, format = 'html') {
-    const content = window[contentId];
-    if (!content) return;
-    
-    if (format === 'pdf') {
-        await downloadResumeAsPDF(content);
-        return;
-    }
-    
+// 通用简历文件下载（HTML/非PDF格式）
+async function _fetchAndDownloadResume(content, format) {
     try {
         const res = await fetch('/api/download/resume', {
             method: 'POST',
@@ -836,6 +1363,25 @@ async function downloadResume(contentId, format = 'html') {
     } catch (err) {
         modal.toast('下载失败', 'error');
     }
+}
+
+async function downloadFromPanel(format = 'html') {
+    if (!currentResumeContent) return;
+    if (format === 'pdf') {
+        await downloadResumeAsPDF(currentResumeContent);
+        return;
+    }
+    await _fetchAndDownloadResume(currentResumeContent, format);
+}
+
+async function downloadResume(contentId, format = 'html') {
+    const content = window[contentId];
+    if (!content) return;
+    if (format === 'pdf') {
+        await downloadResumeAsPDF(content);
+        return;
+    }
+    await _fetchAndDownloadResume(content, format);
 }
 
 // 复制消息
@@ -887,8 +1433,8 @@ function buildReasoningTimeline(steps) {
     
     steps.forEach((step, index) => {
         const stepType = step.type || (step.action ? 'tool' : 'intent_analysis');
-        const stepTitle = step.title || step.action || '处理中';
-        const stepDetail = step.detail || step.output || '';
+        const stepTitle = escapeHtml(step.title || step.action || '处理中');
+        const stepDetail = escapeHtml(step.detail || step.output || '');
         const stepStatus = step.status || 'completed';
         
         const icon = iconMap[stepType] || '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>';
@@ -969,17 +1515,6 @@ function toggleReasoningTimeline(header) {
     }
 }
 
-function updateReasoning(steps) {
-    // 已废弃：推理步骤现在通过内联时间线显示
-    // 保留函数签名以兼容现有调用
-}
-
-function updateTools(tools) {
-    document.getElementById('toolsPanel').innerHTML = tools?.length ? 
-        tools.map(t => '<span class="tool-badge">' + t + '</span>').join('') :
-        '<p style="font-size: 0.8125rem; color: var(--text-tertiary);">未使用</p>';
-}
-
 function updateExecutionSteps(steps) {
     if (!steps || steps.length === 0) {
         document.getElementById('executionStepsPanel').innerHTML = 
@@ -1042,15 +1577,15 @@ function updateExecutionSteps(steps) {
         if (step.subtasks && step.subtasks.length > 0) {
             subtasksHtml = '<div class="subtasks-list">';
             step.subtasks.forEach(st => {
-                const dependsText = st.depends_on && st.depends_on.length > 0 ? ` (依赖: ${st.depends_on.join(', ')})` : '';
+                const dependsText = st.depends_on && st.depends_on.length > 0 ? ` (依赖: ${escapeHtml(st.depends_on.join(', '))})` : '';
                 const subtaskIcon = getAgentIcon(st.agent);
                 const subtaskColor = getAgentColor(st.agent);
                 subtasksHtml += `<div class="subtask-item">
                     <span class="subtask-agent" style="color: ${subtaskColor}; display: inline-flex; align-items: center; gap: 4px;">
                         ${subtaskIcon || ''}
-                        ${getAgentName(st.agent)}
+                        ${escapeHtml(getAgentName(st.agent))}
                     </span>
-                    <span class="subtask-task">${st.task}</span>
+                    <span class="subtask-task">${escapeHtml(st.task)}</span>
                     ${dependsText ? `<span class="subtask-depends">${dependsText}</span>` : ''}
                 </div>`;
             });
@@ -1063,7 +1598,7 @@ function updateExecutionSteps(steps) {
             const agentColor = getAgentColor(step.agent);
             agentHtml = `<span class="agent-badge" style="color: ${agentColor}; display: inline-flex; align-items: center; gap: 4px;">
                 ${agentIcon || '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>'}
-                ${getAgentName(step.agent)}
+                ${escapeHtml(getAgentName(step.agent))}
             </span>`;
         }
         
@@ -1073,15 +1608,15 @@ function updateExecutionSteps(steps) {
                     ${icon}
                 </div>
                 <div class="execution-step-content">
-                    <div class="execution-step-title">${step.title}</div>
-                    <div class="execution-step-detail">${step.detail}</div>
+                    <div class="execution-step-title">${escapeHtml(step.title)}</div>
+                    <div class="execution-step-detail">${escapeHtml(step.detail)}</div>
                     ${step.user_intent_summary ? `<div class="execution-step-intent">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
-                        ${step.user_intent_summary}
+                        ${escapeHtml(step.user_intent_summary)}
                     </div>` : ''}
                     ${step.reasoning ? `<div class="execution-step-reasoning">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
-                        ${step.reasoning}
+                        ${escapeHtml(step.reasoning)}
                     </div>` : ''}
                     ${subtasksHtml}
                     <div class="execution-step-meta">
@@ -1209,26 +1744,17 @@ function selectAgent(value, text, e) {
     btn.classList.remove('active');
 }
 
-// 点击外部关闭下拉菜单
-document.addEventListener('click', function(e) {
-    const selector = document.getElementById('agentSelector');
-    if (selector && !selector.contains(e.target)) {
-        const dropdown = document.getElementById('agentDropdown');
-        const btn = document.getElementById('agentSelectorBtn');
-        if (dropdown) dropdown.classList.remove('show');
-        if (btn) btn.classList.remove('active');
-    }
-});
-
 // 发送消息
 async function sendMessage() {
     const msg = chatInput.value.trim();
     if ((!msg && !uploadedFileContent) || isProcessing) return;
     
     let finalMessage = msg;
+    let imagePreview = null;
     if (uploadedFileContent) {
         const fileContext = `[已上传简历文件: ${uploadedFileName}]\n\n简历内容:\n${uploadedFileContent}`;
         finalMessage = msg ? `${msg}\n\n${fileContext}` : `请帮我优化这份简历\n\n${fileContext}`;
+        imagePreview = uploadedFilePreview; // 保存图片预览
         removeFile();
     }
     
@@ -1236,10 +1762,13 @@ async function sendMessage() {
     chatInput.style.height = '32px'; // 重置输入框高度
     
     document.getElementById('welcomeMessage')?.remove();
-    addMessage(finalMessage, true);
+    addMessage(finalMessage, true, null, null, 0, imagePreview);
     
     setProcessingState(true);
     currentStreamedText = '';
+    
+    // 显示浮动任务状态栏
+    showTaskStatusBar('任务正在后台执行中...');
     
     // 清空右侧侧边栏推理步骤面板的旧内容
     const stepsPanel = document.getElementById('executionStepsPanel');
@@ -1358,6 +1887,8 @@ function handleSSEEvent(eventType, data, allSteps) {
     switch (eventType) {
         case 'start':
             currentTaskId = data.task_id;
+            // 保存任务ID到localStorage，用于断线恢复
+            saveTaskToStorage(data.task_id, data.conversation_id);
             if (currentConversationId !== data.conversation_id) {
                 currentConversationId = data.conversation_id;
                 try {
@@ -1395,14 +1926,6 @@ function handleSSEEvent(eventType, data, allSteps) {
             // 更新右侧推理面板
             updateExecutionSteps(allSteps);
             
-            // 实时更新工具调用信息
-            const currentTools = allSteps
-                .filter(s => s.type === 'tool' || s.action)
-                .map(s => s.action || s.title?.replace('调用工具: ', '') || '')
-                .filter(Boolean);
-            if (currentTools.length > 0) {
-                updateTools([...new Set(currentTools)]);
-            }
             break;
             
         case 'content':
@@ -1466,10 +1989,6 @@ function appendStreamContent(token) {
     smartScrollToBottom();
 }
 
-// updateLiveSteps 已移除 - 内联推理时间线已简化为纯进度文字
-
-// updateLiveSteps 已移除 - 内联推理时间线已简化为纯进度文字
-
 // 任务完成处理
 async function handleTaskCompleted(result, originalMessage) {
     const doneEl = activeLoadingBubble || document.getElementById('loading');
@@ -1477,6 +1996,12 @@ async function handleTaskCompleted(result, originalMessage) {
     
     setProcessingState(false);
     doneEl.removeAttribute('id');
+    
+    // 清除localStorage中的任务状态
+    clearTaskFromStorage();
+    
+    // 隐藏浮动任务状态栏
+    hideTaskStatusBar();
     
     const executionSteps = result.steps || result.execution_steps || [];
     const intermediateSteps = result.intermediate_steps || [];
@@ -1489,12 +2014,6 @@ async function handleTaskCompleted(result, originalMessage) {
     const allSteps = [...executionSteps, ...intermediateSteps];
     
     updateExecutionSteps(executionSteps);
-    
-    // 从executionSteps中提取工具调用信息
-    const toolsFromSteps = executionSteps.filter(s => s.type === 'tool' || s.action).map(s => s.action || s.title || '');
-    const toolsFromIntermediate = intermediateSteps.filter(s => s.action).map(s => s.action);
-    const toolsUsed = [...new Set([...toolsFromSteps, ...toolsFromIntermediate].filter(Boolean))];
-    updateTools(toolsUsed);
     
     // 使用result.output或currentStreamedText（流式输出的内容）
     const fullContent = result.output || currentStreamedText || '';
@@ -1536,12 +2055,14 @@ function addConversationToList(id, firstMsg) {
     const div = document.createElement('div');
     div.className = 'chat-history-item active';
     div.id = 'history-' + id;
+    const safeTitle = escapeHtml(firstMsg.substring(0, 20));
+    const safeId = escapeHtml(id);
     div.innerHTML = `
-        <a href="/chat?id=${id}" class="chat-history-link">
+        <a href="/chat?id=${safeId}" class="chat-history-link">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
-            <span class="chat-history-title">${firstMsg.substring(0, 20)}...</span>
+            <span class="chat-history-title">${safeTitle}...</span>
         </a>
-        <button class="chat-history-delete" onclick="deleteConversation('${id}', event)" title="删除">
+        <button class="chat-history-delete" onclick="deleteConversation('${safeId}', event)" title="删除">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
         </button>`;
     list.insertBefore(div, list.firstChild);
@@ -1706,3 +2227,232 @@ document.addEventListener('DOMContentLoaded', function() {
         }, { passive: true });
     }
 });
+
+// ==================== 任务持久化和恢复 ====================
+
+/**
+ * 保存任务信息到localStorage
+ */
+function saveTaskToStorage(taskId, conversationId) {
+    try {
+        const taskData = {
+            taskId: taskId,
+            conversationId: conversationId,
+            timestamp: Date.now()
+        };
+        localStorage.setItem(TASK_STORAGE_KEY, JSON.stringify(taskData));
+        console.log('[TaskPersistence] 任务已保存到localStorage:', taskId);
+    } catch (e) {
+        console.error('[TaskPersistence] 保存任务失败:', e);
+    }
+}
+
+/**
+ * 从localStorage清除任务信息
+ */
+function clearTaskFromStorage() {
+    try {
+        localStorage.removeItem(TASK_STORAGE_KEY);
+        console.log('[TaskPersistence] 任务已从localStorage清除');
+    } catch (e) {
+        console.error('[TaskPersistence] 清除任务失败:', e);
+    }
+}
+
+/**
+ * 从localStorage获取任务信息
+ */
+function getTaskFromStorage() {
+    try {
+        const data = localStorage.getItem(TASK_STORAGE_KEY);
+        if (data) {
+            return JSON.parse(data);
+        }
+    } catch (e) {
+        console.error('[TaskPersistence] 读取任务失败:', e);
+    }
+    return null;
+}
+
+/**
+ * 初始化任务持久化机制
+ */
+function initTaskPersistence() {
+    // 检查是否有未完成的任务
+    checkAndRestoreTask();
+    
+    // 监听页面可见性变化
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+}
+
+/**
+ * 检查并恢复未完成的任务
+ */
+async function checkAndRestoreTask() {
+    const savedTask = getTaskFromStorage();
+    if (!savedTask) return;
+    
+    const { taskId, conversationId } = savedTask;
+    
+    // 如果当前正在处理中，不恢复
+    if (isProcessing) return;
+    
+    // 如果没有对话ID，直接清除
+    if (!conversationId) {
+        clearTaskFromStorage();
+        return;
+    }
+    
+    console.log('[TaskPersistence] 发现任务，加载对话:', taskId);
+    
+    // 清除任务存储
+    clearTaskFromStorage();
+    
+    // 更新URL并加载对话历史
+    currentConversationId = conversationId;
+    try {
+        const url = new URL(window.location.href);
+        url.searchParams.set('id', currentConversationId);
+        window.history.replaceState(null, '', url.pathname + url.search);
+    } catch (e) {}
+    await loadConversation(currentConversationId);
+}
+
+/**
+ * 显示任务错误
+ */
+function showTaskError(errorMsg) {
+    const errorEl = activeLoadingBubble || document.getElementById('loading');
+    if (errorEl) {
+        if (errorMsg.includes('timeout') || errorMsg.includes('超时')) {
+            errorMsg = '处理超时，请稍后重试。';
+        } else if (errorMsg.includes('network') || errorMsg.includes('网络')) {
+            errorMsg = '网络连接出现问题，请检查网络后重试。';
+        }
+        errorEl.querySelector('.message-content').innerHTML = `<span style="color: var(--error);">${escapeHtml(errorMsg)}</span>`;
+        errorEl.removeAttribute('id');
+    }
+}
+
+/**
+ * 处理页面可见性变化
+ */
+function handleVisibilityChange() {
+    if (document.visibilityState === 'visible') {
+        console.log('[TaskPersistence] 页面变为可见，检查任务状态');
+        // 页面变为可见时，检查是否有未完成的任务
+        if (!isProcessing) {
+            checkAndRestoreTask();
+        }
+    }
+}
+
+// ==================== 浮动任务状态栏 ====================
+
+/**
+ * 显示浮动任务状态栏
+ * @param {string} text - 状态文本
+ * @param {boolean} isCompleted - 是否已完成
+ */
+function showTaskStatusBar(text, isCompleted = false) {
+    const statusBar = document.getElementById('taskStatusBar');
+    if (!statusBar) return;
+    
+    const textEl = statusBar.querySelector('.task-status-text');
+    const btnEl = statusBar.querySelector('.task-status-btn');
+    const iconEl = statusBar.querySelector('.task-status-icon');
+    
+    if (textEl) textEl.textContent = text;
+    
+    if (isCompleted) {
+        statusBar.classList.add('completed');
+        if (btnEl) btnEl.textContent = '查看结果';
+        // 移除旋转动画，显示完成图标
+        if (iconEl) {
+            iconEl.innerHTML = '<div class="task-status-spinner"></div>';
+        }
+    } else {
+        statusBar.classList.remove('completed');
+        if (btnEl) btnEl.textContent = '返回对话';
+        // 显示旋转动画
+        if (iconEl) {
+            iconEl.innerHTML = '<div class="task-status-spinner"></div>';
+        }
+    }
+    
+    statusBar.style.display = 'block';
+    taskStatusBarVisible = true;
+}
+
+/**
+ * 隐藏浮动任务状态栏
+ */
+function hideTaskStatusBar() {
+    const statusBar = document.getElementById('taskStatusBar');
+    if (statusBar) {
+        statusBar.style.display = 'none';
+        statusBar.classList.remove('completed');
+    }
+    taskStatusBarVisible = false;
+}
+
+/**
+ * 处理浮动状态栏点击事件
+ */
+function handleTaskStatusBarClick() {
+    const savedTask = getTaskFromStorage();
+    
+    // 如果有保存的任务，加载对应的对话
+    if (savedTask && savedTask.conversationId) {
+        const conversationId = savedTask.conversationId;
+        clearTaskFromStorage();
+        
+        // 更新URL并加载对话
+        currentConversationId = conversationId;
+        try {
+            const url = new URL(window.location.href);
+            url.searchParams.set('id', currentConversationId);
+            window.history.replaceState(null, '', url.pathname + url.search);
+        } catch (e) {}
+        
+        loadConversation(currentConversationId);
+    }
+    
+    // 隐藏状态栏
+    hideTaskStatusBar();
+}
+
+/**
+ * 更新浮动状态栏为任务完成状态
+ */
+function updateStatusBarToCompleted() {
+    const statusBar = document.getElementById('taskStatusBar');
+    if (statusBar && taskStatusBarVisible) {
+        showTaskStatusBar('任务已完成', true);
+    }
+}
+
+// ==================== 图片预览模态框 ====================
+
+/**
+ * 显示图片大图模态框
+ */
+function showImageModal(imageSrc) {
+    // 移除已有的模态框
+    const existingModal = document.getElementById('imagePreviewModal');
+    if (existingModal) existingModal.remove();
+    
+    const modal = document.createElement('div');
+    modal.id = 'imagePreviewModal';
+    modal.className = 'image-preview-modal';
+    modal.onclick = function() { this.remove(); };
+    modal.innerHTML = `
+        <div class="image-preview-content">
+            <img src="${imageSrc}" alt="图片预览" />
+            <button class="image-preview-close" onclick="this.closest('.image-preview-modal').remove()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+            </button>
+        </div>
+    `;
+    document.body.appendChild(modal);
+}

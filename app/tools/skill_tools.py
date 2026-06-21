@@ -122,5 +122,93 @@ def skill_priority(target_position: str, current_skills: List[str] = []) -> str:
     return output
 
 
+@tool("generate_learning_plan", return_direct=False)
+def generate_learning_plan(skill: str, current_level: str = "beginner", target_level: str = "intermediate", hours_per_week: int = 10) -> str:
+    """生成学习计划。输入技能、当前水平、目标水平、每周学习时间。"""
+    try:
+        from langchain_openai import ChatOpenAI
+        from flask import current_app
+        
+        llm = ChatOpenAI(
+            model=current_app.config['OPENAI_MODEL'],
+            api_key=current_app.config['OPENAI_API_KEY'],
+            base_url=current_app.config['OPENAI_BASE_URL'],
+            temperature=0.7
+        )
+        
+        prompt = f"""请为以下技能生成详细的学习计划：
+
+技能：{skill}
+当前水平：{current_level}
+目标水平：{target_level}
+每周学习时间：{hours_per_week}小时
+
+请提供：
+1. 学习路径规划（分阶段）
+2. 每个阶段的学习内容
+3. 推荐的学习资源（书籍、课程、网站）
+4. 实践项目建议
+5. 学习进度检查点
+6. 常见问题及解决方案
+
+请用Markdown格式输出，确保计划可执行。"""
+
+        response = llm.invoke(prompt)
+        return response.content
+    except Exception as e:
+        return f"生成学习计划失败: {str(e)}"
+
+
+@tool("skill_market_value", return_direct=False)
+def skill_market_value(skill: str, city: str = "全国") -> str:
+    """查询技能的市场价值。输入技能名称和城市。"""
+    try:
+        from app.models.job import Job, JobSkill
+        from app import db
+        
+        db.session.rollback()
+        
+        # 查找包含该技能的职位
+        jobs_with_skill = []
+        all_jobs = Job.query.all()
+        
+        for job in all_jobs:
+            skills = [s.skill_name.lower() for s in job.skills.all()]
+            if skill.lower() in skills:
+                jobs_with_skill.append(job)
+        
+        if not jobs_with_skill:
+            return f"暂无{skill}相关的职位数据"
+        
+        # 统计薪资
+        salaries = [j.salary_avg for j in jobs_with_skill if j.salary_avg]
+        avg_salary = sum(salaries) // len(salaries) if salaries else 0
+        min_salary = min(salaries) if salaries else 0
+        max_salary = max(salaries) if salaries else 0
+        
+        # 统计城市分布
+        cities = {}
+        for job in jobs_with_skill:
+            cities[job.city] = cities.get(job.city, 0) + 1
+        
+        sorted_cities = sorted(cities.items(), key=lambda x: x[1], reverse=True)[:5]
+        
+        output = f"【{skill}】市场价值分析:\n\n"
+        output += f"数据样本: {len(jobs_with_skill)}个职位\n\n"
+        
+        output += "薪资水平:\n"
+        output += f"  - 平均薪资: {avg_salary//1000}K\n"
+        output += f"  - 最低薪资: {min_salary//1000}K\n"
+        output += f"  - 最高薪资: {max_salary//1000}K\n\n"
+        
+        output += "热门城市:\n"
+        for city, count in sorted_cities:
+            output += f"  - {city}: {count}个职位\n"
+        
+        return output
+    except Exception as e:
+        return f"查询技能市场价值失败: {str(e)}"
+
+
 def get_skill_tools():
-    return [analyze_skill_gap, recommend_learning_path, skill_priority]
+    return [analyze_skill_gap, recommend_learning_path, skill_priority, generate_learning_plan, skill_market_value]

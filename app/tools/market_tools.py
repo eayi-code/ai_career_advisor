@@ -138,5 +138,98 @@ def side_job_match(skills: List[str], hours_per_week: int, investment: int = 0, 
     return output
 
 
+@tool("side_job_risk_assessment", return_direct=False)
+def side_job_risk_assessment(side_job_title: str) -> str:
+    """评估副业风险。输入副业名称。"""
+    try:
+        from langchain_openai import ChatOpenAI
+        from flask import current_app
+        
+        llm = ChatOpenAI(
+            model=current_app.config['OPENAI_MODEL'],
+            api_key=current_app.config['OPENAI_API_KEY'],
+            base_url=current_app.config['OPENAI_BASE_URL'],
+            temperature=0.7
+        )
+        
+        prompt = f"""请评估以下副业的风险：
+
+副业：{side_job_title}
+
+请从以下维度进行评估：
+1. 市场风险
+   - 市场需求稳定性
+   - 竞争激烈程度
+   - 政策风险
+
+2. 收入风险
+   - 收入稳定性
+   - 收入天花板
+   - 收入波动性
+
+3. 时间风险
+   - 时间投入产出比
+   - 是否影响主业
+   - 学习成本
+
+4. 法律风险
+   - 合规性
+   - 税务问题
+   - 竞业限制
+
+5. 技术风险
+   - 技术门槛
+   - 技术更新速度
+   - 被替代风险
+
+请给出风险等级（低/中/高）和具体建议。"""
+
+        response = llm.invoke(prompt)
+        return response.content
+    except Exception as e:
+        return f"评估副业风险失败: {str(e)}"
+
+
+@tool("side_job_success_stories", return_direct=False)
+def side_job_success_stories(side_job_title: str) -> str:
+    """获取副业成功案例。输入副业名称。"""
+    try:
+        from langchain_openai import ChatOpenAI
+        from flask import current_app
+        
+        llm = ChatOpenAI(
+            model=current_app.config['OPENAI_MODEL'],
+            api_key=current_app.config['OPENAI_API_KEY'],
+            base_url=current_app.config['OPENAI_BASE_URL'],
+            temperature=0.7
+        )
+        
+        prompt = f"""请提供{side_job_title}副业的成功案例分析。
+
+请包含：
+1. 3个典型的成功案例
+   - 背景介绍
+   - 起步过程
+   - 关键转折点
+   - 最终成果
+
+2. 成功关键因素分析
+   - 共同的成功要素
+   - 必备的能力和资源
+   - 时间投入情况
+
+3. 可复制的经验
+   - 新手入门建议
+   - 避坑指南
+   - 快速上手方法
+
+请用真实、接地气的语言描述。"""
+
+        response = llm.invoke(prompt)
+        return response.content
+    except Exception as e:
+        return f"获取成功案例失败: {str(e)}"
+
+
 def get_market_tools():
-    return [search_side_jobs, calculate_side_job_roi, side_job_match]
+    return [search_side_jobs, calculate_side_job_roi, side_job_match, side_job_risk_assessment, side_job_success_stories]

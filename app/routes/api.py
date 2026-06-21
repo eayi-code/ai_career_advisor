@@ -415,3 +415,53 @@ def update_profile():
         return jsonify({"code": 200, "message": result['message']})
     else:
         return jsonify({"code": 500, "error": result['error']}), 500
+
+
+# ==================== 任务持久化接口 ====================
+
+@api_bp.route('/agent/task/detail/<task_id>', methods=['GET'])
+@login_required
+def get_task_detail(task_id):
+    """获取任务详情（支持用户验证）"""
+    task = ChatService.get_task_status(task_id, current_user.id)
+    if task:
+        return jsonify({"code": 200, "data": task})
+    return jsonify({"code": 404, "error": "任务不存在"}), 404
+
+
+@api_bp.route('/agent/task/active', methods=['GET'])
+@login_required
+def get_user_active_task():
+    """获取当前活跃任务"""
+    conversation_id = request.args.get('conversation_id')
+    task = ChatService.get_active_task(current_user.id, conversation_id)
+    if task:
+        return jsonify({"code": 200, "data": task})
+    return jsonify({"code": 200, "data": None})
+
+
+@api_bp.route('/agent/task/pending', methods=['GET'])
+@login_required
+def get_user_pending_tasks():
+    """获取所有待处理任务"""
+    tasks = ChatService.get_pending_tasks(current_user.id)
+    return jsonify({"code": 200, "data": tasks})
+
+
+@api_bp.route('/agent/task/restore/<task_id>', methods=['GET'])
+@login_required
+def restore_task_stream(task_id):
+    """恢复任务流（用于断线重连）"""
+    generate_func, result_task_id = ChatService.restore_task_stream(task_id, current_user.id)
+    
+    if generate_func:
+        return Response(
+            stream_with_context(generate_func()),
+            mimetype='text/event-stream',
+            headers={
+                'Cache-Control': 'no-cache',
+                'X-Accel-Buffering': 'no',
+                'Connection': 'keep-alive'
+            }
+        )
+    return jsonify({"code": 404, "error": "任务不存在或无法恢复"}), 404
