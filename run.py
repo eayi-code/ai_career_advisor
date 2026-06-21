@@ -12,4 +12,5 @@ def init_db():
 
 if __name__ == '__main__':
     debug = os.getenv('FLASK_DEBUG', 'true').lower() == 'true'
-    app.run(debug=debug, port=int(os.getenv('PORT', 5000)))
+    host = os.getenv('HOST', '0.0.0.0')
+    app.run(host=host, debug=debug, port=int(os.getenv('PORT', 5000)))
