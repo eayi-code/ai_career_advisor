@@ -1908,26 +1908,39 @@ function toggleAgentDropdown() {
 }
 
 function selectAgent(value, text, e) {
+    const input = document.getElementById('agentType');
+    if (input) input.value = value;
+
+    // 更新桌面端UI（可能在移动端不可见，但仍存在于DOM）
     const dropdown = document.getElementById('agentDropdown');
     const btn = document.getElementById('agentSelectorBtn');
-    const input = document.getElementById('agentType');
     const textEl = document.getElementById('agentSelectorText');
-    const selectedOption = e ? e.currentTarget : document.querySelector(`.agent-option[data-value="${value}"]`);
-    
+
+    // 从桌面端下拉菜单中找到匹配的选项
+    const desktopOption = document.querySelector(`.agent-option[data-value="${value}"]`);
+
+    // 更新桌面端选中状态
     document.querySelectorAll('.agent-option').forEach(opt => opt.classList.remove('selected'));
-    if (selectedOption) selectedOption.classList.add('selected');
-    
-    const optionIcon = selectedOption ? selectedOption.querySelector('svg') : null;
-    const btnIcon = btn.querySelector('svg:first-child');
-    if (optionIcon && btnIcon) {
-        btnIcon.outerHTML = optionIcon.outerHTML;
+    if (desktopOption) desktopOption.classList.add('selected');
+
+    // 更新桌面端按钮图标和文字
+    if (btn) {
+        const optionIcon = desktopOption ? desktopOption.querySelector('svg') : null;
+        const btnIcon = btn.querySelector('svg:first-child');
+        if (optionIcon && btnIcon) {
+            btnIcon.outerHTML = optionIcon.outerHTML;
+        }
     }
-    
-    input.value = value;
-    textEl.textContent = text;
-    
-    dropdown.classList.remove('show');
-    btn.classList.remove('active');
+    if (textEl) textEl.textContent = text;
+
+    // 关闭桌面端下拉菜单
+    if (dropdown) dropdown.classList.remove('show');
+    if (btn) btn.classList.remove('active');
+
+    // Toast反馈（移动端用）
+    if (typeof modal !== 'undefined' && modal.toast) {
+        modal.toast('已切换到：' + text, 'success');
+    }
 }
 
 // 发送消息
@@ -2334,6 +2347,25 @@ function toggleMobileMenu() {
     } else {
         menu.classList.add('show');
         btn.classList.add('active');
+        // 创建遮罩层，防止点击穿透到后面的欢迎卡片
+        let backdrop = document.getElementById('mobileMenuBackdrop');
+        if (!backdrop) {
+            backdrop = document.createElement('div');
+            backdrop.id = 'mobileMenuBackdrop';
+            backdrop.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;z-index:29;';
+            backdrop.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                closeMobileMenu();
+            });
+            // 阻止触摸事件穿透
+            backdrop.addEventListener('touchstart', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                closeMobileMenu();
+            }, { passive: false });
+            document.body.appendChild(backdrop);
+        }
     }
 }
 
@@ -2342,6 +2374,9 @@ function closeMobileMenu() {
     const btn = document.getElementById('mobilePlusBtn');
     if (menu) menu.classList.remove('show');
     if (btn) btn.classList.remove('active');
+    // 移除遮罩层
+    const backdrop = document.getElementById('mobileMenuBackdrop');
+    if (backdrop) backdrop.remove();
 }
 
 function showMobileAgentSelector() {
@@ -2357,24 +2392,64 @@ function showMobileAgentSelector() {
 
     const currentAgent = document.getElementById('agentType')?.value || 'auto';
 
-    let html = '<div class="mobile-agent-modal" onclick="this.remove()">';
-    html += '<div class="mobile-agent-sheet" onclick="event.stopPropagation()">';
-    html += '<div class="mobile-agent-header">选择智能体</div>';
-    html += '<div class="mobile-agent-list">';
+    // 创建模态框容器
+    const modal = document.createElement('div');
+    modal.className = 'mobile-agent-modal';
+    modal.addEventListener('click', function() { modal.remove(); });
+
+    const sheet = document.createElement('div');
+    sheet.className = 'mobile-agent-sheet';
+    sheet.addEventListener('click', function(e) { e.stopPropagation(); });
+
+    const header = document.createElement('div');
+    header.className = 'mobile-agent-header';
+    header.textContent = '选择智能体';
+
+    const list = document.createElement('div');
+    list.className = 'mobile-agent-list';
 
     agentOptions.forEach(opt => {
         const isSelected = opt.value === currentAgent;
-        html += `<button class="mobile-agent-option ${isSelected ? 'selected' : ''}" 
-                    onclick="selectAgent('${opt.value}', '${opt.name}', event); this.closest('.mobile-agent-modal').remove();">
-            <span class="mobile-agent-dot" style="background: ${opt.color};"></span>
-            <span>${opt.name}</span>
-            ${isSelected ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M20 6L9 17l-5-5"/></svg>' : ''}
-        </button>`;
+        const btn = document.createElement('button');
+        btn.className = 'mobile-agent-option' + (isSelected ? ' selected' : '');
+
+        const dot = document.createElement('span');
+        dot.className = 'mobile-agent-dot';
+        dot.style.background = opt.color;
+
+        const label = document.createElement('span');
+        label.textContent = opt.name;
+
+        btn.appendChild(dot);
+        btn.appendChild(label);
+
+        if (isSelected) {
+            const check = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+            check.setAttribute('viewBox', '0 0 24 24');
+            check.setAttribute('width', '18');
+            check.setAttribute('height', '18');
+            check.setAttribute('fill', 'none');
+            check.setAttribute('stroke', 'currentColor');
+            check.setAttribute('stroke-width', '2');
+            const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            path.setAttribute('d', 'M20 6L9 17l-5-5');
+            check.appendChild(path);
+            btn.appendChild(check);
+        }
+
+        btn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            selectAgent(opt.value, opt.name, e);
+            modal.remove();
+        });
+
+        list.appendChild(btn);
     });
 
-    html += '</div></div></div>';
-
-    document.body.insertAdjacentHTML('beforeend', html);
+    sheet.appendChild(header);
+    sheet.appendChild(list);
+    modal.appendChild(sheet);
+    document.body.appendChild(modal);
 }
 
 // Close mobile menu when clicking outside
