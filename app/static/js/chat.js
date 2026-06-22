@@ -294,17 +294,17 @@ async function handleFileUpload(e) {
     
     const isImage = ['.png', '.jpg', '.jpeg', '.webp', '.bmp'].includes(ext);
     
-    // 如果是图片，先生成预览
+    // 如果是图片，先生成预览（状态：解析中）
     if (isImage) {
         const reader = new FileReader();
         reader.onload = function(e) {
-            uploadedFilePreview = e.target.result; // 保存base64用于预览
-            // 更新预览区域显示图片
-            updateFilePreviewUI(file.name, true);
+            uploadedFilePreview = e.target.result;
+            updateFilePreviewUI(file.name, true, 'parsing');
         };
         reader.readAsDataURL(file);
     } else {
         uploadedFilePreview = null;
+        updateFilePreviewUI(file.name, false, 'parsing');
     }
     
     const formData = new FormData();
@@ -321,7 +321,7 @@ async function handleFileUpload(e) {
         if (data.code === 200) {
             uploadedFileContent = data.data.content;
             uploadedFileName = data.data.filename;
-            updateFilePreviewUI(uploadedFileName, isImage);
+            updateFilePreviewUI(uploadedFileName, isImage, 'done');
             chatInput.placeholder = '输入优化要求，或直接发送以解析简历...';
             modal.toast('文件解析成功', 'success');
         } else {
@@ -337,17 +337,20 @@ async function handleFileUpload(e) {
 }
 
 // 更新文件预览UI
-function updateFilePreviewUI(fileName, isImage) {
+function updateFilePreviewUI(fileName, isImage, status) {
     const previewEl = document.getElementById('filePreview');
     if (!previewEl) return;
-    
+
+    const statusText = status === 'done' ? '解析完成' : '解析中...';
+    const statusClass = status === 'done' ? 'done' : 'loading';
+
     if (isImage && uploadedFilePreview) {
         previewEl.innerHTML = `
             <div class="file-preview-image">
                 <img src="${uploadedFilePreview}" alt="预览" />
                 <div class="file-preview-info">
                     <span class="file-name">${escapeHtml(fileName)}</span>
-                    <span class="file-status">解析完成</span>
+                    <span class="file-status ${statusClass}">${statusText}</span>
                 </div>
                 <button class="file-remove-btn" onclick="removeFile()" title="移除">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
@@ -361,6 +364,7 @@ function updateFilePreviewUI(fileName, isImage) {
                     <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/>
                 </svg>
                 <span class="file-name">${escapeHtml(fileName)}</span>
+                <span class="file-status ${statusClass}">${statusText}</span>
                 <button class="file-remove-btn" onclick="removeFile()" title="移除">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
                 </button>

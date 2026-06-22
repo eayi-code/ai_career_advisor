@@ -562,6 +562,14 @@
         display: none !important;
     }
 
+    /* Stop button: show the icon, hide the arrow */
+    .chat-input-wrapper #sendBtn.stop-btn .material-symbols-rounded {
+        display: inline-flex !important;
+    }
+    .chat-input-wrapper #sendBtn.stop-btn::after {
+        display: none !important;
+    }
+
     .chat-input-wrapper #sendBtn:active,
     .chat-input-wrapper .btn-primary:active {
         transform: scale(0.9);
