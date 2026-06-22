@@ -31,6 +31,21 @@ class ChatService:
     # Agent状态缓存（避免每次请求都初始化5个Agent）
     _agent_status_cache = None
     _agent_status_cache_time = 0
+
+    @staticmethod
+    def _safe_json_dumps(data):
+        """安全的JSON序列化，处理不可序列化的对象"""
+        try:
+            return json.dumps(data, ensure_ascii=False, default=str)
+        except Exception:
+            try:
+                safe = {
+                    k: v for k, v in data.items()
+                    if isinstance(v, (str, int, float, bool, type(None)))
+                }
+                return json.dumps(safe, ensure_ascii=False, default=str)
+            except Exception:
+                return json.dumps({"error": "结果序列化失败"})
     
     # ==================== 线程安全的存储操作 ====================
     
@@ -456,22 +471,6 @@ class ChatService:
                         'data': {'content': token}
                     })
         
-        @staticmethod
-        def _safe_json_dumps(data):
-            """安全的JSON序列化，处理不可序列化的对象"""
-            try:
-                return json.dumps(data, ensure_ascii=False, default=str)
-            except Exception:
-                # 最终兜底：只保留基本字段
-                try:
-                    safe = {
-                        k: v for k, v in data.items()
-                        if isinstance(v, (str, int, float, bool, type(None)))
-                    }
-                    return json.dumps(safe, ensure_ascii=False, default=str)
-                except Exception:
-                    return json.dumps({"error": "结果序列化失败"})
-
         def generate():
             """SSE生成器"""
             try:

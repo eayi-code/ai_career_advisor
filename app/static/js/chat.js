@@ -1997,9 +1997,13 @@ async function sendMessage() {
     let finalMessage = msg;
     let imagePreview = null;
     if (uploadedFileContent) {
-        const fileContext = `[已上传简历文件: ${uploadedFileName}]\n\n简历内容:\n${uploadedFileContent}`;
-        finalMessage = msg ? `${msg}\n\n${fileContext}` : `请帮我优化这份简历\n\n${fileContext}`;
-        imagePreview = uploadedFilePreview; // 保存图片预览
+        const isImg = /\.(png|jpg|jpeg|webp|bmp|gif)$/i.test(uploadedFileName || '');
+        const label = isImg ? '已上传图片' : '已上传简历文件';
+        const contentLabel = isImg ? '图片内容' : '简历内容';
+        const defaultMsg = isImg ? '帮我看看这张图片' : '请帮我优化这份简历';
+        const fileContext = `[${label}: ${uploadedFileName}]\n\n${contentLabel}:\n${uploadedFileContent}`;
+        finalMessage = msg ? `${msg}\n\n${fileContext}` : `${defaultMsg}\n\n${fileContext}`;
+        imagePreview = uploadedFilePreview;
         removeFile();
     }
     
