@@ -2096,15 +2096,7 @@ async function streamAgentChat(message, agentType, lastAgent, signal) {
     let shouldBreak = false;
     let pendingEventType = null;  // 跨chunk保留event类型
 
-    while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-
-        const lines = buffer.split('\n');
-        buffer = lines.pop();  // 最后一行可能不完整，留到下次
-
+    function processLines(lines, isLast) {
         let eventType = pendingEventType;
         for (const line of lines) {
             if (line.startsWith('event: ')) {
@@ -2128,7 +2120,27 @@ async function streamAgentChat(message, agentType, lastAgent, signal) {
                 eventType = null;
             }
         }
-        pendingEventType = eventType;  // 保留到下一个chunk
+        pendingEventType = eventType;
+    }
+
+    while (true) {
+        const { done, value } = await reader.read();
+
+        buffer += decoder.decode(value, { stream: true });
+
+        if (done) {
+            // 处理 buffer 中剩余的最后一段数据
+            if (buffer.trim()) {
+                const lines = buffer.split('\n');
+                processLines(lines, true);
+            }
+            break;
+        }
+
+        const lines = buffer.split('\n');
+        buffer = lines.pop();  // 最后一行可能不完整，留到下次
+        processLines(lines, false);
+
         if (shouldBreak) break;
     }
 
@@ -2499,14 +2511,7 @@ window.restoreRunningTask = async function(taskId, conversationId) {
         let shouldBreak = false;
         let pendingEventType = null;  // 跨chunk保留event类型
 
-        while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-
-            buffer += decoder.decode(value, { stream: true });
-            const lines = buffer.split('\n');
-            buffer = lines.pop();
-
+        function processRestoreLines(lines) {
             let eventType = pendingEventType;
             for (const line of lines) {
                 if (line.startsWith('event: ')) {
@@ -2531,6 +2536,24 @@ window.restoreRunningTask = async function(taskId, conversationId) {
                 }
             }
             pendingEventType = eventType;
+        }
+
+        while (true) {
+            const { done, value } = await reader.read();
+
+            buffer += decoder.decode(value, { stream: true });
+
+            if (done) {
+                if (buffer.trim()) {
+                    processRestoreLines(buffer.split('\n'));
+                }
+                break;
+            }
+
+            const lines = buffer.split('\n');
+            buffer = lines.pop();
+            processRestoreLines(lines);
+
             if (shouldBreak) break;
         }
         
