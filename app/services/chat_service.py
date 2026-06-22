@@ -456,33 +456,60 @@ class ChatService:
                         'data': {'content': token}
                     })
         
+        @staticmethod
+        def _safe_json_dumps(data):
+            """安全的JSON序列化，处理不可序列化的对象"""
+            try:
+                return json.dumps(data, ensure_ascii=False, default=str)
+            except Exception:
+                # 最终兜底：只保留基本字段
+                try:
+                    safe = {
+                        k: v for k, v in data.items()
+                        if isinstance(v, (str, int, float, bool, type(None)))
+                    }
+                    return json.dumps(safe, ensure_ascii=False, default=str)
+                except Exception:
+                    return json.dumps({"error": "结果序列化失败"})
+
         def generate():
             """SSE生成器"""
             try:
                 yield f"event: start\ndata: {json.dumps({'task_id': task_id, 'conversation_id': conversation_id})}\n\n"
-                
+
                 while True:
                     try:
                         event = task_queue.get(timeout=300)
                         event_type = event.get('type')
-                        
+
                         if event_type == 'step':
-                            yield f"event: step\ndata: {json.dumps(event['data'])}\n\n"
+                            yield f"event: step\ndata: {ChatService._safe_json_dumps(event['data'])}\n\n"
                         elif event_type == 'content':
-                            yield f"event: content\ndata: {json.dumps(event['data'])}\n\n"
+                            yield f"event: content\ndata: {ChatService._safe_json_dumps(event['data'])}\n\n"
                         elif event_type == 'progress':
                             yield f"event: progress\ndata: {json.dumps({'message': event['message']})}\n\n"
                         elif event_type == 'done':
-                            yield f"event: done\ndata: {json.dumps(event['result'])}\n\n"
+                            # 构建精简的完成数据，避免序列化失败
+                            result = event.get('result', {})
+                            done_data = {
+                                'success': result.get('success', False),
+                                'output': result.get('output', ''),
+                                'agent_used': result.get('agent_used', ''),
+                                'intermediate_steps': result.get('intermediate_steps', []),
+                                'steps': result.get('steps', []),
+                                'is_composite': result.get('is_composite', False),
+                                'score': result.get('score', 0),
+                            }
+                            yield f"event: done\ndata: {ChatService._safe_json_dumps(done_data)}\n\n"
                             break
                         elif event_type == 'error':
-                            yield f"event: error\ndata: {json.dumps({'error': event['error']})}\n\n"
+                            yield f"event: error\ndata: {json.dumps({'error': str(event.get('error', '未知错误'))})}\n\n"
                             break
-                            
+
                     except queue.Empty:
                         yield f"event: error\ndata: {json.dumps({'error': '请求超时，请稍后重试'})}\n\n"
                         break
-                        
+
             finally:
                 with cls._store_lock:
                     cls._sse_task_queues.pop(task_id, None)
@@ -749,7 +776,7 @@ class ChatService:
                                     }
                         except Exception as e:
                             print(f"[Task] 从对话历史获取结果失败: {e}")
-                    yield f"event: done\ndata: {json.dumps(result_data)}\n\n"
+                    yield f"event: done\ndata: {ChatService._safe_json_dumps(result_data)}\n\n"
                 return generate, task_id
             
             elif task.status in ['pending', 'running']:
@@ -764,25 +791,35 @@ class ChatService:
                         # 发送已有的进度
                         if task.progress:
                             for step in task.progress:
-                                yield f"event: step\ndata: {json.dumps(step)}\n\n"
-                        
+                                yield f"event: step\ndata: {ChatService._safe_json_dumps(step)}\n\n"
+
                         # 等待新事件
                         while True:
                             try:
                                 event = task_queue.get(timeout=300)
                                 event_type = event.get('type')
-                                
+
                                 if event_type == 'step':
-                                    yield f"event: step\ndata: {json.dumps(event['data'])}\n\n"
+                                    yield f"event: step\ndata: {ChatService._safe_json_dumps(event['data'])}\n\n"
                                 elif event_type == 'content':
-                                    yield f"event: content\ndata: {json.dumps(event['data'])}\n\n"
+                                    yield f"event: content\ndata: {ChatService._safe_json_dumps(event['data'])}\n\n"
                                 elif event_type == 'progress':
                                     yield f"event: progress\ndata: {json.dumps({'message': event['message']})}\n\n"
                                 elif event_type == 'done':
-                                    yield f"event: done\ndata: {json.dumps(event['result'])}\n\n"
+                                    result = event.get('result', {})
+                                    done_data = {
+                                        'success': result.get('success', False),
+                                        'output': result.get('output', ''),
+                                        'agent_used': result.get('agent_used', ''),
+                                        'intermediate_steps': result.get('intermediate_steps', []),
+                                        'steps': result.get('steps', []),
+                                        'is_composite': result.get('is_composite', False),
+                                        'score': result.get('score', 0),
+                                    }
+                                    yield f"event: done\ndata: {ChatService._safe_json_dumps(done_data)}\n\n"
                                     break
                                 elif event_type == 'error':
-                                    yield f"event: error\ndata: {json.dumps({'error': event['error']})}\n\n"
+                                    yield f"event: error\ndata: {json.dumps({'error': str(event.get('error', '未知错误'))})}\n\n"
                                     break
                                     
                             except queue.Empty:

@@ -2027,17 +2027,18 @@ async function streamAgentChat(message, agentType, lastAgent, signal) {
     let finalResult = null;
     let allSteps = [];
     let shouldBreak = false;
+    let pendingEventType = null;  // 跨chunk保留event类型
 
     while (true) {
         const { done, value } = await reader.read();
         if (done) break;
-        
+
         buffer += decoder.decode(value, { stream: true });
-        
+
         const lines = buffer.split('\n');
-        buffer = lines.pop();
-        
-        let eventType = null;
+        buffer = lines.pop();  // 最后一行可能不完整，留到下次
+
+        let eventType = pendingEventType;
         for (const line of lines) {
             if (line.startsWith('event: ')) {
                 eventType = line.slice(7).trim();
@@ -2046,7 +2047,7 @@ async function streamAgentChat(message, agentType, lastAgent, signal) {
                 try {
                     const parsed = JSON.parse(data);
                     handleSSEEvent(eventType, parsed, allSteps);
-                    
+
                     if (eventType === 'done') {
                         finalResult = parsed;
                         shouldBreak = true;
@@ -2060,6 +2061,7 @@ async function streamAgentChat(message, agentType, lastAgent, signal) {
                 eventType = null;
             }
         }
+        pendingEventType = eventType;  // 保留到下一个chunk
         if (shouldBreak) break;
     }
 
@@ -2526,16 +2528,17 @@ window.restoreRunningTask = async function(taskId, conversationId) {
         let finalResult = null;
         let allSteps = [];
         let shouldBreak = false;
-        
+        let pendingEventType = null;  // 跨chunk保留event类型
+
         while (true) {
             const { done, value } = await reader.read();
             if (done) break;
-            
+
             buffer += decoder.decode(value, { stream: true });
             const lines = buffer.split('\n');
             buffer = lines.pop();
-            
-            let eventType = null;
+
+            let eventType = pendingEventType;
             for (const line of lines) {
                 if (line.startsWith('event: ')) {
                     eventType = line.slice(7).trim();
@@ -2544,7 +2547,7 @@ window.restoreRunningTask = async function(taskId, conversationId) {
                     try {
                         const parsed = JSON.parse(data);
                         handleSSEEvent(eventType, parsed, allSteps);
-                        
+
                         if (eventType === 'done') {
                             finalResult = parsed;
                             shouldBreak = true;
@@ -2558,6 +2561,7 @@ window.restoreRunningTask = async function(taskId, conversationId) {
                     eventType = null;
                 }
             }
+            pendingEventType = eventType;
             if (shouldBreak) break;
         }
         
