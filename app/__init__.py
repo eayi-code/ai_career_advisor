@@ -10,9 +10,11 @@ migrate = Migrate()
 cache = Cache()
 
 
-def create_app():
+def create_app(test_config=None):
     app = Flask(__name__)
     app.config.from_object('app.config.Config')
+    if test_config:
+        app.config.update(test_config)
 
     db.init_app(app)
     login_manager.init_app(app)
@@ -31,9 +33,11 @@ def create_app():
     from app.routes.auth import auth_bp
     from app.routes.career import career_bp
     from app.routes.api import api_bp
+    from app.routes.admin import admin_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(career_bp)
     app.register_blueprint(api_bp, url_prefix='/api')
+    app.register_blueprint(admin_bp)
 
     return app

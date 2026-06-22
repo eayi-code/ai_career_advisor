@@ -447,3 +447,232 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 });
+
+// ===== 全局后台任务状态管理器 =====
+window.GlobalTaskManager = {
+    STORAGE_KEY: 'ai_career_task',
+    pollInterval: null,
+    _checkInProgress: false,
+    
+    getTaskFromStorage() {
+        try {
+            const data = localStorage.getItem(this.STORAGE_KEY);
+            if (data) return JSON.parse(data);
+        } catch (e) {
+            console.error('[GlobalTask] 读取任务失败:', e);
+        }
+        return null;
+    },
+    
+    saveTaskToStorage(taskId, conversationId) {
+        try {
+            const taskData = {
+                taskId: taskId,
+                conversationId: conversationId,
+                timestamp: Date.now()
+            };
+            localStorage.setItem(this.STORAGE_KEY, JSON.stringify(taskData));
+            console.log('[GlobalTask] 任务已保存:', taskId);
+        } catch (e) {
+            console.error('[GlobalTask] 保存任务失败:', e);
+        }
+    },
+    
+    clearTaskFromStorage() {
+        try {
+            localStorage.removeItem(this.STORAGE_KEY);
+            console.log('[GlobalTask] 任务已清除');
+        } catch (e) {
+            console.error('[GlobalTask] 清除任务失败:', e);
+        }
+    },
+    
+    async checkTaskStatus() {
+        // 防止并发调用
+        if (this._checkInProgress) return;
+        this._checkInProgress = true;
+        
+        try {
+            await this._doCheckTaskStatus();
+        } finally {
+            this._checkInProgress = false;
+        }
+    },
+    
+    async _doCheckTaskStatus() {
+        const savedTask = this.getTaskFromStorage();
+        if (!savedTask) {
+            this.stopPolling();
+            return;
+        }
+        
+        const { taskId, conversationId } = savedTask;
+        
+        // 判断当前是否在活动任务的对话页
+        const isChatPage = window.location.pathname.includes('/chat');
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlConversationId = urlParams.get('id');
+        const isActiveChatPage = isChatPage && (
+            urlConversationId === conversationId || 
+            window.currentConversationId === conversationId
+        );
+        
+        // 如果离开了活动对话页，标记 left
+        if (!isActiveChatPage) {
+            sessionStorage.setItem('ai_career_task_left_' + taskId, 'true');
+        }
+        
+        const hasLeft = sessionStorage.getItem('ai_career_task_left_' + taskId) === 'true';
+        
+        // 获取客户端当前的流式处理状态
+        const isClientProcessing = window.isProcessing === true;
+        
+        // 如果客户端正在通过 SSE 流式处理此任务，完全交给 SSE 自己的完成回调控制
+        // 轮询器保持静默观察，不做任何干预
+        if (isClientProcessing) {
+            this.startPolling();
+            return;
+        }
+        
+        try {
+            const response = await fetch('/api/agent/task/detail/' + taskId);
+            if (response.status === 404) {
+                this.clearTaskFromStorage();
+                return;
+            }
+            
+            const resData = await response.json();
+            if (resData.code !== 200 || !resData.data) return;
+            
+            const task = resData.data;
+            const status = task.status;
+            
+            if (status === 'completed') {
+                this.stopPolling();
+                
+                if (!isActiveChatPage) {
+                    // 用户不在活动对话页（如 /profile 或其他对话）
+                    this.clearTaskFromStorage();
+                    if (hasLeft) {
+                        if (window.modal) {
+                            window.modal.show({
+                                title: '后台任务已完成',
+                                content: '您发起的后台分析任务已执行完成，是否立即查看结果？',
+                                type: 'confirm',
+                                onConfirm: () => {
+                                    window.location.href = '/chat?id=' + conversationId;
+                                }
+                            });
+                        } else {
+                            if (confirm('后台任务已完成，是否点击查看？')) {
+                                window.location.href = '/chat?id=' + conversationId;
+                            }
+                        }
+                    }
+                } else {
+                    // 用户在活动对话页
+                    if (typeof window.loadConversation === 'function') {
+                        this.clearTaskFromStorage();
+                        if (typeof window.setProcessingState === 'function') {
+                            window.setProcessingState(false);
+                        }
+                        console.log('[GlobalTask] 任务已完成，加载最新对话:', conversationId);
+                        window.loadConversation(conversationId);
+                    } else {
+                        // chat.js 尚未就绪，保留存储数据，等待下次轮询重试
+                        console.log('[GlobalTask] loadConversation 尚不可用，等待重试');
+                        this.startPolling();
+                    }
+                }
+            } else if (status === 'failed' || status === 'aborted') {
+                this.stopPolling();
+                this.clearTaskFromStorage();
+                
+                if (!isActiveChatPage) {
+                    if (hasLeft && window.modal) {
+                        window.modal.toast('后台任务已中止或执行失败', 'error');
+                    }
+                } else {
+                    if (typeof window.setProcessingState === 'function') {
+                        window.setProcessingState(false);
+                    }
+                    if (window.modal) {
+                        window.modal.toast('任务执行失败: ' + (task.error || '未知错误'), 'error');
+                    }
+                }
+            } else {
+                // 进行中 (pending / running)
+                this.startPolling();
+                
+                if (isActiveChatPage) {
+                    if (typeof window.restoreRunningTask === 'function') {
+                        console.log('[GlobalTask] 任务仍在运行，恢复SSE流:', taskId);
+                        window.restoreRunningTask(taskId, conversationId);
+                    } else {
+                        console.log('[GlobalTask] restoreRunningTask 尚不可用，等待重试');
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('[GlobalTask] 检查任务状态出错:', error);
+        }
+    },
+    
+    startPolling() {
+        if (this.pollInterval) return;
+        this.pollInterval = setInterval(() => this.checkTaskStatus(), 5000);
+    },
+    
+    stopPolling() {
+        if (this.pollInterval) {
+            clearInterval(this.pollInterval);
+            this.pollInterval = null;
+        }
+    },
+    
+    init() {
+        // 核心策略：在 chat 页面，不立即调用 checkTaskStatus()
+        // 原因：main.js 在 DOMContentLoaded 时先于 chat.js 的 initChatPage 执行,
+        //       如果此时立即检查，会与 initChatPage 中的 loadConversation 产生竞态,
+        //       导致加载气泡被清空、任务存储被提前清除等严重问题。
+        // 在 chat 页面，由 chat.js 的 initTaskPersistence() 在页面完全初始化后触发检查。
+        // 在非 chat 页面（如 /profile），立即检查以便弹出"任务已完成"提示。
+        const isChatPage = window.location.pathname.includes('/chat');
+        if (!isChatPage) {
+            this.checkTaskStatus();
+        }
+        
+        // visibilitychange: 页面可见性变化（切换APP、锁屏等）
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') {
+                console.log('[GlobalTask] 页面变为可见，检查任务状态');
+                this.checkTaskStatus();
+            }
+        });
+        
+        // pageshow: 从bfcache恢复时触发（手机端重要）
+        window.addEventListener('pageshow', (event) => {
+            if (event.persisted) {
+                console.log('[GlobalTask] 页面从bfcache恢复，检查任务状态');
+                this.checkTaskStatus();
+            }
+        });
+        
+        // storage: 其他标签页修改localStorage时触发
+        window.addEventListener('storage', (e) => {
+            if (e.key === this.STORAGE_KEY) {
+                this.checkTaskStatus();
+            }
+        });
+        
+        // 在线/离线状态变化
+        window.addEventListener('online', () => {
+            console.log('[GlobalTask] 网络恢复，检查任务状态');
+            this.checkTaskStatus();
+        });
+    }
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+    window.GlobalTaskManager.init();
+});

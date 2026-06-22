@@ -463,3 +463,185 @@
         grid-template-columns: 1fr;
     }
 }
+
+/* ===== 职业竞争力评估 & AI 推荐求职方向 ===== */
+.competitiveness-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+.score-ring-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+}
+
+.score-ring {
+    width: 70px;
+    height: 70px;
+    flex-shrink: 0;
+}
+
+.circular-chart {
+    display: block;
+    max-width: 100%;
+    max-height: 100%;
+}
+
+.circle-bg {
+    fill: none;
+    stroke: var(--border);
+    stroke-width: 2.8;
+}
+
+.circle {
+    fill: none;
+    stroke-width: 2.8;
+    stroke-linecap: round;
+    transition: stroke-dasharray 0.6s ease;
+}
+
+.circular-chart.blue .circle {
+    stroke: var(--primary);
+}
+
+.percentage {
+    fill: var(--text-primary);
+    font-family: var(--font-sans);
+    font-size: 0.55rem;
+    font-weight: 700;
+    text-anchor: middle;
+}
+
+.score-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.score-label {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.score-desc {
+    font-size: 0.8125rem;
+    color: var(--text-tertiary);
+    line-height: 1.4;
+}
+
+.competitiveness-details {
+    display: flex;
+    flex-direction: column;
+    gap: 0.875rem;
+}
+
+.comp-detail-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    font-size: 0.8125rem;
+}
+
+.comp-label {
+    width: 60px;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.comp-bar-wrapper {
+    flex: 1;
+    height: 6px;
+    background: var(--border);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.comp-bar {
+    height: 100%;
+    background: var(--primary);
+    border-radius: 3px;
+    transition: width 0.6s ease;
+}
+
+.comp-value {
+    width: 40px;
+    text-align: right;
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+/* 推荐方向卡片样式 */
+.recommendations-container {
+    display: flex;
+    flex-direction: column;
+    gap: 0.875rem;
+}
+
+.recommendation-card {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 1rem;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.recommendation-card:hover {
+    border-color: var(--primary);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(11, 87, 208, 0.08);
+}
+
+.recommendation-card:active {
+    transform: scale(0.98);
+}
+
+.rec-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+    gap: 8px;
+}
+
+.rec-title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.rec-tag {
+    font-size: 0.6875rem;
+    padding: 2px 8px;
+    background: rgba(11, 87, 208, 0.08);
+    color: var(--primary);
+    border-radius: 100px;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.rec-desc {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    margin-bottom: 0.75rem;
+    margin-top: 0;
+}
+
+.rec-action-link {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.25rem;
+    font-size: 0.75rem;
+    color: var(--primary);
+    font-weight: 600;
+}
+
+.rec-action-link span {
+    display: flex;
+    align-items: center;
+}

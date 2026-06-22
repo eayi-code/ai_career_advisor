@@ -40,6 +40,12 @@
         </div>
         
         <div class="sidebar-footer">
+            {% if current_user.is_admin %}
+            <a href="{{ url_for('admin.dashboard') }}" class="sidebar-link" style="color: #ea4335; font-weight: 500;">
+                <span class="material-symbols-rounded" style="color: #ea4335;">admin_panel_settings</span>
+                管理后台
+            </a>
+            {% endif %}
             <a href="{{ url_for('career.profile') }}" class="sidebar-link">
                 <span class="material-symbols-rounded">account_circle</span>
                 用户中心
@@ -323,17 +329,6 @@
             </div>
         </div>
     </main>
-</div>
-
-<!-- 浮动任务状态栏 -->
-<div id="taskStatusBar" class="task-status-bar" style="display: none;">
-    <div class="task-status-content">
-        <div class="task-status-icon">
-            <div class="task-status-spinner"></div>
-        </div>
-        <div class="task-status-text">任务正在后台执行中...</div>
-        <button class="task-status-btn" onclick="handleTaskStatusBarClick()">返回对话</button>
-    </div>
 </div>
 {% endblock %}
 

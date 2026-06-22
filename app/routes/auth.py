@@ -11,14 +11,18 @@ auth_bp = Blueprint('auth', __name__)
 @auth_bp.route('/')
 def index():
     if current_user.is_authenticated:
+        if getattr(current_user, 'is_admin', False):
+            return redirect(url_for('admin.dashboard'))
         return redirect(url_for('career.chat'))
     return render_template('index.html')
 
 
 @auth_bp.route('/register', methods=['GET', 'POST'])
-@limiter.limit(RATE_LIMITS["auth_register"])
+@limiter.limit(RATE_LIMITS["auth_register"], methods=['POST'])
 def register():
     if current_user.is_authenticated:
+        if getattr(current_user, 'is_admin', False):
+            return redirect(url_for('admin.dashboard'))
         return redirect(url_for('career.chat'))
 
     if request.method == 'POST':
@@ -63,9 +67,11 @@ def register():
 
 
 @auth_bp.route('/login', methods=['GET', 'POST'])
-@limiter.limit(RATE_LIMITS["auth_login"])
+@limiter.limit(RATE_LIMITS["auth_login"], methods=['POST'])
 def login():
     if current_user.is_authenticated:
+        if getattr(current_user, 'is_admin', False):
+            return redirect(url_for('admin.dashboard'))
         return redirect(url_for('career.chat'))
 
     if request.method == 'POST':
@@ -75,6 +81,8 @@ def login():
 
         if user and user.check_password(password):
             login_user(user)
+            if user.is_admin:
+                return redirect(url_for('admin.dashboard'))
             return redirect(url_for('career.chat'))
 
         flash('用户名或密码错误', 'danger')

@@ -430,11 +430,14 @@ class ChatService:
             if task_id in cls._aborted_tasks:
                 raise ClientDisconnectedError("Client disconnected")
             try:
-                # 立即发送到SSE队列（不阻塞）
-                task_queue.put({
-                    'type': 'step',
-                    'data': step_data
-                })
+                # 动态获取当前活动队列（可能已被 restore 替换）
+                with cls._store_lock:
+                    current_queue = cls._sse_task_queues.get(task_id)
+                if current_queue:
+                    current_queue.put({
+                        'type': 'step',
+                        'data': step_data
+                    })
                 # 收集到内存，后续批量写入
                 with _step_lock:
                     _pending_steps.append(step_data)
@@ -446,8 +449,9 @@ class ChatService:
             if task_id in cls._aborted_tasks:
                 raise ClientDisconnectedError("Client disconnected")
             with cls._store_lock:
-                if task_id in cls._sse_task_queues:
-                    task_queue.put({
+                current_queue = cls._sse_task_queues.get(task_id)
+                if current_queue:
+                    current_queue.put({
                         'type': 'content',
                         'data': {'content': token}
                     })
@@ -489,8 +493,9 @@ class ChatService:
             with app.app_context():
                 try:
                     with cls._store_lock:
-                        if task_id in cls._sse_task_queues:
-                            task_queue.put({'type': 'progress', 'message': '正在分析意图...'})
+                        current_queue = cls._sse_task_queues.get(task_id)
+                    if current_queue:
+                        current_queue.put({'type': 'progress', 'message': '正在分析意图...'})
                     
                     orch = AgentOrchestrator(
                         on_step_callback=on_step_callback,
@@ -521,19 +526,20 @@ class ChatService:
                             db.session.rollback()
                         return
  
-                    # 发送完成事件
+                    # 发送完成事件（动态获取当前活动队列，可能已被 restore 替换）
                     with cls._store_lock:
-                        if task_id in cls._sse_task_queues:
-                            if result.get("success"):
-                                task_queue.put({
-                                    'type': 'done',
-                                    'result': result
-                                })
-                            else:
-                                task_queue.put({
-                                    'type': 'error',
-                                    'error': result.get('error', '执行失败')
-                                })
+                        current_queue = cls._sse_task_queues.get(task_id)
+                    if current_queue:
+                        if result.get("success"):
+                            current_queue.put({
+                                'type': 'done',
+                                'result': result
+                            })
+                        else:
+                            current_queue.put({
+                                'type': 'error',
+                                'error': result.get('error', '执行失败')
+                            })
                     
                     # 刷新剩余步骤到数据库
                     _flush_steps_to_db()
@@ -645,14 +651,15 @@ class ChatService:
                         db.session.rollback()
                     
                     with cls._store_lock:
-                        if task_id in cls._sse_task_queues:
-                            try:
-                                task_queue.put({
-                                    'type': 'error',
-                                    'error': str(e)
-                                })
-                            except Exception:
-                                pass
+                        current_queue = cls._sse_task_queues.get(task_id)
+                    if current_queue:
+                        try:
+                            current_queue.put({
+                                'type': 'error',
+                                'error': str(e)
+                            })
+                        except Exception:
+                            pass
         
         # 启动后台线程
         thread = threading.Thread(target=run_agent, daemon=True)
@@ -718,8 +725,31 @@ class ChatService:
                     if task.progress:
                         for step in task.progress:
                             yield f"event: step\ndata: {json.dumps(step)}\n\n"
-                    # 发送完成结果（即使result为空也发送done事件）
-                    yield f"event: done\ndata: {json.dumps(task.result or {})}\n\n"
+                    # 发送完成结果（确保result格式正确）
+                    result_data = task.result or {}
+                    # 如果result为空，尝试从对话历史中获取最后一条助手消息
+                    if not result_data.get('output'):
+                        try:
+                            history = AnalysisHistory.query.filter_by(
+                                conversation_id=task.conversation_id,
+                                user_id=user_id
+                            ).first()
+                            if history and history.messages:
+                                last_assistant = next(
+                                    (msg for msg in reversed(history.messages) if msg.get('role') == 'assistant'),
+                                    None
+                                )
+                                if last_assistant:
+                                    result_data = {
+                                        'output': last_assistant.get('content', ''),
+                                        'agent_used': last_assistant.get('agent', ''),
+                                        'steps': last_assistant.get('execution_steps', []),
+                                        'intermediate_steps': last_assistant.get('steps', []),
+                                        'success': True
+                                    }
+                        except Exception as e:
+                            print(f"[Task] 从对话历史获取结果失败: {e}")
+                    yield f"event: done\ndata: {json.dumps(result_data)}\n\n"
                 return generate, task_id
             
             elif task.status in ['pending', 'running']:

@@ -328,6 +328,8 @@ async function loadProfileCompletion() {
         
         if (data.code === 200) {
             const completion = data.data.completion;
+            
+            // 1. 原有的档案完善度（顶部小环）
             const completionText = document.getElementById('completionText');
             const completionCircle = document.getElementById('completionCircle');
             
@@ -337,14 +339,72 @@ async function loadProfileCompletion() {
             if (completionCircle) {
                 const circumference = 2 * Math.PI * 42;
                 const dashArray = (completion / 100) * circumference;
-                // 用setTimeout轻微延迟，确保初始动画触发
                 setTimeout(() => {
                     completionCircle.style.strokeDasharray = `${dashArray} ${circumference}`;
                 }, 50);
             }
+            
+            // 2. 新增的职业竞争力评估卡片（中环）
+            const profileDetails = calculateCompleteness();
+            const skillCount = profileDetails.skillCount;
+            const projectCount = profileDetails.projectCount;
+            
+            const skillScore = skillCount > 0 ? Math.min(100, skillCount * 15 + 25) : 0;
+            const projectScore = projectCount > 0 ? Math.min(100, projectCount * 40 + 20) : 0;
+            const aiCompetitiveness = Math.round((completion * 0.4) + (skillScore * 0.3) + (projectScore * 0.3));
+            
+            const completenessCircle = document.getElementById('completenessCircle');
+            const completenessText = document.getElementById('completenessText');
+            const completenessDesc = document.getElementById('completenessDesc');
+            
+            if (completenessText) {
+                animateNumber(completenessText, 0, aiCompetitiveness, 1200);
+            }
+            if (completenessCircle) {
+                setTimeout(() => {
+                    completenessCircle.setAttribute('stroke-dasharray', `${aiCompetitiveness}, 100`);
+                }, 50);
+            }
+            
+            if (completenessDesc) {
+                if (aiCompetitiveness >= 90) {
+                    completenessDesc.textContent = "竞争力极高！您的技能与经历非常丰富";
+                } else if (aiCompetitiveness >= 65) {
+                    completenessDesc.textContent = "竞争力良好，补齐项目经历将更具优势";
+                } else {
+                    completenessDesc.textContent = "竞争力一般，完善档案以获得精确评估";
+                }
+            }
+            
+            // 动画更新详情进度条
+            const skillThicknessBar = document.getElementById('skillThicknessBar');
+            const skillThicknessVal = document.getElementById('skillThicknessVal');
+            const projectExpBar = document.getElementById('projectExpBar');
+            const projectExpVal = document.getElementById('projectExpVal');
+            
+            if (skillThicknessBar) {
+                setTimeout(() => {
+                    skillThicknessBar.style.width = `${skillScore}%`;
+                }, 100);
+            }
+            if (skillThicknessVal) {
+                skillThicknessVal.textContent = `${skillScore}%`;
+            }
+            
+            if (projectExpBar) {
+                setTimeout(() => {
+                    projectExpBar.style.width = `${projectScore}%`;
+                }, 150);
+            }
+            if (projectExpVal) {
+                projectExpVal.textContent = `${projectScore}%`;
+            }
+            
+            // 3. 同时触发 AI 推荐求职方向加载
+            loadAIRecommendations();
         }
     } catch (e) {
-        console.error('加载档案完善度失败:', e);
+        console.error('加载档案完善度与竞争力评估失败:', e);
     }
 }
 
@@ -573,4 +633,166 @@ async function saveProfile(e) {
     } catch (err) {
         modal.toast('请求失败，请重试', 'error');
     }
+}
+
+// ==================== 职业竞争力计算与 AI 推荐方向 ====================
+
+function calculateCompleteness() {
+    const form = document.querySelector('.profile-form');
+    if (!form) return { score: 0, skillCount: 0, projectCount: 0, targetJob: '', skillsList: [], currentJob: '' };
+    
+    let filledFields = 0;
+    
+    const education = form.querySelector('[name="education"]')?.value;
+    const major = form.querySelector('[name="major"]')?.value?.trim();
+    const workExperience = form.querySelector('[name="work_experience"]')?.value;
+    const currentJob = form.querySelector('[name="current_job_title"]')?.value?.trim();
+    const skills = form.querySelector('[name="skills"]')?.value?.trim();
+    const targetJob = form.querySelector('[name="target_job_title"]')?.value?.trim();
+    const targetIndustry = form.querySelector('[name="target_industry"]')?.value?.trim();
+    const salaryMin = form.querySelector('[name="target_salary_min"]')?.value;
+    const salaryMax = form.querySelector('[name="target_salary_max"]')?.value;
+    const location = form.querySelector('[name="location_preference"]')?.value?.trim();
+    
+    if (education) filledFields += 1;
+    if (major) filledFields += 1;
+    if (workExperience && parseInt(workExperience) > 0) filledFields += 1;
+    if (currentJob) filledFields += 1;
+    if (skills) filledFields += 2;
+    if (targetJob) filledFields += 1;
+    if (targetIndustry) filledFields += 1;
+    if (salaryMin || salaryMax) filledFields += 1;
+    if (location) filledFields += 1;
+    
+    const score = Math.round((filledFields / 10) * 100);
+    const skillList = skills ? skills.split(',').map(s => s.trim()).filter(Boolean) : [];
+    const skillCount = skillList.length;
+    
+    const projectNames = form.querySelectorAll('[name="project_name[]"]');
+    let projectCount = 0;
+    projectNames.forEach(p => {
+        if (p.value?.trim()) projectCount++;
+    });
+    
+    return { score, skillCount, projectCount, targetJob, skillsList: skillList, currentJob };
+}
+
+function generateAIRecommendations(currentJob, targetJob, skillsList) {
+    let recommendations = [];
+    
+    currentJob = (currentJob || '').toLowerCase();
+    targetJob = (targetJob || '').toLowerCase();
+    const skillsStr = skillsList.join(',').toLowerCase();
+    
+    if (skillsStr.includes('python') || skillsStr.includes('django') || skillsStr.includes('flask') || currentJob.includes('python')) {
+        recommendations.push({
+            title: 'AI 智能体研发专家 (Agent Developer)',
+            tag: '结合 Python 技能',
+            desc: '利用 LangChain、Dify 等开发智能体应用，当前年薪涨幅极高。',
+            q: '我想了解如果我想转型成为 AI 智能体开发专家 (Agent Developer)，结合我已有的 Python 技能，我应该如何规划学习路径？'
+        });
+        recommendations.push({
+            title: '大模型应用工程专家 (LLM Engineer)',
+            tag: '大模型热门方向',
+            desc: '负责企业大模型微调与 RAG 知识库检索系统搭建。',
+            q: '作为一个有 Python 经验的开发者，如何入门大模型应用开发 (LLM Engineer) 并参与企业级 RAG 知识库搭建？'
+        });
+        recommendations.push({
+            title: '数据分析与数据挖掘专家',
+            tag: '跨界转型方向',
+            desc: '利用 Pandas、numpy 进行行业数据分析与商业预测，适合技术转数据分析。',
+            q: '我想利用我已有的 Python 编程背景转型做数据分析师，需要补充哪些统计学和商业知识？'
+        });
+    } else if (skillsStr.includes('javascript') || skillsStr.includes('react') || skillsStr.includes('vue') || currentJob.includes('前端') || currentJob.includes('web')) {
+        recommendations.push({
+            title: '全栈开发工程师 (Full Stack Dev)',
+            tag: '技术栈扩展推荐',
+            desc: '从前端延伸到 Node.js 或 Python 后端开发，实现独立全栈交付。',
+            q: '作为一个前端开发者，如何制定转型全栈开发工程师的成长路径，需要补充哪些后端知识？'
+        });
+        recommendations.push({
+            title: '低代码/无代码解决方案专家',
+            tag: '企业数字化方向',
+            desc: '负责企业业务系统的高效低代码搭建与交互优化，当前市场需求大。',
+            q: '我想了解低代码/无代码平台解决方案专家这个方向的发展前景，以及我作为前端开发如何切入？'
+        });
+        recommendations.push({
+            title: 'AI 辅助前端工程专家',
+            tag: '前沿效率方向',
+            desc: '结合 AI 工具重构前端工作流，负责前端体验与交互智能化。',
+            q: '前端开发如何结合 AI 工具（如 v0, cursor）进行智能化转型，提升个人在市场上的竞争力？'
+        });
+    } else if (currentJob.includes('产品') || currentJob.includes('运营') || currentJob.includes('市场') || targetJob.includes('产品')) {
+        recommendations.push({
+            title: 'AI 产品经理 (AIGC 方向)',
+            tag: '热门转型推荐',
+            desc: '负责将大模型技术与具体行业场景结合，进行产品功能定义与落地。',
+            q: '非技术背景的产品或运营人员，如何转型成为 AI 产品经理，需要学习哪些技术概念？'
+        });
+        recommendations.push({
+            title: '数据运营与分析专家',
+            tag: '高薪成长方向',
+            desc: '利用数据驱动业务决策，掌握 SQL 与可视化工具。',
+            q: '运营人员想要转型数据分析与数据运营方向，应该如何起步，学习路径是怎样的？'
+        });
+        recommendations.push({
+            title: '数字化转型咨询专家',
+            tag: '行业复合推荐',
+            desc: '为传统企业规划数字化建设，结合行业经验与低代码/AI 方案。',
+            q: '我想了解数字化转型咨询专家这个职位的日常工作，以及需要具备什么样的核心竞争力？'
+        });
+    } else {
+        recommendations.push({
+            title: 'AIGC 提示词工程师 (Prompt Engineer)',
+            tag: 'AI 零基础热门',
+            desc: '通过撰写与优化提示词，帮助企业提升日常业务流效率与产出。',
+            q: '请为我介绍 AIGC 提示词工程师这一新兴职业，没有编程基础如何入手学习？'
+        });
+        recommendations.push({
+            title: '数字化效率增长专家',
+            tag: '通用技术应用',
+            desc: '使用 Notion、Zapier 及大模型等工具，帮助中小企业构建自动化流程。',
+            q: '数字化效率增长专家是一个怎样的方向，如何利用自动化工具和 AI 提升企业工作流效率？'
+        });
+        recommendations.push({
+            title: '自由职业全栈数字创造者',
+            tag: '灵活就业推荐',
+            desc: '独立开发微型 SaaS 或数字化小工具，进行个人商业化变现。',
+            q: '对于想要成为独立全栈数字创造者（Indie Hacker）的人，有什么好的起步建议 and 变现思路？'
+        });
+    }
+    
+    return recommendations.slice(0, 3);
+}
+
+function loadAIRecommendations() {
+    const container = document.getElementById('aiRecommendations');
+    if (!container) return;
+    
+    const profileDetails = calculateCompleteness();
+    const currentJob = profileDetails.currentJob;
+    const targetJob = profileDetails.targetJob;
+    const skillsList = profileDetails.skillsList;
+    
+    const recs = generateAIRecommendations(currentJob, targetJob, skillsList);
+    
+    let html = '';
+    recs.forEach(rec => {
+        const queryUrl = `/chat?q=${encodeURIComponent(rec.q)}`;
+        html += `
+            <div class="recommendation-card" onclick="location.href='${queryUrl}'">
+                <div class="rec-card-header">
+                    <span class="rec-title">${rec.title}</span>
+                    <span class="rec-tag">${rec.tag}</span>
+                </div>
+                <p class="rec-desc">${rec.desc}</p>
+                <div class="rec-action-link">
+                    <span>咨询 AI 规划路径</span>
+                    <span class="material-symbols-rounded" style="font-size: 14px; margin-left: 2px;">chevron_right</span>
+                </div>
+            </div>
+        `;
+    });
+    
+    container.innerHTML = html;
 }

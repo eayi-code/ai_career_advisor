@@ -2398,8 +2398,97 @@ sudo docker exec ai_career_advisor-db-1 mysqldump -u root -p career_advisor > ba
 | `app/static/css/modal.css` | +54行，弹窗/Toast移动端适配 |
 | `app/static/css/chat.css` | -9行，删除损坏的glowGold代码 |
 | `app/templates/base.html` | CSS版本号统一到v=1.0.4 |
-| `app/templates/career/profile.html` | 薪资容器class化+基础样式 |
 | `app/templates/index.html` | 落地页hero标题收紧+间距优化 |
 | `app/config.py` | SSL证书自动检测修复 |
 | `app/agents/orchestrator.py` | 意图识别优化+并行执行优化+Prompt精简 |
 | `app/static/js/chat.js` | 移除内联推理时间线，简化加载状态 |
+
+---
+
+## 二十四、用户中心重构与交互体验优化
+
+### 2026-06-21 界面交互打磨与用户中心卡片优化重构
+
+**目标**：提升移动端与桌面端的界面交互体验，重构个人中心（`/profile`）页面，移除冗余的展示卡片，并替换为高保真、AI驱动的竞争力评估与一键智能体对话。
+
+#### 24.1 主要优化与修复（3项）
+
+1. **后台任务完成时全局弹窗提示**
+   - **优化原因**：在之前的版本中，如果用户在执行长耗时的后台分析任务时停留在当前页面，会一直显示底部的浮窗；如果用户切换至其他页面，就很难知道任务是否已经完成，且浮窗本身比较占地方。
+   - **优化方案**：彻底移除底部的浮动任务状态栏（`#taskStatusBar`）。在 `main.js` 中新增全局任务管理器 `window.GlobalTaskManager`。如果在任务执行期间用户切换到了其他页面（如个人中心），任务完成后会自动弹出确认窗口 `modal.show` 提示：“后台任务已完成，是否立即查看结果？”。若确认则自动跳转并渲染对话详情页；若用户在当前对话页则不弹窗干扰，直接通过流式进行渐进式内容输出。
+2. **手机端左侧加号与文件上传功能修复**
+   - **问题原因**：在 `chat.css` 中，`.mobile-plus-btn` 和 `.mobile-plus-menu` 使用了 `display: none !important;` 在桌面端进行隐藏。然而在移动端样式 `mobile.css` 中，虽然覆盖了显示，但没有加 `!important`，导致即使在移动端，隐藏的指令依然生效，无法显示和折叠菜单。
+   - **修复措施**：修改 `app/static/css/mobile.css`，在媒体查询中将加号按钮显示样式修改为 `display: flex !important;`，将弹出菜单修改为 `display: block !important;`。移动端可以正常展开带有“上传文件”和“切换智能体”的底栏菜单，并能流畅唤起本地文件系统上传简历。
+3. **个人中心（`/profile`）卡片优化与重构**
+   - **优化原因**：原有的“决策锚点”卡片与职业档案表单字段高度重合，且“决策里程碑”卡片与侧边栏历史记录重复。移除这两张冗余卡片，可使页面布局更加清爽且功能聚焦。
+   - **优化方案**：
+     - 重构后仪表盘网格展示 4 个核心卡片：**技能标签 (Skill Tags)**、**职业竞争力评估 (AI Career Competitiveness)**、**AI 推荐求职方向 (AI Recommended Directions)**、**建议行动 (Recommended Actions)**。
+     - **职业竞争力评估**：动态读取档案基本信息（学历、专业、工作年限、当前职位），配合前端 `calculateCompleteness()` 算法，结合“档案完善度 (40%)”、“技能储备健全度 (30%)”、“项目经历丰富度 (30%)”这三个维度，通过 SVG 环形进度条和水平进度条实时动态渲染出综合 **AI 竞争力得分** 并加载相关诊断建议。
+     - **AI 推荐求职方向**：前端启发式算法根据填写的当前岗位、意图岗位和技能，动态推荐 3 个匹配的转型方向。
+     - **一键快捷咨询**：点击“咨询 AI”链接时，直接携带预置的岗位提问 query 参数跳转到 `/chat?q=...`，由 `chat.js` 在页面加载时自动预填输入框并发送消息给 AI，完成了用户中心到 AI 聊天界面的无缝闭环。
+
+#### 24.2 提交记录与修改文件
+
+**相关文件**：
+
+| 文件 | 修改内容 |
+|------|----------|
+| `app/templates/career/profile.html` | 移除冗余的决策锚点/决策里程碑卡片，新增“职业竞争力评估”圆环SVG与进度条容器，新增“AI推荐求职方向”容器 |
+| `app/static/css/profile.css` | 追加环形百分比圈（`.circular-chart`）、详情百分比进度条（`.comp-bar`）以及推荐卡片（`.recommendation-card`）的交互悬浮动效 |
+| `app/static/js/profile.js` | 新增 `calculateCompleteness()`、`generateAIRecommendations()` 并在页面载入时执行；更新 `loadProfileCompletion()` 实现数值与进度条的动态加载动画 |
+| `app/static/js/main.js` | 移除底栏任务栏交互逻辑，重构 `window.GlobalTaskManager`，实现跨界面任务完成时的 `modal.show` 全局确认弹窗 |
+| `app/static/css/mobile.css` | 在移动端媒体查询区块为 `.mobile-plus-btn` 和 `.mobile-plus-menu` 添加 `!important` 覆盖规则，修复手机端加号按钮与折叠菜单不显示的问题 |
+| `app/static/js/chat.js` | 优化 `/chat?q=...` 自动消息（`autoMessage`）处理流程，发送后立即清空 URL 中的 query 参数以避免返回或刷新页面时重复触发发送 |
+
+---
+
+## 二十五、专业级管理员后台与数据看板开发
+
+### 2026-06-22 管理员后台控制台、安全路由与多维度可视化数据看板
+
+**目标**：构建一个专业、安全、高级简约且易于操作的管理员后台界面。该控制台提供全面的数据看板（包含用户增长趋势、AI 智能体调用占比、系统活跃指标、后台队列任务分析等），并具备严格的安全防范，确保非管理员无法越权访问。
+
+#### 25.1 主要改动与技术设计（5项）
+
+1. **数据库结构平滑升级与默认管理员播种**
+   - **数据库修改**：在 `User` 模型（`user.py`）中新增 `is_admin` 权限布尔值字段（默认为 `False`）。
+   - **缺失表补齐**：生成并应用了数据库迁移脚本（`1f232d078660_add_agent_tasks.py`），为数据库成功补齐了原本缺失的 `agent_tasks`（任务状态表）及多个关联性能索引，使并发任务分析能正常运转。
+   - **默认管理员创建**：新建初始化脚本 `scripts/setup_admin.py`，用于向 MySQL `users` 表追加 `is_admin` 字段并安全创建系统首个管理员账号：
+     - 用户名: `admin` | 密码: `admin123456` | 邮箱: `admin@career.ai`
+
+2. **安全隔离装饰器与接口保护**
+   - **安全过滤器**：在 `app/routes/admin.py` 中实现了 `@admin_required` 权限装饰器：
+     - 若为非管理员用户的普通页面访问，直接返回 `403 Forbidden`。
+     - 若为非管理员用户的 API 端点请求，直接返回规范的 403 错误 JSON 响应，确保数据的机密性与安全防范。
+   - **登录自动分流**：修改了登录端点（`auth.py`）。用户成功登录后，系统会自动判断其 `is_admin` 标识，管理员将被直接跳转重定向至后台管理主页 `/admin/dashboard`；普通用户则无感重定向至 `/chat` 对话页面。
+
+3. **前端入口动态整合**
+   - 分别修改了对话页面（`chat.html`）与个人中心页面（`profile.html`）的侧边栏底部。若当前登录用户具备管理员权限，系统会自动注入醒目的红色高亮 **“管理后台”** 按钮链接，以便管理员前后台无缝穿梭。
+
+4. **高级简约的可视化管理后台**
+   - **核心 KPI 卡片区**：采用现代网格布局（Grid）与毛玻璃微阴影卡片设计，实时统计注册用户总数（含今日新增）、AI 分析总数（含今日新增）、并发活跃任务数与系统异常失败数。
+   - **双轴折线趋势图**：引入 Chart.js，渲染近 7 日每日新增用户与 AI 分析请求量的联合变化趋势折线。
+   - **智能体调用占比图**：使用环形图（Doughnut）清晰直观地统计各个 AI 智能体（职业规划顾问、简历修改顾问、副业分析师、技能分析师）被触发的使用分布占比。
+   - **异步 Fetch 账户控制**：管理员能一键拉黑/启用指定账户，或升级/降级管理员权限。
+   - **防管理员锁死机制**：在修改状态和权限的后端接口中加入了防御性硬性验证——禁止当前登录的管理员禁用自己或撤销自己的管理员身份。
+   - **毫秒级即时过滤**：前端输入任意用户名或邮箱，可毫秒级实时过滤用户列表，极具响应速度。
+
+5. **单元测试环境的完全隔离**
+   - **问题原因**：旧的测试配置直接通过 `app.config.update` 覆盖 URI，导致 Flask-SQLAlchemy 在初始化缓存后未重建引擎，使测试实际上在真实的 MySQL 数据库上运行，并在测试后执行了 `db.drop_all()` 擦除了所有的 MySQL 业务数据表。
+   - **修复措施**：改造 `app/__init__.py` 支持 `test_config` 传参，在 `db.init_app` 被执行前即完成测试参数覆盖。并在 `tests/test_admin.py` 中通过 `SQLALCHEMY_ENGINE_OPTIONS = {}` 清空连接池参数。目前所有 pytest 测试（14/14）成功通过，且测试数据被完美沙箱隔离在 SQLite 内存数据库中，彻底排除了擦除开发库的隐患。
+
+#### 25.2 修改与创建文件列表
+
+| 文件 | 修改内容 |
+|------|----------|
+| `app/models/user.py` [MODIFY] | 新增 `is_admin = db.Column(db.Boolean, default=False)` 字段 |
+| `app/routes/admin.py` [NEW] | 包含权限限制装饰器 `@admin_required`、控制台页面路由、统计指标聚合 API、用户状态及权限更改 API |
+| `app/__init__.py` [MODIFY] | 支持 `test_config` 参数，在全局实例注入前先覆盖配置；注册 `admin_bp` 蓝图 |
+| `app/routes/auth.py` [MODIFY] | 优化登录/主页/注册逻辑，增加管理员账号的定向自动重定向与越权防范 |
+| `app/templates/career/chat.html` [MODIFY] | 侧边栏底部根据 `current_user.is_admin` 动态注入“管理后台”入口 |
+| `app/templates/career/profile.html` [MODIFY] | 个人中心同步动态注入“管理后台”入口 |
+| `app/templates/dashboard/dashboard.html` [NEW] | 高级简约的管理页面，包含 Chart.js 容器、即时筛选用户表格、近期分析日志和 Toast 通信反馈 |
+| `app/static/css/admin.css` [NEW] | 编写控制台侧边栏、KPI卡片、微表情徽章、交互按钮等样式，确保前后台样式不污染且设计高度一致 |
+| `scripts/setup_admin.py` [NEW] | 数据库迁移辅助脚本，完成 MySQL 中 `is_admin` 的平滑升级并播种系统首个管理员账号 |
+| `tests/test_admin.py` [NEW] | 单元测试，覆盖匿名阻断、越权403、管理员登录重定向与自锁死防护等验证 |
+

@@ -523,7 +523,7 @@
         color: var(--m-text-secondary);
         cursor: pointer;
         flex-shrink: 0;
-        display: flex;
+        display: flex !important;
         align-items: center;
         justify-content: center;
         transition: background 0.15s, transform 0.1s;
@@ -623,7 +623,7 @@
     }
 
     .mobile-plus-menu.show {
-        display: block;
+        display: block !important;
     }
 
     @keyframes menuUp {

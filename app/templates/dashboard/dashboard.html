@@ -1,0 +1,652 @@
+{% extends "base.html" %}
+{% block title %}管理员后台控制台 - CareerAI{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+<style>
+    /* 补充辅助样式 */
+    .search-input-wrapper {
+        position: relative;
+        display: flex;
+        align-items: center;
+    }
+    
+    .search-input-wrapper .material-symbols-rounded {
+        position: absolute;
+        left: 12px;
+        color: var(--text-secondary);
+        font-size: 20px;
+        pointer-events: none;
+    }
+    
+    .search-input {
+        padding: 8px 12px 8px 40px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        font-size: 13px;
+        width: 240px;
+        outline: none;
+        transition: all var(--transition-fast);
+    }
+    
+    .search-input:focus {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px rgba(11, 87, 208, 0.1);
+    }
+    
+    .section-nav-link {
+        cursor: pointer;
+    }
+    
+    .admin-nav-item {
+        cursor: pointer;
+        border: none;
+        background: transparent;
+        width: 100%;
+        text-align: left;
+    }
+</style>
+{% endblock %}
+
+{% block body %}
+<div class="admin-layout">
+    <!-- 侧边栏 -->
+    <aside class="admin-sidebar" id="adminSidebar">
+        <div class="admin-logo-section">
+            <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M6 26C6 26 12 16 20 16" stroke="#4285f4" stroke-width="3" stroke-linecap="round" />
+                <path d="M20 16H25V11" stroke="#34a853" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+                <path d="M25 6C25 7.10457 24.1046 8 23 8C24.1046 8 25 8.89543 25 10C25 8.89543 25.8954 8 27 8C25.8954 8 25 7.10457 25 6Z" fill="#fbbc05" />
+                <path d="M6 26H25" stroke="#ea4335" stroke-width="3" stroke-linecap="round" />
+            </svg>
+            <span class="admin-logo-text">CareerAI</span>
+            <span class="admin-logo-badge">Admin</span>
+        </div>
+        
+        <nav class="admin-nav">
+            <button class="admin-nav-item active" onclick="switchSection('dashboard-section', this)">
+                <span class="material-symbols-rounded">dashboard</span>
+                数据看板
+            </button>
+            <button class="admin-nav-item" onclick="switchSection('users-section', this)">
+                <span class="material-symbols-rounded">group</span>
+                用户管理
+            </button>
+            <button class="admin-nav-item" onclick="switchSection('logs-section', this)">
+                <span class="material-symbols-rounded">history</span>
+                分析日志
+            </button>
+            <a href="{{ url_for('career.chat') }}" class="admin-nav-item" style="text-decoration: none; margin-top: auto;">
+                <span class="material-symbols-rounded">forum</span>
+                返回聊天前台
+            </a>
+        </nav>
+        
+        <div class="admin-sidebar-footer">
+            <form method="POST" action="{{ url_for('auth.logout') }}" style="margin: 0;">
+                <button type="submit" class="admin-nav-item logout-btn">
+                    <span class="material-symbols-rounded">logout</span>
+                    退出登录
+                </button>
+            </form>
+        </div>
+    </aside>
+
+    <!-- 主体区域 -->
+    <main class="admin-main">
+        <!-- 顶部操作栏 -->
+        <header class="admin-header">
+            <div class="admin-header-left">
+                <h1 id="pageTitle">数据面板</h1>
+            </div>
+            
+            <div class="admin-header-right">
+                <div class="system-status-indicator">
+                    <div class="status-dot"></div>
+                    <span>系统状态正常</span>
+                </div>
+                <div class="admin-profile">
+                    <div class="admin-avatar">
+                        {{ current_user.username[0] | upper if current_user.username else 'A' }}
+                    </div>
+                    <span>{{ current_user.username }}</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- 管理员内容 -->
+        <div class="admin-content">
+            <!-- 1. 数据看板部分 -->
+            <div id="dashboard-section" class="admin-view-section">
+                <!-- KPI 指标区 -->
+                <div class="kpi-grid">
+                    <div class="kpi-card">
+                        <div class="kpi-info">
+                            <span class="kpi-title">注册用户总数</span>
+                            <span class="kpi-value" id="kpi-total-users">-</span>
+                            <span class="kpi-subtext">
+                                今日新增: <span class="trend-up" id="kpi-users-today">+0</span>
+                            </span>
+                        </div>
+                        <div class="kpi-icon-wrapper">
+                            <span class="material-symbols-rounded">group</span>
+                        </div>
+                    </div>
+                    
+                    <div class="kpi-card">
+                        <div class="kpi-info">
+                            <span class="kpi-title">AI 分析总次数</span>
+                            <span class="kpi-value" id="kpi-total-analyses">-</span>
+                            <span class="kpi-subtext">
+                                今日完成: <span class="trend-up" id="kpi-analyses-today">+0</span>
+                            </span>
+                        </div>
+                        <div class="kpi-icon-wrapper">
+                            <span class="material-symbols-rounded">analytics</span>
+                        </div>
+                    </div>
+                    
+                    <div class="kpi-card">
+                        <div class="kpi-info">
+                            <span class="kpi-title">当前活跃任务</span>
+                            <span class="kpi-value" id="kpi-active-tasks">-</span>
+                            <span class="kpi-subtext">后台 AI 运行状态</span>
+                        </div>
+                        <div class="kpi-icon-wrapper">
+                            <span class="material-symbols-rounded">rotate_right</span>
+                        </div>
+                    </div>
+                    
+                    <div class="kpi-card">
+                        <div class="kpi-info">
+                            <span class="kpi-title">系统失败任务</span>
+                            <span class="kpi-value" id="kpi-failed-tasks">-</span>
+                            <span class="kpi-subtext">异常终止数</span>
+                        </div>
+                        <div class="kpi-icon-wrapper">
+                            <span class="material-symbols-rounded">error_med</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 图表展示区 -->
+                <div class="charts-grid" style="margin-top: 24px;">
+                    <div class="chart-card">
+                        <div class="chart-card-header">
+                            <span class="chart-card-title">系统活跃趋势（近7日）</span>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="trendChart"></canvas>
+                        </div>
+                    </div>
+                    
+                    <div class="chart-card">
+                        <div class="chart-card-header">
+                            <span class="chart-card-title">AI 智能体调用占比</span>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="agentChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. 用户管理部分 -->
+            <div id="users-section" class="admin-view-section" style="display: none;">
+                <div class="data-card">
+                    <div class="data-card-header">
+                        <span class="data-card-title">注册用户列表</span>
+                        <div class="search-input-wrapper">
+                            <span class="material-symbols-rounded">search</span>
+                            <input type="text" class="search-input" id="userSearch" placeholder="搜索用户名、邮箱..." oninput="filterUsersTable()">
+                        </div>
+                    </div>
+                    <div class="data-table-wrapper">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>用户</th>
+                                    <th>注册日期</th>
+                                    <th>角色</th>
+                                    <th>账号状态</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="usersTableBody">
+                                <tr>
+                                    <td colspan="5" style="text-align: center; padding: 40px; color: var(--text-secondary);">
+                                        正在加载数据...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. 分析日志部分 -->
+            <div id="logs-section" class="admin-view-section" style="display: none;">
+                <div class="data-card">
+                    <div class="data-card-header">
+                        <span class="data-card-title">最近 AI 分析历史日志</span>
+                    </div>
+                    <div class="data-table-wrapper">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>用户</th>
+                                    <th>对话主题</th>
+                                    <th>调用智能体</th>
+                                    <th>分析类型</th>
+                                    <th>生成时间</th>
+                                </tr>
+                            </thead>
+                            <tbody id="analysesTableBody">
+                                <tr>
+                                    <td colspan="5" style="text-align: center; padding: 40px; color: var(--text-secondary);">
+                                        正在加载数据...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<!-- 全局提示框 -->
+<div class="admin-toast" id="adminToast">
+    <span class="material-symbols-rounded" style="color: #4caf50;">check_circle</span>
+    <span id="toastMessage">操作成功</span>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // 全局变量保存统计数据
+    let statsData = null;
+    let trendChartObj = null;
+    let agentChartObj = null;
+
+    // 页面加载完成后加载数据
+    document.addEventListener("DOMContentLoaded", () => {
+        loadDashboardStats();
+    });
+
+    // 获取并渲染后台数据
+    async function loadDashboardStats() {
+        try {
+            const response = await fetch('/admin/api/stats');
+            const data = await response.json();
+            
+            if (!data.success) {
+                showToast(data.message || '加载统计数据失败', true);
+                return;
+            }
+            
+            statsData = data;
+            
+            // 1. 填充 KPI 数据
+            document.getElementById('kpi-total-users').innerText = data.kpis.total_users;
+            document.getElementById('kpi-users-today').innerText = '+' + data.kpis.users_today;
+            document.getElementById('kpi-total-analyses').innerText = data.kpis.total_analyses;
+            document.getElementById('kpi-analyses-today').innerText = '+' + data.kpis.analyses_today;
+            document.getElementById('kpi-active-tasks').innerText = data.kpis.active_tasks;
+            document.getElementById('kpi-failed-tasks').innerText = data.kpis.failed_tasks;
+            
+            // 2. 渲染图表
+            renderTrendChart(data.trends);
+            renderAgentChart(data.agent_distribution);
+            
+            // 3. 渲染用户表格与分析表格
+            renderUsersTable(data.recent_users);
+            renderAnalysesTable(data.recent_analyses);
+            
+        } catch (error) {
+            console.error("Error loading stats:", error);
+            showToast('无法连接后台服务，请稍后重试', true);
+        }
+    }
+
+    // 渲染近7日活跃趋势
+    function renderTrendChart(trends) {
+        const ctx = document.getElementById('trendChart').getContext('2d');
+        if (trendChartObj) {
+            trendChartObj.destroy();
+        }
+        
+        trendChartObj = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: trends.labels,
+                datasets: [
+                    {
+                        label: '新增用户数',
+                        data: trends.user_growth,
+                        borderColor: '#0b57d0',
+                        backgroundColor: 'rgba(11, 87, 208, 0.04)',
+                        borderWidth: 2,
+                        tension: 0.3,
+                        fill: true,
+                        yAxisID: 'y'
+                    },
+                    {
+                        label: 'AI 分析量',
+                        data: trends.analysis_volume,
+                        borderColor: '#10b981',
+                        backgroundColor: 'transparent',
+                        borderWidth: 2,
+                        tension: 0.3,
+                        yAxisID: 'y1'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                        labels: {
+                            font: { family: 'Plus Jakarta Sans', size: 12 }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: { display: false }
+                    },
+                    y: {
+                        type: 'linear',
+                        display: true,
+                        position: 'left',
+                        title: { display: true, text: '用户增长' },
+                        grid: { borderDash: [5, 5] }
+                    },
+                    y1: {
+                        type: 'linear',
+                        display: true,
+                        position: 'right',
+                        title: { display: true, text: '分析量' },
+                        grid: { drawOnChartArea: false }
+                    }
+                }
+            }
+        });
+    }
+
+    // 渲染智能体使用比例环形图
+    function renderAgentChart(agentDist) {
+        const ctx = document.getElementById('agentChart').getContext('2d');
+        if (agentChartObj) {
+            agentChartObj.destroy();
+        }
+        
+        const labels = Object.keys(agentDist);
+        const data = Object.values(agentDist);
+        
+        // 若无数据则展示占位符
+        if (labels.length === 0) {
+            labels.push('暂无调用数据');
+            data.push(1);
+        }
+
+        agentChartObj = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: data,
+                    backgroundColor: [
+                        '#0b57d0', // 蓝
+                        '#10b981', // 绿
+                        '#f59e0b', // 黄
+                        '#8b5cf6', // 紫
+                        '#ec4899'  // 粉
+                    ],
+                    borderWidth: 2,
+                    hoverOffset: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            boxWidth: 12,
+                            padding: 15,
+                            font: { family: 'Plus Jakarta Sans', size: 12 }
+                        }
+                    }
+                },
+                cutout: '65%'
+            }
+        });
+    }
+
+    // 渲染用户管理表格
+    function renderUsersTable(users) {
+        const tbody = document.getElementById('usersTableBody');
+        tbody.innerHTML = '';
+        
+        if (users.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-secondary);">暂无用户记录</td></tr>`;
+            return;
+        }
+        
+        users.forEach(u => {
+            const tr = document.createElement('tr');
+            tr.className = 'user-row';
+            tr.dataset.username = u.username.toLowerCase();
+            tr.dataset.email = u.email.toLowerCase();
+            
+            // 构造状态徽章
+            const statusBadge = u.is_active 
+                ? '<span class="badge badge-success">正常启用</span>' 
+                : '<span class="badge badge-danger">已禁用</span>';
+                
+            // 构造角色徽章
+            const roleBadge = u.is_admin 
+                ? '<span class="badge badge-primary">管理员</span>' 
+                : '<span class="badge badge-secondary">普通用户</span>';
+                
+            // 构造按钮
+            const statusBtnText = u.is_active ? '拉黑账户' : '解禁启用';
+            const statusBtnClass = u.is_active ? 'btn-active' : 'btn-promote';
+            const roleBtnText = u.is_admin ? '降级用户' : '升为管理';
+            const roleBtnClass = u.is_admin ? 'btn-demote' : 'btn-promote';
+            
+            // 当前登录管理员自己不能禁用或降级自己
+            const isSelf = u.id === {{ current_user.id }};
+            const btnDisabled = isSelf ? 'disabled style="opacity: 0.5; cursor: not-allowed;"' : '';
+            
+            tr.innerHTML = `
+                <td>
+                    <div class="user-info-cell">
+                        <div class="user-avatar-cell">${u.username[0].toUpperCase()}</div>
+                        <div class="user-details">
+                            <span class="user-username">${u.username}${isSelf ? ' <small>(我自己)</small>' : ''}</span>
+                            <span class="user-email">${u.email}</span>
+                        </div>
+                    </div>
+                </td>
+                <td>${u.created_at}</td>
+                <td id="role-badge-cell-${u.id}">${roleBadge}</td>
+                <td id="status-badge-cell-${u.id}">${statusBadge}</td>
+                <td>
+                    <div class="action-btn-group">
+                        <button class="action-btn ${statusBtnClass}" id="status-btn-${u.id}" onclick="toggleStatus(${u.id})" ${btnDisabled}>
+                            ${statusBtnText}
+                        </button>
+                        <button class="action-btn ${roleBtnClass}" id="role-btn-${u.id}" onclick="toggleAdmin(${u.id})" ${btnDisabled}>
+                            ${roleBtnText}
+                        </button>
+                    </div>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    // 渲染分析日志表格
+    function renderAnalysesTable(analyses) {
+        const tbody = document.getElementById('analysesTableBody');
+        tbody.innerHTML = '';
+        
+        if (analyses.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-secondary);">暂无 AI 分析日志</td></tr>`;
+            return;
+        }
+        
+        analyses.forEach(a => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td><strong>${a.username}</strong></td>
+                <td>${a.title || '新对话'}</td>
+                <td><span class="badge badge-primary">${a.agent_used}</span></td>
+                <td><code>${a.analysis_type}</code></td>
+                <td style="color: var(--text-tertiary);">${a.created_at}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    // 用户表实时过滤
+    function filterUsersTable() {
+        const query = document.getElementById('userSearch').value.toLowerCase().trim();
+        const rows = document.querySelectorAll('.user-row');
+        
+        rows.forEach(row => {
+            const username = row.dataset.username;
+            const email = row.dataset.email;
+            if (username.includes(query) || email.includes(query)) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+    }
+
+    // 切换导航视图
+    function switchSection(sectionId, element) {
+        // 1. 隐藏所有视图段
+        document.querySelectorAll('.admin-view-section').forEach(sec => {
+            sec.style.display = 'none';
+        });
+        
+        // 2. 显示选定的视图
+        document.getElementById(sectionId).style.display = 'block';
+        
+        // 3. 移除其它按钮的活跃样式，并为当前点击的按钮添加活跃样式
+        document.querySelectorAll('.admin-nav-item').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        element.classList.add('active');
+        
+        // 4. 修改顶部页面标题
+        const titleMapping = {
+            'dashboard-section': '数据看板',
+            'users-section': '用户账号管理',
+            'logs-section': '系统分析历史日志'
+        };
+        document.getElementById('pageTitle').innerText = titleMapping[sectionId] || '管理后台';
+    }
+
+    // 改变用户启用状态
+    async function toggleStatus(userId) {
+        try {
+            const response = await fetch(`/admin/api/users/${userId}/toggle_status`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            });
+            const data = await response.json();
+            
+            if (!data.success) {
+                showToast(data.message || '操作失败', true);
+                return;
+            }
+            
+            // 1. 局部更新徽章和按钮文字
+            const statusCell = document.getElementById(`status-badge-cell-${userId}`);
+            const statusBtn = document.getElementById(`status-btn-${userId}`);
+            
+            if (data.is_active) {
+                statusCell.innerHTML = '<span class="badge badge-success">正常启用</span>';
+                statusBtn.innerText = '拉黑账户';
+                statusBtn.className = 'action-btn btn-active';
+            } else {
+                statusCell.innerHTML = '<span class="badge badge-danger">已禁用</span>';
+                statusBtn.innerText = '解禁启用';
+                statusBtn.className = 'action-btn btn-promote';
+            }
+            
+            showToast(data.message);
+        } catch (error) {
+            console.error("Error toggling user status:", error);
+            showToast('操作请求失败，请检查网络连接', true);
+        }
+    }
+
+    // 改变管理员权限状态
+    async function toggleAdmin(userId) {
+        try {
+            const response = await fetch(`/admin/api/users/${userId}/toggle_admin`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            });
+            const data = await response.json();
+            
+            if (!data.success) {
+                showToast(data.message || '操作失败', true);
+                return;
+            }
+            
+            // 局部更新徽章和按钮文字
+            const roleCell = document.getElementById(`role-badge-cell-${userId}`);
+            const roleBtn = document.getElementById(`role-btn-${userId}`);
+            
+            if (data.is_admin) {
+                roleCell.innerHTML = '<span class="badge badge-primary">管理员</span>';
+                roleBtn.innerText = '降级用户';
+                roleBtn.className = 'action-btn btn-demote';
+            } else {
+                roleCell.innerHTML = '<span class="badge badge-secondary">普通用户</span>';
+                roleBtn.innerText = '升为管理';
+                roleBtn.className = 'action-btn btn-promote';
+            }
+            
+            showToast(data.message);
+        } catch (error) {
+            console.error("Error toggling admin privilege:", error);
+            showToast('操作请求失败，请检查网络', true);
+        }
+    }
+
+    // 显示 Toast 通知
+    function showToast(message, isError = false) {
+        const toast = document.getElementById('adminToast');
+        const msgNode = document.getElementById('toastMessage');
+        const iconNode = toast.querySelector('.material-symbols-rounded');
+        
+        msgNode.innerText = message;
+        
+        if (isError) {
+            iconNode.innerText = 'error';
+            iconNode.style.color = '#c5221f';
+        } else {
+            iconNode.innerText = 'check_circle';
+            iconNode.style.color = '#137333';
+        }
+        
+        toast.classList.add('show');
+        setTimeout(() => {
+            toast.classList.remove('show');
+        }, 3000);
+    }
+</script>
+{% endblock %}

@@ -1,956 +1,2603 @@
-{% extends "base.html" %}
-{% block title %}AI职业决策顾问{% endblock %}
-
-{% block body %}
-<style>
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
-
-body {
-    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', 'PingFang SC', sans-serif;
-    -webkit-font-smoothing: antialiased;
-    color: #1d1d1f;
-}
-
-.landing {
-    background: #fff;
-}
-
-/* Nav */
-.nav {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    z-index: 100;
-    height: 52px;
-    background: rgba(255, 255, 255, 0.8);
-    backdrop-filter: saturate(180%) blur(20px);
-    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 48px;
-}
-
-.nav-brand {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 15px;
-    font-weight: 700;
-    color: #1d1d1f;
-    text-decoration: none;
-    letter-spacing: -0.02em;
-}
-
-.nav-brand span {
-    background: linear-gradient(135deg, #1d1d1f 0%, #0066cc 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-}
-
-.nav-links {
-    display: flex;
-    align-items: center;
-    gap: 28px;
-}
-
-.nav-link {
-    font-size: 13px;
-    color: #1d1d1f;
-    text-decoration: none;
-    opacity: 0.8;
-    transition: opacity 0.2s;
-}
-
-.nav-link:hover {
-    opacity: 1;
-}
-
-.nav-cta {
-    padding: 6px 16px;
-    background: #0066cc;
-    color: white;
-    border: none;
-    border-radius: 980px;
-    font-size: 13px;
-    text-decoration: none;
-    transition: background 0.2s;
-}
-
-.nav-cta:hover {
-    background: #0077ed;
-}
-
-/* Hero */
-.hero {
-    padding: 140px 48px 100px;
-    text-align: center;
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-}
-
-.hero-content {
-    max-width: 700px;
-}
-
-.hero-eyebrow {
-    font-size: 17px;
-    font-weight: 400;
-    color: #86868b;
-    margin-bottom: 8px;
-}
-
-.hero h1 {
-    font-size: clamp(48px, 8vw, 72px);
-    font-weight: 600;
-    line-height: 1.05;
-    letter-spacing: -0.03em;
-    margin-bottom: 16px;
-}
-
-.hero-subtitle {
-    font-size: 21px;
-    font-weight: 400;
-    line-height: 1.5;
-    color: #86868b;
-    max-width: 500px;
-    margin: 0 auto 32px;
-}
-
-.hero-actions {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 16px;
-}
-
-.btn-primary {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 12px 28px;
-    background: #0066cc;
-    color: white;
-    border: none;
-    border-radius: 980px;
-    font-size: 17px;
-    font-weight: 400;
-    text-decoration: none;
-    cursor: pointer;
-    transition: background 0.2s;
-}
-
-.btn-primary:hover {
-    background: #0077ed;
-}
-
-.btn-secondary {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 12px 28px;
-    background: transparent;
-    color: #0066cc;
-    border: none;
-    border-radius: 980px;
-    font-size: 17px;
-    font-weight: 400;
-    text-decoration: none;
-    cursor: pointer;
-}
-
-.btn-secondary:hover {
-    text-decoration: underline;
-}
-
-/* Sections */
-.section {
-    padding: 100px 48px;
-    text-align: center;
-}
-
-.section-dark {
-    background: #f5f5f7;
-}
-
-.section h2 {
-    font-size: clamp(32px, 5vw, 48px);
-    font-weight: 600;
-    line-height: 1.1;
-    letter-spacing: -0.02em;
-    margin-bottom: 8px;
-}
-
-.section-desc {
-    font-size: 19px;
-    font-weight: 400;
-    color: #86868b;
-    margin-bottom: 56px;
-}
-
-/* Features */
-.features {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 24px;
-    max-width: 980px;
-    margin: 0 auto;
-}
-
-.feature {
-    text-align: left;
-    padding: 32px;
-    background: #fff;
-    border-radius: 20px;
-    border: 1px solid rgba(0, 0, 0, 0.06);
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    cursor: default;
-}
-
-.feature:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.08);
-    border-color: rgba(0, 102, 204, 0.15);
-}
-
-.feature-icon {
-    width: 48px;
-    height: 48px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-bottom: 16px;
-    background: #f5f5f7;
-    border-radius: 12px;
-    color: #0066cc;
-    transition: all 0.3s ease;
-}
-
-.feature:hover .feature-icon {
-    background: #0066cc;
-    color: #fff;
-    transform: scale(1.05);
-}
-
-.feature-icon svg {
-    width: 24px;
-    height: 24px;
-}
-
-.feature h3 {
-    font-size: 17px;
-    font-weight: 600;
-    margin-bottom: 6px;
-    letter-spacing: -0.01em;
-}
-
-.feature p {
-    font-size: 14px;
-    line-height: 1.5;
-    color: #86868b;
-}
-
-/* Demo */
-.demo {
-    max-width: 720px;
-    margin: 0 auto;
-}
-
-.demo-window {
-    background: #1d1d1f;
-    border-radius: 12px;
-    overflow: hidden;
-    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.12);
-}
-
-.demo-bar {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 12px 16px;
-    background: #2d2d2f;
-}
-
-.demo-dot {
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-}
-
-.demo-dot:nth-child(1) { background: #ff5f57; }
-.demo-dot:nth-child(2) { background: #febc2e; }
-.demo-dot:nth-child(3) { background: #28c840; }
-
-.demo-code {
-    padding: 24px;
-    font-family: 'SF Mono', 'Fira Code', monospace;
-    font-size: 13px;
-    line-height: 1.8;
-    color: #f5f5f7;
-    text-align: left;
-    min-height: 280px;
-}
-
-.demo-line {
-    opacity: 0;
-    min-height: 1.8em;
-}
-
-.demo-line.visible {
-    opacity: 1;
-}
-
-.demo-line .char {
-    opacity: 0;
-    transition: opacity 0.05s ease;
-}
-
-.demo-line .char.visible {
-    opacity: 1;
-}
-
-.demo-line .typing-cursor {
-    display: inline-block;
-    width: 8px;
-    height: 14px;
-    background: #0066cc;
-    margin-left: 2px;
-    animation: blink 1s infinite;
-    vertical-align: middle;
-    opacity: 0;
-}
-
-.demo-line.active .typing-cursor {
-    opacity: 1;
-}
-
-@keyframes blink {
-    0%, 50% { opacity: 1; }
-    51%, 100% { opacity: 0; }
-}
-
-.code-label { color: #64d2ff; }
-.code-text { color: #f5f5f7; }
-.code-muted { color: #86868b; }
-
-/* Stats */
-.stats {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 32px;
-    max-width: 720px;
-    margin: 0 auto;
-}
-
-.stat-value {
-    font-size: 48px;
-    font-weight: 600;
-    letter-spacing: -0.03em;
-    color: #1d1d1f;
-}
-
-.stat-label {
-    font-size: 13px;
-    color: #86868b;
-    margin-top: 4px;
-}
-
-/* CTA */
-.cta-section {
-    background: #f5f5f7;
-}
-
-.cta-section h2 {
-    color: #1d1d1f;
-}
-
-/* Animation Section - UnicornStudio Style (Light) */
-.animation-section {
-    position: relative;
-    overflow: hidden;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: #f8fafc;
-    min-height: 500px;
-}
-
-/* 主画布层 */
-.canvas-layer {
-    position: absolute;
-    inset: 0;
-    overflow: hidden;
-}
-
-/* 流动渐变块 - 浅色系 */
-.blob {
-    position: absolute;
-    border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%;
-    filter: blur(50px);
-    mix-blend-mode: multiply;
-    will-change: transform, border-radius;
-}
-
-.blob-1 {
-    width: 60%;
-    height: 60%;
-    top: -10%;
-    left: -5%;
-    background: linear-gradient(135deg, #93c5fd 0%, #bfdbfe 50%, #60a5fa 100%);
-    animation: morph-1 15s ease-in-out infinite, drift-1 20s ease-in-out infinite;
-    opacity: 0.6;
-}
-
-.blob-2 {
-    width: 50%;
-    height: 50%;
-    bottom: -10%;
-    right: -5%;
-    background: linear-gradient(225deg, #c4b5fd 0%, #ddd6fe 50%, #a78bfa 100%);
-    animation: morph-2 18s ease-in-out infinite, drift-2 25s ease-in-out infinite;
-    opacity: 0.5;
-}
-
-.blob-3 {
-    width: 40%;
-    height: 40%;
-    top: 30%;
-    left: 30%;
-    background: linear-gradient(315deg, #67e8f9 0%, #a5f3fc 50%, #22d3ee 100%);
-    animation: morph-3 12s ease-in-out infinite, drift-3 18s ease-in-out infinite;
-    opacity: 0.45;
-}
-
-.blob-4 {
-    width: 35%;
-    height: 35%;
-    top: 10%;
-    right: 15%;
-    background: linear-gradient(45deg, #fda4af 0%, #fecdd3 50%, #fb7185 100%);
-    animation: morph-4 20s ease-in-out infinite, drift-4 22s ease-in-out infinite;
-    opacity: 0.4;
-}
-
-/* 形变动画 */
-@keyframes morph-1 {
-    0%, 100% { border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%; }
-    25% { border-radius: 70% 30% 50% 50% / 30% 70% 40% 60%; }
-    50% { border-radius: 50% 50% 30% 70% / 60% 40% 70% 30%; }
-    75% { border-radius: 30% 70% 60% 40% / 50% 60% 30% 70%; }
-}
-
-@keyframes morph-2 {
-    0%, 100% { border-radius: 60% 40% 30% 70% / 50% 60% 40% 50%; }
-    25% { border-radius: 30% 70% 50% 50% / 60% 30% 70% 40%; }
-    50% { border-radius: 50% 50% 70% 30% / 40% 70% 30% 60%; }
-    75% { border-radius: 70% 30% 40% 60% / 50% 40% 60% 50%; }
-}
-
-@keyframes morph-3 {
-    0%, 100% { border-radius: 50% 50% 40% 60% / 60% 40% 60% 40%; }
-    33% { border-radius: 60% 40% 60% 40% / 40% 60% 40% 60%; }
-    66% { border-radius: 40% 60% 50% 50% / 50% 50% 50% 50%; }
-}
-
-@keyframes morph-4 {
-    0%, 100% { border-radius: 45% 55% 65% 35% / 55% 45% 55% 45%; }
-    50% { border-radius: 55% 45% 35% 65% / 45% 55% 45% 55%; }
-}
-
-/* 漂移动画 */
-@keyframes drift-1 {
-    0%, 100% { transform: translate(0, 0) rotate(0deg) scale(1); }
-    25% { transform: translate(5%, 8%) rotate(5deg) scale(1.05); }
-    50% { transform: translate(-3%, 5%) rotate(-3deg) scale(0.95); }
-    75% { transform: translate(4%, -3%) rotate(2deg) scale(1.02); }
-}
-
-@keyframes drift-2 {
-    0%, 100% { transform: translate(0, 0) rotate(0deg) scale(1); }
-    25% { transform: translate(-6%, -4%) rotate(-4deg) scale(1.03); }
-    50% { transform: translate(4%, -6%) rotate(6deg) scale(0.97); }
-    75% { transform: translate(-2%, 4%) rotate(-2deg) scale(1.04); }
-}
-
-@keyframes drift-3 {
-    0%, 100% { transform: translate(-50%, -50%) rotate(0deg) scale(1); }
-    33% { transform: translate(calc(-50% + 8%), calc(-50% - 5%)) rotate(10deg) scale(1.1); }
-    66% { transform: translate(calc(-50% - 6%), calc(-50% + 7%)) rotate(-8deg) scale(0.9); }
-}
-
-@keyframes drift-4 {
-    0%, 100% { transform: translate(0, 0) rotate(0deg); }
-    50% { transform: translate(-5%, 5%) rotate(-15deg); }
-}
-
-/* 浮动粒子 - 浅色 */
-.particle-layer {
-    position: absolute;
-    inset: 0;
-    z-index: 4;
-}
-
-.particle {
-    position: absolute;
-    width: 3px;
-    height: 3px;
-    background: rgba(0, 102, 204, 0.3);
-    border-radius: 50%;
-    box-shadow: 0 0 8px rgba(0, 102, 204, 0.15);
-    animation: float-up linear infinite;
-}
-
-.particle:nth-child(1) { left: 10%; animation-duration: 12s; animation-delay: 0s; }
-.particle:nth-child(2) { left: 20%; animation-duration: 15s; animation-delay: 2s; width: 2px; height: 2px; }
-.particle:nth-child(3) { left: 30%; animation-duration: 10s; animation-delay: 4s; }
-.particle:nth-child(4) { left: 40%; animation-duration: 18s; animation-delay: 1s; width: 4px; height: 4px; }
-.particle:nth-child(5) { left: 50%; animation-duration: 14s; animation-delay: 3s; }
-.particle:nth-child(6) { left: 60%; animation-duration: 11s; animation-delay: 5s; width: 2px; height: 2px; }
-.particle:nth-child(7) { left: 70%; animation-duration: 16s; animation-delay: 0.5s; }
-.particle:nth-child(8) { left: 80%; animation-duration: 13s; animation-delay: 2.5s; }
-.particle:nth-child(9) { left: 90%; animation-duration: 17s; animation-delay: 4.5s; width: 4px; height: 4px; }
-.particle:nth-child(10) { left: 15%; animation-duration: 19s; animation-delay: 1.5s; }
-
-@keyframes float-up {
-    0% { bottom: -10%; opacity: 0; transform: translateX(0); }
-    10% { opacity: 1; }
-    90% { opacity: 1; }
-    100% { bottom: 110%; opacity: 0; transform: translateX(30px); }
-}
-
-/* 鼠标跟随光晕 - 浅色 */
-.cursor-glow {
-    position: absolute;
-    width: 400px;
-    height: 400px;
-    border-radius: 50%;
-    background: radial-gradient(circle, rgba(96, 165, 250, 0.15) 0%, transparent 70%);
-    pointer-events: none;
-    z-index: 5;
-    transform: translate(-50%, -50%);
-    transition: opacity 0.5s, left 0.1s, top 0.1s;
-    opacity: 0;
-    filter: blur(40px);
-}
-
-.animation-section:hover .cursor-glow {
-    opacity: 1;
-}
-
-/* 文字容器 */
-.content-layer {
-    position: relative;
-    z-index: 10;
-    text-align: center;
-    padding: 60px 20px;
-}
-
-.animation-section .glow-text {
-    font-size: clamp(104px, 18vw, 192px);
-    font-weight: 800;
-    letter-spacing: -0.03em;
-    line-height: 1.1;
-}
-
-.animation-section .glow-text .main-text {
-    background: linear-gradient(135deg, #f9a8d4 0%, #d8b4fe 25%, #c4b5fd 50%, #f0abfc 75%, #f9a8d4 100%);
-    background-size: 300% 300%;
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    animation: text-shimmer 6s ease infinite;
-    filter: drop-shadow(0 4px 20px rgba(216, 180, 254, 0.3));
-}
-
-.animation-section .glow-text .sub-text {
-    display: block;
-    font-size: 0.3em;
-    font-weight: 400;
-    color: #64748b;
-    margin-top: 20px;
-    letter-spacing: 0.15em;
-    text-transform: uppercase;
-    -webkit-text-fill-color: #64748b;
-}
-
-@keyframes text-shimmer {
-    0%, 100% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
-}
-
-/* 装饰线条 */
-.deco-line {
-    position: absolute;
-    z-index: 6;
-    pointer-events: none;
-}
-
-.deco-line-top {
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(0, 0, 0, 0.05), transparent);
-}
-
-.deco-line-bottom {
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(0, 0, 0, 0.05), transparent);
-}
-
-/* Animations */
-.fade-up {
-    opacity: 0;
-    transform: translateY(20px);
-    transition: opacity 0.6s ease, transform 0.6s ease;
-}
-
-.fade-up.visible {
-    opacity: 1;
-    transform: translateY(0);
-}
-
-@media (max-width: 768px) {
-    .nav { padding: 0 20px; }
-    .hero { padding: 100px 20px 72px; }
-    .section { padding: 72px 20px; }
-    .features { grid-template-columns: 1fr; }
-    .stats { grid-template-columns: repeat(2, 1fr); }
-    .hero-actions { flex-direction: column; }
-    .footer-content { flex-direction: column; gap: 12px; text-align: center; }
-
-    /* 收紧 hero 主标题下限，避免 ≤360px 屏单行汉字溢出 */
-    .hero h1 {
-        font-size: clamp(36px, 9vw, 56px);
-        line-height: 1.15;
-    }
-
-    /* 移动端汉堡菜单 */
-    .hamburger-btn {
-        display: flex !important;
-    }
-
-    .nav-links {
-        display: none;
-        position: absolute;
-        top: 52px;
-        left: 0;
-        right: 0;
-        background: rgba(255, 255, 255, 0.95);
-        backdrop-filter: blur(20px);
-        border-bottom: 1px solid rgba(0, 0, 0, 0.08);
-        flex-direction: column;
-        padding: 16px 20px;
-        gap: 12px;
-    }
-
-    .nav-links.active {
-        display: flex;
-    }
-
-    .nav-link, .nav-cta {
-        width: 100%;
-        text-align: center;
-        padding: 12px;
-    }
-}
-</style>
-
-<div class="landing">
-    <nav class="nav">
-        <a class="nav-brand" href="/">
-            <svg viewBox="0 0 32 32" width="22" height="22" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M6 26C6 26 12 16 20 16" stroke="#4285f4" stroke-width="3" stroke-linecap="round" />
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CareerAI - 智能职业决策顾问</title>
+    <!-- 引入 Outfit 英文标题字体与 Inter 中英正文字体 -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Google Material Symbols -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+    
+    <style>
+        :root {
+            /* 谷歌现代浅色系配色 */
+            --bg-primary: #ffffff;
+            --bg-secondary: #f8f9fa;
+            --bg-tertiary: #f1f3f4;
+            --text-primary: #1f1f1f;
+            --text-secondary: #5f6368;
+            --text-tertiary: #80868b;
+            
+            --google-blue: #1a73e8;
+            --google-red: #ea4335;
+            --google-yellow: #fbbc05;
+            --google-green: #34a853;
+            
+            --ai-violet: #8b5cf6;
+            --ai-pink: #ec4899;
+            --ai-cyan: #06b6d4;
+            
+            /* 复合渐变 */
+            --gemini-gradient: linear-gradient(135deg, #1a73e8 0%, #7c3aed 45%, #ff4b91 100%);
+            --blue-violet: linear-gradient(135deg, #1a73e8 0%, #8b5cf6 100%);
+            
+            /* 描边与阴影 */
+            --border-light: rgba(0, 0, 0, 0.06);
+            --border-hover: rgba(26, 115, 232, 0.2);
+            --shadow-subtle: 0 2px 12px rgba(0, 0, 0, 0.03);
+            --shadow-card: 0 4px 24px rgba(0, 0, 0, 0.05);
+            --shadow-float: 0 12px 36px rgba(0, 0, 0, 0.08);
+            
+            /* 字体变量 */
+            --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            --font-title: 'Outfit', 'Inter', sans-serif;
+            
+            /* 动效 */
+            --transition-spring: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+            --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            --transition-fast: all 0.2s ease;
+        }
+
+        /* 基础重置 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: var(--font-sans);
+            color: var(--text-primary);
+            background-color: var(--bg-primary);
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+            line-height: 1.6;
+        }
+
+        /* 隐藏滚动条样式 */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: var(--bg-secondary);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #dadce0;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #bdc1c6;
+        }
+
+        /* 容器排版 */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 24px;
+        }
+
+        /* ==================== 0. 全局高级动效辅助类 ==================== */
+        /* 1. 滚动渐现 (Spring Slide Reveal) */
+        .reveal {
+            opacity: 0;
+            transform: translateY(40px) scale(0.98);
+            transition: opacity 1.2s cubic-bezier(0.16, 1, 0.3, 1), transform 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+            will-change: transform, opacity;
+        }
+
+        .reveal.active {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+
+        /* 2. 级联延迟 (Staggered Delays) */
+        .stagger-1 { transition-delay: 0.1s; }
+        .stagger-2 { transition-delay: 0.2s; }
+        .stagger-3 { transition-delay: 0.3s; }
+        .stagger-4 { transition-delay: 0.4s; }
+
+        /* 3. 鼠标聚光灯效果容器 */
+        .spotlight-card {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .spotlight-card::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(280px circle at var(--mouse-x, 0px) var(--mouse-y, 0px), rgba(26, 115, 232, 0.05) 0%, transparent 80%);
+            z-index: 1;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+            pointer-events: none;
+        }
+
+        .spotlight-card:hover::before {
+            opacity: 1;
+        }
+
+        /* 4. 流光外边框 */
+        .border-glow-card {
+            position: relative;
+        }
+
+        .border-glow-card::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
+            padding: 1px;
+            background: linear-gradient(135deg, transparent 40%, rgba(26, 115, 232, 0.1) 50%, transparent 60%);
+            background-size: 300% 300%;
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            pointer-events: none;
+            transition: opacity 0.5s ease;
+            opacity: 0;
+        }
+
+        .border-glow-card:hover::after {
+            opacity: 1;
+            animation: border-glow-flow 3s linear infinite;
+        }
+
+        @keyframes border-glow-flow {
+            0% { background-position: 0% 50%; }
+            100% { background-position: 300% 50%; }
+        }
+
+        /* ==================== 1. 导航栏 ==================== */
+        .navbar {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: calc(100% - 48px);
+            max-width: 1120px;
+            height: 64px;
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: saturate(180%) blur(20px);
+            -webkit-backdrop-filter: saturate(180%) blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            border-radius: 32px;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 28px;
+            box-shadow: var(--shadow-subtle), 0 10px 30px rgba(0, 0, 0, 0.02);
+            transition: var(--transition-spring);
+        }
+
+        .navbar.scrolled {
+            top: 10px;
+            width: 100%;
+            max-width: 100%;
+            border-radius: 0;
+            border-left: none;
+            border-right: none;
+            border-top: none;
+            border-bottom: 1px solid var(--border-light);
+            background: rgba(255, 255, 255, 0.9);
+            box-shadow: var(--shadow-subtle);
+        }
+
+        .nav-logo {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+            font-family: var(--font-title);
+            font-weight: 700;
+            font-size: 20px;
+            color: var(--text-primary);
+        }
+
+        .nav-logo svg {
+            width: 26px;
+            height: 26px;
+        }
+
+        .nav-logo span {
+            background: var(--gemini-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .nav-links {
+            display: flex;
+            align-items: center;
+            gap: 32px;
+        }
+
+        .nav-link {
+            text-decoration: none;
+            color: var(--text-secondary);
+            font-size: 14px;
+            font-weight: 500;
+            transition: var(--transition-fast);
+        }
+
+        .nav-link:hover {
+            color: var(--google-blue);
+        }
+
+        .nav-actions {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 10px 20px;
+            font-size: 14px;
+            font-weight: 600;
+            border-radius: 20px;
+            text-decoration: none;
+            transition: var(--transition-spring);
+            cursor: pointer;
+            border: none;
+        }
+
+        .btn-text {
+            color: var(--text-primary);
+            background: transparent;
+        }
+
+        .btn-text:hover {
+            background: var(--bg-secondary);
+        }
+
+        .btn-primary {
+            background: var(--google-blue);
+            color: white;
+            box-shadow: 0 4px 14px rgba(26, 115, 232, 0.2);
+        }
+
+        .btn-primary:hover {
+            background: #1557b0;
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(26, 115, 232, 0.3);
+        }
+
+        .btn-primary:active {
+            transform: scale(0.97);
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 1px solid #dadce0;
+            color: var(--text-primary);
+        }
+
+        .btn-outline:hover {
+            background: var(--bg-secondary);
+            border-color: #bdc1c6;
+        }
+
+        /* ==================== 2. Hero 屏 ==================== */
+        .hero-section {
+            position: relative;
+            padding-top: 140px;
+            padding-bottom: 80px;
+            min-height: 95vh;
+            background: radial-gradient(circle at var(--bg-x, 25%) var(--bg-y, 25%), rgba(26, 115, 232, 0.06) 0%, transparent 55%),
+                        radial-gradient(circle at var(--bg-x2, 75%) var(--bg-y2, 75%), rgba(139, 92, 246, 0.06) 0%, transparent 55%),
+                        radial-gradient(circle at 50% 50%, rgba(255, 75, 145, 0.02) 0%, transparent 70%),
+                        #ffffff;
+            display: flex;
+            align-items: center;
+            overflow: hidden;
+            transition: background 0.4s cubic-bezier(0.1, 0.8, 0.2, 1);
+        }
+
+        .hero-section .container {
+            position: relative;
+            z-index: 2;
+        }
+
+        .hero-bg-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* 浮动背景微光气泡 */
+        .ambient-bubble {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(90px);
+            opacity: 0.15;
+            pointer-events: none;
+            z-index: 1;
+            animation: morph-bubble 15s infinite alternate ease-in-out;
+        }
+
+        @keyframes morph-bubble {
+            0% {
+                border-radius: 42% 58% 70% 30% / 45% 45% 55% 55%;
+            }
+            33% {
+                border-radius: 70% 30% 52% 48% / 60% 40% 60% 40%;
+            }
+            66% {
+                border-radius: 50% 50% 30% 70% / 40% 60% 30% 70%;
+            }
+            100% {
+                border-radius: 42% 58% 70% 30% / 45% 45% 55% 55%;
+            }
+        }
+        
+        .ambient-bubble:nth-of-type(1) {
+            background: radial-gradient(circle, rgba(26, 115, 232, 0.45) 0%, transparent 75%);
+            animation: float-bubble-1 22s infinite alternate ease-in-out;
+        }
+        
+        .ambient-bubble:nth-of-type(2) {
+            background: radial-gradient(circle, rgba(139, 92, 246, 0.45) 0%, transparent 75%);
+            animation: float-bubble-2 28s infinite alternate ease-in-out;
+        }
+        
+        .ambient-bubble:nth-of-type(3) {
+            background: radial-gradient(circle, rgba(255, 75, 145, 0.4) 0%, transparent 75%);
+            animation: float-bubble-3 18s infinite alternate ease-in-out;
+        }
+
+        @keyframes float-bubble-1 {
+            0% { transform: translate(0, 0) scale(1); }
+            50% { transform: translate(80px, 50px) scale(1.15); }
+            100% { transform: translate(-40px, 90px) scale(0.9); }
+        }
+
+        @keyframes float-bubble-2 {
+            0% { transform: translate(0, 0) scale(1.1); }
+            50% { transform: translate(-90px, -40px) scale(0.85); }
+            100% { transform: translate(60px, 80px) scale(1.25); }
+        }
+
+        @keyframes float-bubble-3 {
+            0% { transform: translate(0, 0) scale(0.95); }
+            50% { transform: translate(50px, -70px) scale(1.15); }
+            100% { transform: translate(-50px, 40px) scale(1); }
+        }
+
+        .hero-grid {
+            display: grid;
+            grid-template-columns: 1.1fr 0.9fr;
+            gap: 48px;
+            align-items: center;
+        }
+
+        .hero-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 14px;
+            background: rgba(26, 115, 232, 0.06);
+            border-radius: 100px;
+            color: var(--google-blue);
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 24px;
+            animation: pulse-light 3s infinite;
+        }
+
+        .hero-title {
+            font-family: var(--font-title);
+            font-size: clamp(40px, 5.5vw, 60px);
+            font-weight: 800;
+            line-height: 1.15;
+            letter-spacing: -0.02em;
+            color: var(--text-primary);
+            margin-bottom: 20px;
+        }
+
+        .hero-title span.grad {
+            background: var(--gemini-gradient);
+            background-size: 300% 300%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: gradient-shimmer 8s ease infinite;
+        }
+
+        @keyframes gradient-shimmer {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+
+        .hero-subtitle {
+            font-size: 18px;
+            color: var(--text-secondary);
+            margin-bottom: 36px;
+            max-width: 580px;
+            line-height: 1.6;
+        }
+
+        .hero-actions {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .btn-large {
+            padding: 14px 28px;
+            font-size: 16px;
+            border-radius: 28px;
+        }
+
+        /* 智能体星云拓扑图 (Hero Visual) */
+        .hero-visual {
+            position: relative;
+            width: 100%;
+            height: 480px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transform: rotateX(var(--rotate-x, 0deg)) rotateY(var(--rotate-y, 0deg));
+            transition: transform 0.5s cubic-bezier(0.25, 1, 0.5, 1);
+            transform-style: preserve-3d;
+        }
+
+        .nebula-canvas {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .nebula-nodes {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            z-index: 2;
+        }
+
+        /* 核心用户节点 */
+        .node-center {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 90px;
+            height: 90px;
+            background: #ffffff;
+            border: 2px solid #e8f0fe;
+            border-radius: 50%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            box-shadow: var(--shadow-float);
+            cursor: pointer;
+            transition: var(--transition-spring);
+        }
+
+        .node-center::after {
+            content: '';
+            position: absolute;
+            inset: -8px;
+            border-radius: 50%;
+            border: 1px dashed rgba(26, 115, 232, 0.2);
+            animation: rotate-clockwise 30s linear infinite;
+        }
+
+        .node-center:hover {
+            transform: translate(-50%, -50%) scale(1.08);
+            box-shadow: 0 16px 48px rgba(26, 115, 232, 0.15);
+            border-color: rgba(26, 115, 232, 0.3);
+        }
+
+        .node-center-avatar {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, rgba(26, 115, 232, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--google-blue);
+            margin-bottom: 4px;
+        }
+
+        .node-center span {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        /* 卫星 Agent 节点 */
+        .agent-node {
+            position: absolute;
+            width: 56px;
+            height: 56px;
+            background: #ffffff;
+            border: 1px solid var(--border-light);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: var(--shadow-card);
+            cursor: pointer;
+            transition: var(--transition-spring);
+        }
+
+        .agent-node span.material-symbols-rounded {
+            font-size: 24px;
+            transition: transform 0.3s ease;
+        }
+
+        .agent-node:hover {
+            transform: scale(1.15);
+            border-color: var(--hover-color);
+            box-shadow: 0 10px 25px var(--shadow-color);
+            color: var(--hover-color);
+        }
+
+        .agent-node:hover span.material-symbols-rounded {
+            transform: rotate(15deg);
+        }
+
+        /* 卫星轨道坐标设定 */
+        .node-career { top: 12%; left: 50%; transform: translateX(-50%); --hover-color: var(--google-blue); --shadow-color: rgba(26, 115, 232, 0.15); }
+        .node-career:hover { transform: translateX(-50%) scale(1.15) !important; }
+        .node-skill { top: 35%; left: 10%; --hover-color: var(--ai-violet); --shadow-color: rgba(139, 92, 246, 0.15); }
+        .node-side { top: 35%; right: 10%; --hover-color: var(--google-green); --shadow-color: rgba(52, 168, 83, 0.15); }
+        .node-resume { bottom: 15%; left: 22%; --hover-color: var(--ai-pink); --shadow-color: rgba(236, 72, 153, 0.15); }
+        .node-interview { bottom: 15%; right: 22%; --hover-color: var(--google-yellow); --shadow-color: rgba(251, 188, 5, 0.15); }
+
+        /* 卫星悬浮说明框 */
+        .node-tooltip {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.95);
+            border: 1px solid var(--border-light);
+            border-radius: 12px;
+            padding: 8px 14px;
+            box-shadow: var(--shadow-float);
+            pointer-events: none;
+            opacity: 0;
+            transform: translateY(10px) scale(0.95);
+            transition: var(--transition-smooth);
+            z-index: 10;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .node-tooltip-title {
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .node-tooltip-desc {
+            font-size: 11px;
+            color: var(--text-secondary);
+        }
+
+        .agent-node:hover + .node-tooltip {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+
+        .tooltip-career { top: calc(12% - 46px); left: 50%; transform: translateX(-50%) translateY(10px); }
+        .tooltip-skill { top: calc(35% - 46px); left: 10%; transform: translateY(10px); }
+        .tooltip-side { top: calc(35% - 46px); right: 10%; transform: translateY(10px); }
+        .tooltip-resume { bottom: calc(15% + 66px); left: 18%; transform: translateY(10px); }
+        .tooltip-interview { bottom: calc(15% + 66px); right: 18%; transform: translateY(10px); }
+
+        /* 滚动提示鼠标 */
+        .scroll-indicator {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            font-size: 11px;
+            color: var(--text-tertiary);
+            pointer-events: none;
+            animation: bounce-slow 2s infinite;
+        }
+
+        .mouse-icon {
+            width: 20px;
+            height: 32px;
+            border: 2px solid var(--text-tertiary);
+            border-radius: 10px;
+            position: relative;
+        }
+
+        .mouse-icon::after {
+            content: '';
+            position: absolute;
+            top: 6px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 4px;
+            height: 8px;
+            background: var(--text-tertiary);
+            border-radius: 2px;
+            animation: scroll-wheel 1.5s infinite;
+        }
+
+        @keyframes scroll-wheel {
+            0% { opacity: 1; transform: translate(-50%, 0); }
+            100% { opacity: 0; transform: translate(-50%, 8px); }
+        }
+
+        @keyframes bounce-slow {
+            0%, 100% { transform: translate(-50%, 0); }
+            50% { transform: translate(-50%, -6px); }
+        }
+
+        /* ==================== 3. 编排协同看板 ==================== */
+        .section-orch {
+            padding: 100px 0;
+            background: var(--bg-secondary);
+            border-top: 1px solid var(--border-light);
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        .section-header {
+            text-align: center;
+            max-width: 680px;
+            margin: 0 auto 60px;
+        }
+
+        .section-header h2 {
+            font-family: var(--font-title);
+            font-size: 36px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 16px;
+            letter-spacing: -0.01em;
+        }
+
+        .section-header p {
+            font-size: 16px;
+            color: var(--text-secondary);
+        }
+
+        .orch-container {
+            background: #ffffff;
+            border: 1px solid var(--border-light);
+            border-radius: 24px;
+            box-shadow: var(--shadow-card);
+            overflow: hidden;
+            display: grid;
+            grid-template-columns: 380px 1fr;
+            min-height: 520px;
+        }
+
+        /* 左侧面板：意图输入与拆解 */
+        .orch-left {
+            background: #f8fafc;
+            border-right: 1px solid var(--border-light);
+            padding: 32px;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        .orch-step-num {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 24px;
+            height: 24px;
+            background: var(--google-blue);
+            color: white;
+            border-radius: 50%;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .orch-user-prompt {
+            background: #ffffff;
+            border: 1px solid var(--border-light);
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: var(--shadow-subtle);
+        }
+
+        .orch-prompt-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+        }
+
+        .orch-prompt-content {
+            font-size: 14px;
+            color: var(--text-primary);
+            font-weight: 500;
+            line-height: 1.5;
+        }
+
+        /* 意图拆解卡片 */
+        .intent-dissect-card {
+            background: #ffffff;
+            border: 1px solid var(--border-light);
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: var(--shadow-subtle);
+            opacity: 0;
+            transform: translateY(15px);
+            transition: var(--transition-spring);
+        }
+
+        .intent-dissect-card.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .intent-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 0;
+            border-bottom: 1px solid var(--bg-secondary);
+        }
+
+        .intent-item:last-child {
+            border-bottom: none;
+        }
+
+        .intent-tag {
+            font-size: 11px;
+            font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 4px;
+            text-transform: uppercase;
+        }
+
+        .intent-tag-career { background: rgba(26, 115, 232, 0.08); color: var(--google-blue); }
+        .intent-tag-skill { background: rgba(139, 92, 246, 0.08); color: var(--ai-violet); }
+        .intent-tag-side { background: rgba(52, 168, 83, 0.08); color: var(--google-green); }
+
+        .intent-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        /* 右侧面板：协同模拟时间线 */
+        .orch-right {
+            padding: 36px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            position: relative;
+        }
+
+        .pipeline-timeline {
+            display: flex;
+            flex-direction: column;
+            gap: 28px;
+            position: relative;
+        }
+
+        .pipeline-timeline::before {
+            content: '';
+            position: absolute;
+            top: 24px;
+            left: 20px;
+            bottom: 24px;
+            width: 2px;
+            background: var(--bg-tertiary);
+            z-index: 1;
+        }
+
+        /* 时间线上的进程线 */
+        .pipeline-progress-line {
+            position: absolute;
+            top: 24px;
+            left: 20px;
+            width: 2px;
+            height: 0%;
+            background: var(--google-blue);
+            z-index: 2;
+            transition: height 0.5s ease;
+        }
+
+        .pipeline-node {
+            display: grid;
+            grid-template-columns: 42px 1fr;
+            gap: 16px;
+            align-items: flex-start;
+            position: relative;
+            z-index: 3;
+            opacity: 0.3;
+            transform: translateX(-10px);
+            transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .pipeline-node.active {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .pipeline-node-icon {
+            width: 42px;
+            height: 42px;
+            background: #ffffff;
+            border: 2px solid var(--bg-tertiary);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: var(--shadow-subtle);
+            transition: var(--transition-smooth);
+        }
+
+        /* 顶部声呐脉冲波纹效果 */
+        .pipeline-node.active .pipeline-node-icon {
+            position: relative;
+            border-color: var(--node-color);
+            background: var(--node-bg);
+            color: var(--node-color);
+            box-shadow: 0 4px 12px var(--node-shadow);
+        }
+
+        .pipeline-node.active .pipeline-node-icon::after {
+            content: '';
+            position: absolute;
+            inset: -6px;
+            border-radius: 50%;
+            border: 2px solid var(--node-color);
+            opacity: 0;
+            animation: sonar-pulse 1.8s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+        }
+
+        @keyframes sonar-pulse {
+            0% { transform: scale(0.9); opacity: 0.8; }
+            100% { transform: scale(1.4); opacity: 0; }
+        }
+
+        .pipeline-node-content {
+            background: #ffffff;
+            border: 1px solid var(--border-light);
+            border-radius: 16px;
+            padding: 18px;
+            box-shadow: var(--shadow-subtle);
+            transition: var(--transition-smooth);
+        }
+
+        .pipeline-node.active .pipeline-node-content {
+            border-color: var(--node-border);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.02);
+        }
+
+        .node-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 6px;
+        }
+
+        .node-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .node-status {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-tertiary);
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .pipeline-node.active .node-status {
+            color: var(--node-color);
+        }
+
+        .node-body {
+            font-size: 13px;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+
+        /* 各种节点对应的颜色 */
+        .node-style-career { --node-color: var(--google-blue); --node-bg: #e8f0fe; --node-shadow: rgba(26, 115, 232, 0.15); --node-border: rgba(26, 115, 232, 0.15); }
+        .node-style-skill { --node-color: var(--ai-violet); --node-bg: #f3e8ff; --node-shadow: rgba(139, 92, 246, 0.15); --node-border: rgba(139, 92, 246, 0.15); }
+        .node-style-side { --node-color: var(--google-green); --node-bg: #e6f4ea; --node-shadow: rgba(52, 168, 83, 0.15); --node-border: rgba(52, 168, 83, 0.15); }
+
+        /* ReAct推理链内嵌卡片 */
+        .react-chain {
+            margin-top: 10px;
+            padding: 10px 14px;
+            background: var(--bg-secondary);
+            border-left: 2px solid var(--node-color);
+            border-radius: 4px;
+            font-size: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        
+        .react-chain-row {
+            display: flex;
+            gap: 8px;
+        }
+
+        .react-label {
+            font-weight: 700;
+            color: var(--node-color);
+            flex-shrink: 0;
+        }
+
+        .react-text {
+            color: var(--text-primary);
+        }
+
+        /* 控制按钮 */
+        .orch-controls {
+            margin-top: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 12px;
+        }
+
+        .btn-control {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-light);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: var(--text-secondary);
+            transition: var(--transition-fast);
+        }
+
+        .btn-control:hover {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+
+        /* ==================== 4. 互动决策模拟舱 ==================== */
+        .section-sim {
+            padding: 100px 0;
+            background: var(--bg-primary);
+        }
+
+        .sim-grid {
+            display: grid;
+            grid-template-columns: 1fr 1.2fr;
+            gap: 56px;
+            align-items: center;
+        }
+
+        /* 预设角色选择按钮列表 */
+        .presets-list {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .preset-btn {
+            background: #ffffff;
+            border: 1px solid var(--border-light);
+            border-radius: 20px;
+            padding: 22px 28px;
+            text-align: left;
+            cursor: pointer;
+            transition: var(--transition-spring);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: relative;
+            overflow: hidden;
+            box-shadow: var(--shadow-subtle);
+            z-index: 2;
+        }
+
+        .preset-btn::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            width: 4px;
+            background: var(--google-blue);
+            transform: scaleY(0);
+            transition: transform 0.3s ease;
+        }
+
+        .preset-btn.active {
+            border-color: var(--google-blue);
+            box-shadow: var(--shadow-card);
+            transform: translateX(6px);
+        }
+
+        .preset-btn.active::after {
+            transform: scaleY(1);
+        }
+
+        .preset-info {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .preset-icon-box {
+            width: 44px;
+            height: 44px;
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-secondary);
+            transition: var(--transition-smooth);
+        }
+
+        .preset-btn.active .preset-icon-box {
+            background: rgba(26, 115, 232, 0.08);
+            color: var(--google-blue);
+        }
+
+        .preset-name {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 2px;
+        }
+
+        .preset-sub {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .preset-arrow {
+            color: var(--text-tertiary);
+            transition: transform 0.3s ease;
+        }
+
+        .preset-btn.active .preset-arrow {
+            transform: translateX(4px);
+            color: var(--google-blue);
+        }
+
+        /* 模拟面板展示 */
+        .sim-panel {
+            background: #ffffff;
+            border: 1px solid var(--border-light);
+            border-radius: 28px;
+            padding: 32px;
+            box-shadow: var(--shadow-float);
+            min-height: 480px;
+            display: flex;
+            flex-direction: column;
+            gap: 28px;
+            position: relative;
+            overflow: hidden;
+            transition: opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1), transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        /* 模拟面板标题区 */
+        .sim-panel-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--bg-secondary);
+            padding-bottom: 16px;
+        }
+
+        .sim-panel-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .sim-panel-tag {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--google-blue);
+            background: rgba(26, 115, 232, 0.08);
+            padding: 3px 10px;
+            border-radius: 100px;
+        }
+
+        /* 竞争力评估环区 */
+        .sim-competitiveness-row {
+            display: grid;
+            grid-template-columns: 100px 1fr;
+            gap: 24px;
+            align-items: center;
+        }
+
+        .sim-score-ring {
+            width: 100px;
+            height: 100px;
+            position: relative;
+        }
+
+        .sim-score-ring svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .ring-circle-bg {
+            fill: none;
+            stroke: var(--bg-tertiary);
+            stroke-width: 3;
+        }
+
+        .ring-circle-fill {
+            fill: none;
+            stroke: var(--google-blue);
+            stroke-width: 3;
+            stroke-linecap: round;
+            stroke-dasharray: 0, 100;
+            transition: stroke-dasharray 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .sim-score-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-family: var(--font-title);
+            font-size: 24px;
+            font-weight: 800;
+            color: var(--text-primary);
+        }
+
+        .sim-score-info {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .sim-score-label {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .sim-score-desc {
+            font-size: 13px;
+            color: var(--text-secondary);
+            line-height: 1.4;
+        }
+
+        /* 推荐转型方向卡片展示 */
+        .sim-recommendations {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        /* 级联入场动画类 */
+        .sim-rec-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-light);
+            border-radius: 16px;
+            padding: 16px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: var(--transition-smooth);
+            cursor: pointer;
+            text-decoration: none;
+            opacity: 0;
+            transform: translateY(15px);
+            z-index: 2;
+        }
+
+        /* 动态载入时的阶梯延时入场 */
+        .sim-rec-card.rendered {
+            animation: slide-up-reveal 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        @keyframes slide-up-reveal {
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .sim-rec-card:hover {
+            border-color: rgba(26, 115, 232, 0.3);
+            background: #ffffff;
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-card);
+        }
+
+        .sim-rec-info {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            z-index: 2;
+        }
+
+        .sim-rec-title-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .sim-rec-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .sim-rec-tag {
+            font-size: 10px;
+            font-weight: 700;
+            color: var(--ai-violet);
+            background: rgba(139, 92, 246, 0.08);
+            padding: 2px 8px;
+            border-radius: 100px;
+        }
+
+        .sim-rec-desc {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .sim-rec-link {
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--google-blue);
+            display: flex;
+            align-items: center;
+            gap: 2px;
+            z-index: 2;
+        }
+
+        /* ==================== 5. 核心价值亮点卡片 ==================== */
+        .section-features {
+            padding: 100px 0;
+            background: var(--bg-secondary);
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 24px;
+        }
+
+        .feature-card {
+            background: #ffffff;
+            border: 1px solid var(--border-light);
+            border-radius: 24px;
+            padding: 32px;
+            box-shadow: var(--shadow-subtle);
+            transition: var(--transition-spring);
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            z-index: 2;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-6px) scale(1.02);
+            box-shadow: var(--shadow-float);
+            border-color: rgba(26, 115, 232, 0.15);
+        }
+
+        .feature-icon-box {
+            width: 48px;
+            height: 48px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 24px;
+            transition: var(--transition-smooth);
+            z-index: 2;
+        }
+
+        /* 给特性卡片图标添加微动效 */
+        .feature-card:hover .feature-icon-box {
+            transform: scale(1.1) rotate(6deg);
+        }
+
+        /* 特定的图标旋转或脉冲 */
+        .feature-card:hover .feature-icon-box.icon-spin span {
+            animation: icon-rotate 2.5s linear infinite;
+        }
+
+        .feature-card:hover .feature-icon-box.icon-pulse span {
+            animation: icon-heartbeat 1.5s ease-in-out infinite;
+        }
+
+        @keyframes icon-rotate {
+            to { transform: rotate(360deg); }
+        }
+
+        @keyframes icon-heartbeat {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.15); }
+        }
+
+        .feature-card-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 12px;
+            z-index: 2;
+        }
+
+        .feature-card-desc {
+            font-size: 14px;
+            color: var(--text-secondary);
+            line-height: 1.55;
+            z-index: 2;
+        }
+
+        /* ==================== 6. 底部召集板块 ==================== */
+        .section-cta {
+            padding: 120px 0;
+            background: var(--bg-primary);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .cta-box {
+            position: relative;
+            /* 渐变流体液态背景 */
+            background: linear-gradient(135deg, rgba(26, 115, 232, 0.04) 0%, rgba(139, 92, 246, 0.04) 30%, rgba(236, 72, 153, 0.04) 60%, rgba(26, 115, 232, 0.04) 100%);
+            background-size: 400% 400%;
+            border: 1px solid var(--border-light);
+            border-radius: 36px;
+            padding: 80px 48px;
+            text-align: center;
+            box-shadow: var(--shadow-card);
+            overflow: hidden;
+            animation: cta-mesh-flow 12s ease infinite;
+        }
+
+        @keyframes cta-mesh-flow {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .cta-box::before {
+            content: '';
+            position: absolute;
+            top: -20%;
+            left: -20%;
+            width: 140%;
+            height: 140%;
+            background: radial-gradient(circle, rgba(26, 115, 232, 0.08) 0%, transparent 60%);
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .cta-content {
+            position: relative;
+            z-index: 2;
+            max-width: 620px;
+            margin: 0 auto;
+        }
+
+        .cta-title {
+            font-family: var(--font-title);
+            font-size: 40px;
+            font-weight: 800;
+            color: var(--text-primary);
+            margin-bottom: 18px;
+            letter-spacing: -0.02em;
+            line-height: 1.25;
+        }
+
+        .cta-desc {
+            font-size: 16px;
+            color: var(--text-secondary);
+            margin-bottom: 36px;
+            line-height: 1.6;
+        }
+
+        .cta-buttons {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+        }
+
+        /* ==================== 7. 页脚 ==================== */
+        .footer {
+            background: var(--bg-secondary);
+            border-top: 1px solid var(--border-light);
+            padding: 48px 0;
+            color: var(--text-secondary);
+            font-size: 13px;
+        }
+
+        .footer-grid {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .footer-logo {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-family: var(--font-title);
+            font-weight: 700;
+            font-size: 16px;
+            color: var(--text-primary);
+            text-decoration: none;
+        }
+
+        .footer-copyright {
+            color: var(--text-tertiary);
+        }
+
+        /* ==================== 8. 响应式布局 ==================== */
+        @media (max-width: 1024px) {
+            .navbar {
+                width: calc(100% - 32px);
+            }
+            .hero-grid {
+                grid-template-columns: 1fr;
+                text-align: center;
+                gap: 40px;
+            }
+            .hero-subtitle {
+                margin-left: auto;
+                margin-right: auto;
+            }
+            .hero-actions {
+                justify-content: center;
+            }
+            .hero-visual {
+                height: 380px;
+            }
+            .orch-container {
+                grid-template-columns: 1fr;
+            }
+            .orch-left {
+                border-right: none;
+                border-bottom: 1px solid var(--border-light);
+            }
+            .sim-grid {
+                grid-template-columns: 1fr;
+                gap: 40px;
+            }
+            .features-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .navbar {
+                top: 0;
+                width: 100%;
+                border-radius: 0;
+                border-top: none;
+                border-left: none;
+                border-right: none;
+                height: 56px;
+                padding: 0 16px;
+            }
+            .nav-links {
+                display: none;
+            }
+            .hero-section {
+                padding-top: 100px;
+            }
+            .features-grid {
+                grid-template-columns: 1fr;
+            }
+            .sim-competitiveness-row {
+                grid-template-columns: 1fr;
+                justify-items: center;
+                text-align: center;
+            }
+            .cta-box {
+                padding: 60px 24px;
+            }
+            .cta-title {
+                font-size: 32px;
+            }
+            .cta-buttons {
+                flex-direction: column;
+                width: 100%;
+            }
+            .cta-buttons .btn {
+                width: 100%;
+            }
+            .footer-grid {
+                flex-direction: column;
+                gap: 16px;
+                text-align: center;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 1. 导航栏 -->
+    <nav class="navbar" id="navbar">
+        <a href="#" class="nav-logo">
+            <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M6 26C6 26 12 16 20 16" stroke="#1a73e8" stroke-width="3" stroke-linecap="round" />
                 <path d="M20 16H25V11" stroke="#34a853" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
                 <path d="M25 6C25 7.10457 24.1046 8 23 8C24.1046 8 25 8.89543 25 10C25 8.89543 25.8954 8 27 8C25.8954 8 25 7.10457 25 6Z" fill="#fbbc05" />
                 <path d="M6 26H25" stroke="#ea4335" stroke-width="3" stroke-linecap="round" />
             </svg>
             <span>CareerAI</span>
         </a>
-        <!-- 汉堡菜单按钮（移动端） -->
-        <button class="hamburger-btn" onclick="toggleNavMenu()" aria-label="打开菜单" style="display: none;">
-            <span class="material-symbols-rounded">menu</span>
-        </button>
         <div class="nav-links">
-            {% if current_user.is_authenticated %}
-                <a href="{{ url_for('career.chat') }}" class="nav-cta">Open App</a>
-            {% else %}
-                <a href="{{ url_for('auth.login') }}" class="nav-link">登录</a>
-                <a href="{{ url_for('auth.register') }}" class="nav-cta">免费注册</a>
-            {% endif %}
+            <a href="#orchestration" class="nav-link">编排协同</a>
+            <a href="#playground" class="nav-link">决策诊断舱</a>
+            <a href="#features" class="nav-link">核心特性</a>
+        </div>
+        <div class="nav-actions">
+            <a href="/login" class="btn btn-text">登录</a>
+            <a href="/register" class="btn btn-primary">免费体验</a>
         </div>
     </nav>
 
-    <section class="hero">
-        <div class="hero-content">
-            <div class="hero-eyebrow fade-up">Powered by AI Agent</div>
-            <h1 class="fade-up">智能职业决策<br>AI 顾问系统</h1>
-            <p class="hero-subtitle fade-up">
-                基于多智能体协作，通过 ReAct 推理模式，为你提供精准的职业规划与副业建议
-            </p>
-            <div class="hero-actions fade-up">
-                {% if current_user.is_authenticated %}
-                    <a href="{{ url_for('career.chat') }}" class="btn-primary">开始对话</a>
-                {% else %}
-                    <a href="{{ url_for('auth.register') }}" class="btn-primary">免费注册</a>
-                    <a href="{{ url_for('auth.login') }}" class="btn-secondary">登录</a>
-                {% endif %}
+    <!-- 2. Hero 屏 -->
+    <section class="hero-section">
+        <!-- background canvas for particle network -->
+        <canvas class="hero-bg-canvas" id="heroBgCanvas"></canvas>
+        <div class="container">
+            <div class="hero-grid">
+                <!-- 左侧文案 -->
+                <div class="hero-text">
+                    <div class="hero-tag">
+                        <span class="material-symbols-rounded" style="font-size: 16px;">auto_awesome</span>
+                        基于多智能体协作决策系统
+                    </div>
+                    <h1 class="hero-title">
+                        用 AI 智能体，<br>重新定义你的<span class="grad">职业未来</span>
+                    </h1>
+                    <p class="hero-subtitle">
+                        五大职场专家级智能体无缝接力。基于 ReAct 推理框架与多意图链式协同，为您提供竞争力诊断、副业发掘与求职转型方案。
+                    </p>
+                    <div class="hero-actions">
+                        <a href="/register" class="btn btn-primary btn-large">开始免费体验</a>
+                        <a href="#orchestration" class="btn btn-outline btn-large">了解工作流</a>
+                    </div>
+                </div>
+                
+                <!-- 右侧星云拓扑图 -->
+                <div class="hero-visual">
+                    <!-- 脉冲粒子流画布 -->
+                    <canvas class="nebula-canvas" id="nebulaCanvas"></canvas>
+                    
+                    <div class="nebula-nodes">
+                        <!-- 核心用户节点 -->
+                        <div class="node-center" id="nodeCenter">
+                            <div class="node-center-avatar">
+                                <span class="material-symbols-rounded" style="font-size: 32px;">person</span>
+                            </div>
+                            <span>职业档案</span>
+                        </div>
+                        
+                        <!-- 卫星 Agent 节点 1：规划 -->
+                        <div class="agent-node node-career" style="background-color: #e8f0fe; color: #1a73e8;">
+                            <span class="material-symbols-rounded">explore</span>
+                        </div>
+                        <div class="node-tooltip tooltip-career">
+                            <span class="node-tooltip-title" style="color: #1a73e8;">职业规划顾问</span>
+                            <span class="node-tooltip-desc">进行多重意向匹配，分析转型优势与路径</span>
+                        </div>
+                        
+                        <!-- 卫星 Agent 节点 2：技能 -->
+                        <div class="agent-node node-skill" style="background-color: #f3e8ff; color: #8b5cf6;">
+                            <span class="material-symbols-rounded">psychology</span>
+                        </div>
+                        <div class="node-tooltip tooltip-skill">
+                            <span class="node-tooltip-title" style="color: #8b5cf6;">技能发展顾问</span>
+                            <span class="node-tooltip-desc">比对技能库差距，智能生成推荐学习路径</span>
+                        </div>
+                        
+                        <!-- 卫星 Agent 节点 3：副业 -->
+                        <div class="agent-node node-side" style="background-color: #e6f4ea; color: #34a853;">
+                            <span class="material-symbols-rounded">payments</span>
+                        </div>
+                        <div class="node-tooltip tooltip-side">
+                            <span class="node-tooltip-title" style="color: #34a853;">副业规划专家</span>
+                            <span class="node-tooltip-desc">锁定高性价比副业，计算ROI及匹配系数</span>
+                        </div>
+                        
+                        <!-- 卫星 Agent 节点 4：简历 -->
+                        <div class="agent-node node-resume" style="background-color: #fce4ec; color: #ec4899;">
+                            <span class="material-symbols-rounded">description</span>
+                        </div>
+                        <div class="node-tooltip tooltip-resume">
+                            <span class="node-tooltip-title" style="color: #ec4899;">简历优化专家</span>
+                            <span class="node-tooltip-desc">打磨JD契合度，针对性重构经历和排版</span>
+                        </div>
+                        
+                        <!-- 卫星 Agent 节点 5：面试 -->
+                        <div class="agent-node node-interview" style="background-color: #fef7e0; color: #ea8600;">
+                            <span class="material-symbols-rounded">forum</span>
+                        </div>
+                        <div class="node-tooltip tooltip-interview">
+                            <span class="node-tooltip-title" style="color: #ea8600;">面试教练</span>
+                            <span class="node-tooltip-desc">生成拟真面试题库，提供结构化应答训练</span>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
+        
+        <!-- 滚动提示鼠标 -->
+        <div class="scroll-indicator" id="scrollIndicator">
+            <span>下滑探索更多</span>
+            <div class="mouse-icon"></div>
+        </div>
+        
+        <!-- 背景微光气泡装饰 -->
+        <div class="ambient-bubble" style="width: 140px; height: 140px; top: 12%; left: 5%;"></div>
+        <div class="ambient-bubble" style="width: 100px; height: 100px; bottom: 8%; right: 4%;"></div>
+        <div class="ambient-bubble" style="width: 120px; height: 120px; bottom: 35%; left: 40%;"></div>
     </section>
 
-    <section class="section">
-        <div class="fade-up">
-            <h2>智能体驱动的决策支持</h2>
-            <p class="section-desc">五个专业智能体协作，提供全方位职业规划建议</p>
-        </div>
-        
-        <div class="features fade-up">
-            <div class="feature">
-                <div class="feature-icon" style="color: var(--accent); display: flex; align-items: center; justify-content: center;">
-                    <span class="material-symbols-rounded" style="font-size: 28px;">work</span>
-                </div>
-                <h3>职业匹配</h3>
-                <p>分析技能与兴趣，智能匹配最适合的职业方向</p>
+    <!-- 3. 编排协同看板 -->
+    <section class="section-orch" id="orchestration">
+        <div class="container">
+            <div class="section-header reveal">
+                <h2>多智能体链式协同工作流</h2>
+                <p>一个提问同时触发多重深度分析。CareerAI 的主编排器能够秒级分解复杂任务，动态派发给多个专业智能体，并实时可视化执行推理步骤。</p>
             </div>
-            <div class="feature">
-                <div class="feature-icon" style="color: var(--accent); display: flex; align-items: center; justify-content: center;">
-                    <span class="material-symbols-rounded" style="font-size: 28px;">payments</span>
-                </div>
-                <h3>副业分析</h3>
-                <p>发现适合的副业机会，计算投资回报率</p>
-            </div>
-            <div class="feature">
-                <div class="feature-icon" style="color: var(--accent); display: flex; align-items: center; justify-content: center;">
-                    <span class="material-symbols-rounded" style="font-size: 28px;">analytics</span>
-                </div>
-                <h3>技能分析</h3>
-                <p>识别技能缺口，获取个性化学习路径</p>
-            </div>
-        </div>
-    </section>
-
-    <section class="section section-dark">
-        <div class="fade-up">
-            <h2>透明的推理过程</h2>
-            <p class="section-desc">观察 AI 如何思考、选择工具并给出建议</p>
-        </div>
-        
-        <div class="demo fade-up">
-            <div class="demo-window">
-                <div class="demo-bar">
-                    <div class="demo-dot"></div>
-                    <div class="demo-dot"></div>
-                    <div class="demo-dot"></div>
-                </div>
-                <div class="demo-code" id="demoCode">
-                    <div class="demo-line"><span class="code-label">思考:</span> <span class="code-text">用户想转行数据分析师，需要分析技能差距</span></div>
-                    <div class="demo-line"><span class="code-label">行动:</span> <span class="code-text">调用 analyze_skill_gap</span></div>
-                    <div class="demo-line"><span class="code-label">输入:</span> <span class="code-text">skills=["Python","Excel"], target="数据分析师"</span></div>
-                    <div class="demo-line"><span class="code-label">观察:</span> <span class="code-text">匹配度40%，缺少SQL、数据可视化</span></div>
-                    <div class="demo-line"><br></div>
-                    <div class="demo-line"><span class="code-label">思考:</span> <span class="code-text">需要推荐学习路径</span></div>
-                    <div class="demo-line"><span class="code-label">行动:</span> <span class="code-text">调用 recommend_learning_path</span></div>
-                    <div class="demo-line"><span class="code-label">输入:</span> <span class="code-text">skill="SQL", level="beginner"</span></div>
-                    <div class="demo-line"><span class="code-label">观察:</span> <span class="code-text">预计1-2个月，推荐SQL必知必会</span></div>
-                    <div class="demo-line"><br></div>
-                    <div class="demo-line"><span class="code-muted">// 基于工具返回的数据给出建议</span></div>
-                    <div class="demo-line"><span class="code-label">回答:</span> <span class="code-text">建议您按以下路径提升技能...</span><span class="typing-cursor"></span></div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <section class="section">
-        <div class="stats fade-up">
-            <div>
-                <div class="stat-value" data-num="5">0</div>
-                <div class="stat-label">智能体</div>
-            </div>
-            <div>
-                <div class="stat-value" data-num="6">0</div>
-                <div class="stat-label">工具</div>
-            </div>
-            <div>
-                <div class="stat-value" data-num="32">0</div>
-                <div class="stat-label">职位数据</div>
-            </div>
-            <div>
-                <div class="stat-value" data-num="15">0</div>
-                <div class="stat-label">副业机会</div>
-            </div>
-        </div>
-    </section>
-
-    <section class="animation-section" id="animSection">
-        <!-- 流动渐变块 -->
-        <div class="canvas-layer">
-            <div class="blob blob-1"></div>
-            <div class="blob blob-2"></div>
-            <div class="blob blob-3"></div>
-            <div class="blob blob-4"></div>
-        </div>
-        
-        <!-- 浮动粒子 -->
-        <div class="particle-layer">
-            <div class="particle"></div>
-            <div class="particle"></div>
-            <div class="particle"></div>
-            <div class="particle"></div>
-            <div class="particle"></div>
-            <div class="particle"></div>
-            <div class="particle"></div>
-            <div class="particle"></div>
-            <div class="particle"></div>
-            <div class="particle"></div>
-        </div>
-        
-        <!-- 装饰线 -->
-        <div class="deco-line deco-line-top"></div>
-        <div class="deco-line deco-line-bottom"></div>
-        
-        <!-- 鼠标跟随光晕 -->
-        <div class="cursor-glow" id="cursorGlow"></div>
-        
-        <!-- 文字内容 -->
-        <div class="content-layer">
-            <div class="glow-text">
-                <span class="main-text">CareerAI</span>
-                <span class="sub-text">智能职业决策的未来</span>
-            </div>
-        </div>
-    </section>
-
-</div>
-
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    // 鼠标跟随光晕
-    const animSection = document.getElementById('animSection');
-    const cursorGlow = document.getElementById('cursorGlow');
-    
-    if (animSection && cursorGlow) {
-        animSection.addEventListener('mousemove', function(e) {
-            const rect = animSection.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
-            cursorGlow.style.left = x + 'px';
-            cursorGlow.style.top = y + 'px';
-        });
-    }
-    
-    // 推理演示打字机效果（逐字出现）
-    const demoCode = document.getElementById('demoCode');
-    if (demoCode) {
-        const lines = demoCode.querySelectorAll('.demo-line');
-        let hasPlayed = false;
-        
-        // 将每行文本拆分成字符
-        lines.forEach(line => {
-            const originalHTML = line.innerHTML;
-            const tempDiv = document.createElement('div');
-            tempDiv.innerHTML = originalHTML;
             
-            // 保存原始内容并清空
-            line.dataset.originalHtml = originalHTML;
-            line.innerHTML = '';
+            <div class="orch-container reveal">
+                <!-- 左侧面板 -->
+                <div class="orch-left">
+                    <div>
+                        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+                            <span class="orch-step-num">1</span>
+                            <span style="font-size: 14px; font-weight: 700; color: var(--text-primary)">输入复杂意图</span>
+                        </div>
+                        <div class="orch-user-prompt spotlight-card border-glow-card">
+                            <div class="orch-prompt-title">
+                                <span class="material-symbols-rounded" style="font-size: 16px;">account_circle</span>
+                                用户
+                            </div>
+                            <div class="orch-prompt-content">
+                                我想转型AI智能体研发专家，帮我评估技能缺口，并推荐适合的副业与技能学习路线。
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div style="flex: 1;">
+                        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+                            <span class="orch-step-num">2</span>
+                            <span style="font-size: 14px; font-weight: 700; color: var(--text-primary)">多意图智能拆解</span>
+                        </div>
+                        <div class="intent-dissect-card spotlight-card border-glow-card" id="intentDissectCard">
+                            <div class="intent-item">
+                                <span class="intent-tag intent-tag-career">Career</span>
+                                <span class="intent-title">定位：AI智能体研发专家</span>
+                            </div>
+                            <div class="intent-item">
+                                <span class="intent-tag intent-tag-skill">Skill</span>
+                                <span class="intent-title">诊断技能差距与学习路径</span>
+                            </div>
+                            <div class="intent-item">
+                                <span class="intent-tag intent-tag-side">Side Job</span>
+                                <span class="intent-title">检索匹配的相关变现副业</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 右侧面板 -->
+                <div class="orch-right">
+                    <div class="pipeline-timeline">
+                        <!-- 动态流线 -->
+                        <div class="pipeline-progress-line" id="pipelineProgressLine"></div>
+                        
+                        <!-- 节点 1 -->
+                        <div class="pipeline-node node-style-career" data-index="0">
+                            <div class="pipeline-node-icon">
+                                <span class="material-symbols-rounded">explore</span>
+                            </div>
+                            <div class="pipeline-node-content spotlight-card border-glow-card">
+                                <div class="node-header">
+                                    <span class="node-title">职业规划顾问 介入</span>
+                                    <span class="node-status">
+                                        <span class="material-symbols-rounded" style="font-size: 14px; animation: rotate-clockwise 2s linear infinite;">progress_activity</span>
+                                        执行中
+                                    </span>
+                                </div>
+                                <div class="node-body">
+                                    比对用户基本信息与“AI智能体研发专家”画像。目标年薪增幅预计 35%。
+                                    <!-- ReAct 推理演示 -->
+                                    <div class="react-chain">
+                                        <div class="react-chain-row">
+                                            <span class="react-label">思考:</span>
+                                            <span class="react-text">目标职位对大模型框架 and 智能体有高度要求。我必须先检查技能差距...</span>
+                                        </div>
+                                        <div class="react-chain-row">
+                                            <span class="react-label">行动:</span>
+                                            <span class="react-text">调用工具 recommend_career_path(current_position="Python后端开发", target_position="AI智能体研发专家")</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 节点 2 -->
+                        <div class="pipeline-node node-style-skill" data-index="1">
+                            <div class="pipeline-node-icon">
+                                <span class="material-symbols-rounded">psychology</span>
+                            </div>
+                            <div class="pipeline-node-content spotlight-card border-glow-card">
+                                <div class="node-header">
+                                    <span class="node-title">技能发展顾问 介入</span>
+                                    <span class="node-status">等待派发</span>
+                                </div>
+                                <div class="node-body">
+                                    诊断用户已有技能（Python、Django），发现大模型框架技能缺失（LangChain、Dify、RAG等）。
+                                    <div class="react-chain" style="display: none;">
+                                        <div class="react-chain-row">
+                                            <span class="react-label">思考:</span>
+                                            <span class="react-text">用户已有Python背景。转型智能体开发的效率较高。我需要为他匹配对应的智能技能诊断...</span>
+                                        </div>
+                                        <div class="react-chain-row">
+                                            <span class="react-label">行动:</span>
+                                            <span class="react-text">调用工具 analyze_skill_gap(current_skills=["Python", "Django", "SQL"], target_position="AI智能体研发专家")</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 节点 3 -->
+                        <div class="pipeline-node node-style-side" data-index="2">
+                            <div class="pipeline-node-icon">
+                                <span class="material-symbols-rounded">payments</span>
+                            </div>
+                            <div class="pipeline-node-content spotlight-card border-glow-card">
+                                <div class="node-header">
+                                    <span class="node-title">副业规划专家 介入</span>
+                                    <span class="node-status">等待派发</span>
+                                </div>
+                                <div class="node-body">
+                                    根据所学大模型应用技能，检索适合的变现副业：微型SaaS开发、大模型提示词顾问。匹配度 88%。
+                                    <div class="react-chain" style="display: none;">
+                                        <div class="react-chain-row">
+                                            <span class="react-label">思考:</span>
+                                            <span class="react-text">智能体方向副业需要短期快交付特性。我将以掌握技能匹配副业岗位...</span>
+                                        </div>
+                                        <div class="react-chain-row">
+                                            <span class="react-label">行动:</span>
+                                            <span class="react-text">调用工具 search_side_jobs(skills=["Python", "大模型开发"], hours_per_week=10)</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 交互控制器 -->
+                    <div class="orch-controls">
+                        <button class="btn-control" id="btnOrchPlay" title="播放/暂停">
+                            <span class="material-symbols-rounded" id="playIcon">pause</span>
+                        </button>
+                        <button class="btn-control" id="btnOrchReset" title="重置">
+                            <span class="material-symbols-rounded">replay</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 4. 互动决策模拟舱 -->
+    <section class="section-sim" id="playground">
+        <div class="container">
+            <div class="section-header reveal">
+                <h2>职业诊断模拟舱</h2>
+                <p>点击选择不同背景的角色画像，体验前端竞争力实时评分系统与智能方向推荐的协同动效。</p>
+            </div>
             
-            // 递归处理节点，只对文本节点添加字符span
-            function processNode(node, container) {
-                if (node.nodeType === Node.TEXT_NODE) {
-                    const text = node.textContent;
-                    for (let i = 0; i < text.length; i++) {
-                        const span = document.createElement('span');
-                        span.className = 'char';
-                        span.textContent = text[i] === ' ' ? '\u00A0' : text[i];
-                        container.appendChild(span);
+            <div class="sim-grid">
+                <!-- 左侧列表 -->
+                <div class="presets-list reveal stagger-1">
+                    <!-- 角色 1 -->
+                    <div class="preset-btn active spotlight-card border-glow-card" data-preset="python-dev">
+                        <div class="preset-info">
+                            <div class="preset-icon-box">
+                                <span class="material-symbols-rounded">terminal</span>
+                            </div>
+                            <div>
+                                <div class="preset-name">Python 后端开发</div>
+                                <div class="preset-sub">掌握 Python, Django, SQL. 缺少大模型经验。</div>
+                            </div>
+                        </div>
+                        <span class="material-symbols-rounded preset-arrow">arrow_forward</span>
+                    </div>
+                    
+                    <!-- 角色 2 -->
+                    <div class="preset-btn spotlight-card border-glow-card" data-preset="frontend-eng">
+                        <div class="preset-info">
+                            <div class="preset-icon-box">
+                                <span class="material-symbols-rounded">html</span>
+                            </div>
+                            <div>
+                                <div class="preset-name">前端工程师</div>
+                                <div class="preset-sub">掌握 React, Vue, JS. 意图扩展全栈。</div>
+                            </div>
+                        </div>
+                        <span class="material-symbols-rounded preset-arrow">arrow_forward</span>
+                    </div>
+                    
+                    <!-- 角色 3 -->
+                    <div class="preset-btn spotlight-card border-glow-card" data-preset="product-pm">
+                        <div class="preset-info">
+                            <div class="preset-icon-box">
+                                <span class="material-symbols-rounded">design_services</span>
+                            </div>
+                            <div>
+                                <div class="preset-name">产品运营经理</div>
+                                <div class="preset-sub">掌握市场分析、用户增长. 意图转型 AIGC 产品。</div>
+                            </div>
+                        </div>
+                        <span class="material-symbols-rounded preset-arrow">arrow_forward</span>
+                    </div>
+                </div>
+                
+                <!-- 右侧模拟结果面板 -->
+                <div class="sim-panel reveal spotlight-card border-glow-card stagger-2" id="simPanel">
+                    <div class="sim-panel-header">
+                        <span class="sim-panel-title" id="simPanelTitle">Python 后端开发 决策看板</span>
+                        <span class="sim-panel-tag" id="simPanelTag">AI 诊断完毕</span>
+                    </div>
+                    
+                    <!-- 跑表圆环 -->
+                    <div class="sim-competitiveness-row">
+                        <div class="sim-score-ring">
+                            <svg viewBox="0 0 36 36">
+                                <path class="ring-circle-bg"
+                                  d="M18 2.0845
+                                    a 15.9155 15.9155 0 0 1 0 31.831
+                                    a 15.9155 15.9155 0 0 1 0 -31.831"
+                                />
+                                <path class="ring-circle-fill" id="simCircleFill"
+                                  d="M18 2.0845
+                                    a 15.9155 15.9155 0 0 1 0 31.831
+                                    a 15.9155 15.9155 0 0 1 0 -31.831"
+                                />
+                            </svg>
+                            <span class="sim-score-text" id="simScoreText">0%</span>
+                        </div>
+                        <div class="sim-score-info">
+                            <span class="sim-score-label">智能竞争力评分</span>
+                            <span class="sim-score-desc" id="simScoreDesc">基于已有 3 项核心技能和 1 个项目经历测算。大模型方向技能厚度偏低，建议针对性补齐。</span>
+                        </div>
+                    </div>
+                    
+                    <!-- 智能求职转型推荐 -->
+                    <div class="sim-recommendations">
+                        <div style="font-size: 13px; font-weight: 700; color: var(--text-secondary); margin-bottom: 4px;">AI 推荐转型方向</div>
+                        <div id="simRecContainer">
+                            <!-- 动态载入卡片 -->
+                            <a href="/chat?q=我想转型AI智能体开发" class="sim-rec-card spotlight-card border-glow-card rendered">
+                                <div class="sim-rec-info">
+                                    <div class="sim-rec-title-row">
+                                        <span class="sim-rec-title">AI 智能体研发专家 (Agent Developer)</span>
+                                        <span class="sim-rec-tag">结合 Python 背景</span>
+                                    </div>
+                                    <span class="sim-rec-desc">利用 LangChain、Dify 开发企业级智能体应用，目前涨幅极高。</span>
+                                </div>
+                                <span class="sim-rec-link">
+                                    咨询 AI
+                                    <span class="material-symbols-rounded" style="font-size: 14px;">chevron_right</span>
+                                </span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 5. 核心价值亮点卡片 -->
+    <section class="section-features" id="features">
+        <div class="container">
+            <div class="section-header reveal">
+                <h2>更前沿、更透明的 AI 驱动技术</h2>
+                <p>不只是简单的聊天气泡。我们在交互深度与智能编排层面进行了彻底升级。</p>
+            </div>
+            
+            <div class="features-grid">
+                <!-- 卡片 1 -->
+                <div class="feature-card reveal spotlight-card border-glow-card stagger-1">
+                    <div class="feature-icon-box icon-spin" style="background: rgba(26, 115, 232, 0.06); color: var(--google-blue);">
+                        <span class="material-symbols-rounded">hub</span>
+                    </div>
+                    <h3 class="feature-card-title">五大专家智能体协作</h3>
+                    <p class="feature-card-desc">职业规划顾问、技能发展顾问、副业规划专家、简历优化专家、面试教练。主编排器进行无缝任务接力，彻底告别单点问答。</p>
+                </div>
+                
+                <!-- 卡片 2 -->
+                <div class="feature-card reveal spotlight-card border-glow-card stagger-2">
+                    <div class="feature-icon-box icon-spin" style="background: rgba(139, 92, 246, 0.06); color: var(--ai-violet);">
+                        <span class="material-symbols-rounded">visibility</span>
+                    </div>
+                    <h3 class="feature-card-title">透明的 ReAct 推理</h3>
+                    <p class="feature-card-desc">AI 并非盲盒。我们将“思考 - 行动 - 观察 - 结论”的推理逻辑透明地呈现在右侧仪表盘，助您理解每一个职业决策的底层依据。</p>
+                </div>
+                
+                <!-- 卡片 3 -->
+                <div class="feature-card reveal spotlight-card border-glow-card stagger-3">
+                    <div class="feature-icon-box" style="background: rgba(236, 72, 153, 0.06); color: var(--ai-pink);">
+                        <span class="material-symbols-rounded">query_stats</span>
+                    </div>
+                    <h3 class="feature-card-title">项目+技能双维竞争力</h3>
+                    <p class="feature-card-desc">摆脱简单纸面简历比对。结合档案完善度、技能深度与实际项目的技术栈厚度，由算法科学量化竞争力得分与缺口。</p>
+                </div>
+                
+                <!-- 卡片 4 -->
+                <div class="feature-card reveal spotlight-card border-glow-card stagger-4">
+                    <div class="feature-icon-box icon-pulse" style="background: rgba(52, 168, 83, 0.06); color: var(--google-green);">
+                        <span class="material-symbols-rounded">psychology_alt</span>
+                    </div>
+                    <h3 class="feature-card-title">对话数据自动提取</h3>
+                    <p class="feature-card-desc">在您与 AI 顾问沟通的字里行间，智能体能自动提取并沉淀您的新技能标签和新项目，动态更新系统竞争力记忆，无须繁琐录入。</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 6. 底部召集板块 -->
+    <section class="section-cta">
+        <div class="container">
+            <div class="cta-box reveal">
+                <div class="cta-content">
+                    <h2 class="cta-title">开启属于您的 AI 职业探索</h2>
+                    <p class="cta-desc">数万职场精英已通过 CareerAI 锁定了下一份转型岗位、发掘了首笔数字副业收入。现在，轮到您了。</p>
+                    <div class="cta-buttons">
+                        <a href="/register" class="btn btn-primary btn-large">免费创建账号</a>
+                        <a href="/login" class="btn btn-outline btn-large">直接登录</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 7. 页脚 -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-grid">
+                <a href="#" class="footer-logo">
+                    <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M6 26C6 26 12 16 20 16" stroke="#1a73e8" stroke-width="3" stroke-linecap="round" />
+                        <path d="M20 16H25V11" stroke="#34a853" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+                        <path d="M25 6C25 7.10457 24.1046 8 23 8C24.1046 8 25 8.89543 25 10C25 8.89543 25.8954 8 27 8C25.8954 8 25 7.10457 25 6Z" fill="#fbbc05" />
+                        <path d="M6 26H25" stroke="#ea4335" stroke-width="3" stroke-linecap="round" />
+                    </svg>
+                    <span>CareerAI</span>
+                </a>
+                <span class="footer-copyright">&copy; 2026 CareerAI. Google Inspired Light Design Language.</span>
+            </div>
+        </div>
+    </footer>
+
+    <!-- JS 交互逻辑 -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            
+            // ==================== 0. 导航栏与滚动提示滑动过渡 ====================
+            const navbar = document.getElementById('navbar');
+            const scrollIndicator = document.getElementById('scrollIndicator');
+            
+            window.addEventListener('scroll', () => {
+                if (window.scrollY > 40) {
+                    navbar.classList.add('scrolled');
+                    if (scrollIndicator) {
+                        scrollIndicator.style.opacity = '0';
+                        scrollIndicator.style.transition = 'opacity 0.4s ease';
                     }
-                } else if (node.nodeType === Node.ELEMENT_NODE) {
-                    const clone = node.cloneNode(false);
-                    container.appendChild(clone);
-                    Array.from(node.childNodes).forEach(child => processNode(child, clone));
-                }
-            }
-            
-            Array.from(tempDiv.childNodes).forEach(child => processNode(child, line));
-        });
-        
-        // 逐字显示函数
-        function typeLine(lineIndex) {
-            if (lineIndex >= lines.length) return;
-            
-            const line = lines[lineIndex];
-            line.classList.add('visible', 'active');
-            const chars = line.querySelectorAll('.char');
-            let charIndex = 0;
-            
-            function showNextChar() {
-                if (charIndex < chars.length) {
-                    chars[charIndex].classList.add('visible');
-                    charIndex++;
-                    const delay = chars[charIndex - 1].textContent === ' ' ? 30 : 50;
-                    setTimeout(showNextChar, delay);
                 } else {
-                    line.classList.remove('active');
-                    setTimeout(() => typeLine(lineIndex + 1), 150);
+                    navbar.classList.remove('scrolled');
+                    if (scrollIndicator) {
+                        scrollIndicator.style.opacity = '1';
+                    }
+                }
+            });
+
+            // ==================== 1. 元素显露动效 (IntersectionObserver) ====================
+            const revealElements = document.querySelectorAll('.reveal');
+            const revealObserver = new IntersectionObserver((entries, observer) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('active');
+                        // 仅加载一次
+                        observer.unobserve(entry.target);
+                    }
+                });
+            }, { threshold: 0.1 });
+            revealElements.forEach(el => revealObserver.observe(el));
+
+            // ==================== 2. 全局鼠标聚光灯位置计算与背景/3D交互 ====================
+            const heroSection = document.querySelector('.hero-section');
+            const heroVisual = document.querySelector('.hero-visual');
+            
+            document.addEventListener('mousemove', function(e) {
+                // Spotlight cards
+                const cards = document.querySelectorAll('.spotlight-card');
+                cards.forEach(card => {
+                    const rect = card.getBoundingClientRect();
+                    const x = e.clientX - rect.left;
+                    const y = e.clientY - rect.top;
+                    card.style.setProperty('--mouse-x', `${x}px`);
+                    card.style.setProperty('--mouse-y', `${y}px`);
+                });
+                
+                // Hero Background and 3D Visual Tilt
+                if (heroSection) {
+                    const rect = heroSection.getBoundingClientRect();
+                    if (e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom) {
+                        const x = ((e.clientX - rect.left) / rect.width) * 100;
+                        const y = ((e.clientY - rect.top) / rect.height) * 100;
+                        
+                        // Interactive background spotlight positions
+                        heroSection.style.setProperty('--bg-x', `${x}%`);
+                        heroSection.style.setProperty('--bg-y', `${y}%`);
+                        heroSection.style.setProperty('--bg-x2', `${100 - x}%`);
+                        heroSection.style.setProperty('--bg-y2', `${100 - y}%`);
+                        
+                        // Interactive 3D Visual Tilt
+                        if (heroVisual) {
+                            const vRect = heroVisual.getBoundingClientRect();
+                            const centerX = vRect.left + vRect.width / 2;
+                            const centerY = vRect.top + vRect.height / 2;
+                            const rotateY = ((e.clientX - centerX) / (vRect.width / 2)) * 10; // Max 10 deg
+                            const rotateX = -((e.clientY - centerY) / (vRect.height / 2)) * 10;
+                            
+                            heroVisual.style.setProperty('--rotate-x', `${rotateX}deg`);
+                            heroVisual.style.setProperty('--rotate-y', `${rotateY}deg`);
+                        }
+                    }
+                }
+            });
+            
+            if (heroSection) {
+                heroSection.addEventListener('mouseleave', () => {
+                    if (heroVisual) {
+                        heroVisual.style.setProperty('--rotate-x', '0deg');
+                        heroVisual.style.setProperty('--rotate-y', '0deg');
+                    }
+                    heroSection.style.setProperty('--bg-x', '25%');
+                    heroSection.style.setProperty('--bg-y', '25%');
+                    heroSection.style.setProperty('--bg-x2', '75%');
+                    heroSection.style.setProperty('--bg-y2', '75%');
+                });
+            }
+
+            // ==================== 1.5. Hero 背景粒子网络 Canvas 动画 ====================
+            const bgCanvas = document.getElementById('heroBgCanvas');
+            if (bgCanvas) {
+                const bgCtx = bgCanvas.getContext('2d');
+                let bgWidth = bgCanvas.width = bgCanvas.offsetWidth;
+                let bgHeight = bgCanvas.height = bgCanvas.offsetHeight;
+                
+                let particles = [];
+                const maxParticles = 60; // Throttled for extreme smooth performance
+                
+                let mouse = { x: null, y: null, radius: 180 };
+                
+                window.addEventListener('mousemove', (e) => {
+                    const rect = bgCanvas.getBoundingClientRect();
+                    mouse.x = e.clientX - rect.left;
+                    mouse.y = e.clientY - rect.top;
+                });
+                
+                window.addEventListener('mouseleave', () => {
+                    mouse.x = null;
+                    mouse.y = null;
+                });
+                
+                function resizeBgCanvas() {
+                    bgWidth = bgCanvas.width = bgCanvas.offsetWidth;
+                    bgHeight = bgCanvas.height = bgCanvas.offsetHeight;
+                    initBgParticles();
+                }
+                window.addEventListener('resize', resizeBgCanvas);
+                
+                class BgParticle {
+                    constructor() {
+                        this.x = Math.random() * bgWidth;
+                        this.y = Math.random() * bgHeight;
+                        this.vx = (Math.random() - 0.5) * 0.4;
+                        this.vy = (Math.random() - 0.5) * 0.4;
+                        this.size = Math.random() * 2 + 1; // 1px to 3px
+                        const colors = ['rgba(26, 115, 232, 0.45)', 'rgba(139, 92, 246, 0.4)', 'rgba(255, 75, 145, 0.35)'];
+                        this.color = colors[Math.floor(Math.random() * colors.length)];
+                    }
+                    
+                    update() {
+                        // Check boundaries
+                        if (this.x < 0 || this.x > bgWidth) this.vx = -this.vx;
+                        if (this.y < 0 || this.y > bgHeight) this.vy = -this.vy;
+                        
+                        // Mouse interaction (repulsion)
+                        if (mouse.x !== null && mouse.y !== null) {
+                            let dx = this.x - mouse.x;
+                            let dy = this.y - mouse.y;
+                            let distance = Math.hypot(dx, dy);
+                            if (distance < mouse.radius) {
+                                let force = (mouse.radius - distance) / mouse.radius;
+                                let angle = Math.atan2(dy, dx);
+                                this.x += Math.cos(angle) * force * 1.5;
+                                this.y += Math.sin(angle) * force * 1.5;
+                            }
+                        }
+                        
+                        this.x += this.vx;
+                        this.y += this.vy;
+                    }
+                    
+                    draw() {
+                        bgCtx.beginPath();
+                        bgCtx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                        bgCtx.fillStyle = this.color;
+                        bgCtx.fill();
+                    }
+                }
+                
+                function initBgParticles() {
+                    particles = [];
+                    for (let i = 0; i < maxParticles; i++) {
+                        particles.push(new BgParticle());
+                    }
+                }
+                
+                function connectParticles() {
+                    for (let a = 0; a < particles.length; a++) {
+                        for (let b = a + 1; b < particles.length; b++) {
+                            let dx = particles[a].x - particles[b].x;
+                            let dy = particles[a].y - particles[b].y;
+                            let distance = Math.hypot(dx, dy);
+                            
+                            if (distance < 110) {
+                                let alpha = (110 - distance) / 110 * 0.15;
+                                bgCtx.beginPath();
+                                bgCtx.moveTo(particles[a].x, particles[a].y);
+                                bgCtx.lineTo(particles[b].x, particles[b].y);
+                                bgCtx.strokeStyle = `rgba(124, 62, 237, ${alpha})`;
+                                bgCtx.lineWidth = 0.8;
+                                bgCtx.stroke();
+                            }
+                        }
+                    }
+                }
+                
+                function animateBg() {
+                    bgCtx.clearRect(0, 0, bgWidth, bgHeight);
+                    
+                    particles.forEach(p => {
+                        p.update();
+                        p.draw();
+                    });
+                    
+                    connectParticles();
+                    requestAnimationFrame(animateBg);
+                }
+                
+                initBgParticles();
+                animateBg();
+            }
+
+            // ==================== 3. Hero星云 Canvas 粒子连线动画 ====================
+            const canvas = document.getElementById('nebulaCanvas');
+            if (canvas) {
+                const ctx = canvas.getContext('2d');
+                
+                function resizeCanvas() {
+                    const rect = canvas.getBoundingClientRect();
+                    canvas.width = rect.width;
+                    canvas.height = rect.height;
+                }
+                
+                resizeCanvas();
+                window.addEventListener('resize', resizeCanvas);
+                
+                // 获取各节点相对画布的中心点坐标
+                const centerNodeEl = document.getElementById('nodeCenter');
+                const agentEls = document.querySelectorAll('.agent-node');
+                
+                let particles = [];
+                
+                // 粒子类定义
+                class FlowParticle {
+                    constructor(startNode, endNode, delay = 0) {
+                        this.startNode = startNode;
+                        this.endNode = endNode;
+                        this.progress = 0; // 0 to 1
+                        this.speed = 0.008 + Math.random() * 0.006;
+                        this.delay = delay;
+                        this.color = window.getComputedStyle(endNode).color || '#1a73e8';
+                    }
+                    
+                    draw() {
+                        if (this.delay > 0) {
+                            this.delay--;
+                            return;
+                        }
+                        
+                        this.progress += this.speed;
+                        if (this.progress >= 1) {
+                            this.progress = 0;
+                            // 来回穿梭：反转起点和终点
+                            const temp = this.startNode;
+                            this.startNode = this.endNode;
+                            this.endNode = temp;
+                            this.speed = 0.008 + Math.random() * 0.006;
+                        }
+                        
+                        // 获取当前节点中心点
+                        const startX = this.startNode.offsetLeft + this.startNode.offsetWidth / 2;
+                        const startY = this.startNode.offsetTop + this.startNode.offsetHeight / 2;
+                        const endX = this.endNode.offsetLeft + this.endNode.offsetWidth / 2;
+                        const endY = this.endNode.offsetTop + this.endNode.offsetHeight / 2;
+                        
+                        // 线性插值计算当前粒子坐标
+                        const currentX = startX + (endX - startX) * this.progress;
+                        const currentY = startY + (endY - startY) * this.progress;
+                        
+                        // 绘制粒子
+                        ctx.beginPath();
+                        ctx.arc(currentX, currentY, 3, 0, Math.PI * 2);
+                        ctx.fillStyle = this.color;
+                        ctx.shadowBlur = 8;
+                        ctx.shadowColor = this.color;
+                        ctx.fill();
+                        ctx.shadowBlur = 0; // 重置
+                    }
+                }
+                
+                // 初始化粒子流（每个卫星节点到中心节点各初始化2个粒子）
+                function initParticles() {
+                    particles = [];
+                    if (!centerNodeEl) return;
+                    agentEls.forEach(agent => {
+                        particles.push(new FlowParticle(centerNodeEl, agent, 0));
+                        particles.push(new FlowParticle(agent, centerNodeEl, 60)); // 反向及延迟粒子
+                    });
+                }
+                
+                setTimeout(() => {
+                    initParticles();
+                    
+                    // 动画渲染环
+                    function animate() {
+                        ctx.clearRect(0, 0, canvas.width, canvas.height);
+                        
+                        // 绘制虚线背景轨道
+                        if (centerNodeEl) {
+                            const startX = centerNodeEl.offsetLeft + centerNodeEl.offsetWidth / 2;
+                            const startY = centerNodeEl.offsetTop + centerNodeEl.offsetHeight / 2;
+                            
+                            agentEls.forEach(agent => {
+                                const endX = agent.offsetLeft + agent.offsetWidth / 2;
+                                const endY = agent.offsetTop + agent.offsetHeight / 2;
+                                
+                                ctx.beginPath();
+                                ctx.moveTo(startX, startY);
+                                ctx.lineTo(endX, endY);
+                                ctx.strokeStyle = 'rgba(218, 220, 224, 0.4)';
+                                ctx.lineWidth = 1;
+                                ctx.setLineDash([4, 4]);
+                                ctx.stroke();
+                                ctx.setLineDash([]); // 重置
+                            });
+                        }
+                        
+                        // 绘制流动粒子
+                        particles.forEach(p => p.draw());
+                        
+                        requestAnimationFrame(animate);
+                    }
+                    
+                    animate();
+                }, 500);
+            }
+
+            // ==================== 4. 编排协同时间线步进器 ====================
+            const pipelineNodes = document.querySelectorAll('.pipeline-node');
+            const progressLine = document.getElementById('pipelineProgressLine');
+            const intentCard = document.getElementById('intentDissectCard');
+            const btnPlay = document.getElementById('btnOrchPlay');
+            const btnReset = document.getElementById('btnOrchReset');
+            const playIcon = document.getElementById('playIcon');
+            
+            let currentStep = 0;
+            let playInterval = null;
+            let isPlaying = true;
+            
+            function updateTimeline() {
+                // 1. 重置所有节点状态
+                pipelineNodes.forEach((node, idx) => {
+                    node.classList.remove('active');
+                    const statusText = node.querySelector('.node-status');
+                    const reactChain = node.querySelector('.react-chain');
+                    
+                    if (idx < currentStep) {
+                        node.classList.add('active');
+                        statusText.innerHTML = '<span class="material-symbols-rounded" style="font-size: 14px;">check_circle</span>已完成';
+                        if (reactChain) reactChain.style.display = 'flex';
+                    } else if (idx === currentStep) {
+                        node.classList.add('active');
+                        statusText.innerHTML = '<span class="material-symbols-rounded" style="font-size: 14px; animation: rotate-clockwise 2s linear infinite;">progress_activity</span>执行中';
+                        if (reactChain) reactChain.style.display = 'flex';
+                    } else {
+                        statusText.innerHTML = '等待派发';
+                        if (reactChain) reactChain.style.display = 'none';
+                    }
+                });
+                
+                // 2. 意图拆解卡片激活动效
+                if (currentStep >= 0) {
+                    intentCard.classList.add('active');
+                } else {
+                    intentCard.classList.remove('active');
+                }
+                
+                // 3. 计算进度条百分比
+                let percent = 0;
+                if (currentStep === 1) percent = 45;
+                if (currentStep === 2) percent = 90;
+                if (currentStep >= 3) percent = 100;
+                
+                if (progressLine) {
+                    progressLine.style.height = percent + '%';
                 }
             }
             
-            showNextChar();
-        }
-        
-        // 当滚动到可视区域时触发
-        const demoObserver = new IntersectionObserver(function(entries) {
-            if (entries[0].isIntersecting && !hasPlayed) {
-                hasPlayed = true;
-                setTimeout(() => typeLine(0), 300);
-            }
-        }, { threshold: 0.3 });
-        
-        demoObserver.observe(demoCode);
-    }
-    
-    // 滚动动画
-    var observer = new IntersectionObserver(function(entries) {
-        entries.forEach(function(entry) {
-            if (entry.isIntersecting) {
-                entry.target.classList.add('visible');
-            }
-        });
-    }, { threshold: 0.1 });
-    
-    document.querySelectorAll('.fade-up').forEach(function(el) {
-        observer.observe(el);
-    });
-    
-    document.querySelectorAll('[data-num]').forEach(function(el) {
-        var numObserver = new IntersectionObserver(function(entries) {
-            if (entries[0].isIntersecting) {
-                var target = parseInt(el.getAttribute('data-num'));
-                var start = performance.now();
-                function animate(now) {
-                    var progress = Math.min((now - start) / 1500, 1);
-                    el.textContent = Math.floor(target * (1 - Math.pow(1 - progress, 3)));
-                    if (progress < 1) requestAnimationFrame(animate);
+            function nextStep() {
+                currentStep++;
+                if (currentStep > 3) {
+                    currentStep = 0;
                 }
-                requestAnimationFrame(animate);
-                numObserver.unobserve(el);
+                updateTimeline();
             }
+            
+            function startInterval() {
+                if (playInterval) clearInterval(playInterval);
+                playInterval = setInterval(nextStep, 3500);
+                playIcon.textContent = 'pause';
+                isPlaying = true;
+            }
+            
+            function stopInterval() {
+                if (playInterval) clearInterval(playInterval);
+                playInterval = null;
+                playIcon.textContent = 'play_arrow';
+                isPlaying = false;
+            }
+            
+            // 点击播放/暂停
+            if (btnPlay) {
+                btnPlay.addEventListener('click', () => {
+                    if (isPlaying) stopInterval();
+                    else startInterval();
+                });
+            }
+            
+            // 点击重置
+            if (btnReset) {
+                btnReset.addEventListener('click', () => {
+                    currentStep = 0;
+                    updateTimeline();
+                    if (isPlaying) startInterval();
+                });
+            }
+            
+            // 初始化时间线
+            updateTimeline();
+            startInterval();
+            
+            // 当元素滑出可视区时暂停，滑入时播放
+            const timelineObserver = new IntersectionObserver((entries) => {
+                if (entries[0].isIntersecting) {
+                    if (!isPlaying && playInterval === null) {
+                        startInterval();
+                    }
+                } else {
+                    stopInterval();
+                }
+            }, { threshold: 0.1 });
+            
+            const orchSection = document.getElementById('orchestration');
+            if (orchSection) timelineObserver.observe(orchSection);
+
+            // ==================== 5. 决策模拟舱交互逻辑 ====================
+            const presetBtns = document.querySelectorAll('.preset-btn');
+            const simCircleFill = document.getElementById('simCircleFill');
+            const simScoreText = document.getElementById('simScoreText');
+            const simScoreDesc = document.getElementById('simScoreDesc');
+            const simPanelTitle = document.getElementById('simPanelTitle');
+            const simRecContainer = document.getElementById('simRecContainer');
+            const simPanel = document.getElementById('simPanel');
+            
+            // 预设数据池 (完全对接 profile.js 中的岗位及文案)
+            const presetData = {
+                'python-dev': {
+                    title: 'Python 后端开发 决策看板',
+                    score: 65,
+                    desc: '基于已有 3 项核心技能和 1 个项目经历测算。大模型方向技能厚度偏低，建议针对性补齐以适应 AI 时代转型需求。',
+                    recs: [
+                        {
+                            title: 'AI 智能体研发专家 (Agent Developer)',
+                            tag: '结合 Python 背景',
+                            desc: '利用 LangChain、Dify 等开发智能体应用，当前年薪涨幅极高。',
+                            q: '我想了解转型成为 AI 智能体开发专家 (Agent Developer)，结合我已有的 Python 背景，学习路径应该怎么规划？'
+                        },
+                        {
+                            title: '大模型应用工程专家 (LLM Engineer)',
+                            tag: '热门转型方向',
+                            desc: '负责企业大模型微调与 RAG 知识库检索系统搭建。',
+                            q: '我是一个Python工程师，请帮我规划一套大模型应用工程专家 (LLM Engineer) 的成长路线，尤其是RAG技术的学习方案。'
+                        }
+                    ]
+                },
+                'frontend-eng': {
+                    title: '前端开发工程师 决策看板',
+                    score: 75,
+                    desc: '具备扎实的 React 与 JavaScript 栈深度。前端核心骨架完备，若补充 Node.js 及 AI 工具流将升级为高交付力全栈工程师。',
+                    recs: [
+                        {
+                            title: '全栈开发工程师 (Full Stack Dev)',
+                            tag: '技术栈纵向推荐',
+                            desc: '从前端延伸到 Node.js 或 Python 后端开发，实现独立全栈交付。',
+                            q: '作为一个有 React 经验的前端开发者，如何转型为全栈开发工程师，需要补充哪些后端与运维核心知识？'
+                        },
+                        {
+                            title: 'AI 辅助前端工程专家',
+                            tag: '前沿方向',
+                            desc: '结合 AI 工具重构前端工作流，负责前端体验与交互智能化。',
+                            q: '前端开发如何结合 AI 工具（如 v0, cursor）进行智能化转型，提升个人在市场上的竞争力？'
+                        }
+                    ]
+                },
+                'product-pm': {
+                    title: '产品运营经理 决策看板',
+                    score: 55,
+                    desc: '商业敏感度与用户调研能力良好。缺少技术实现细节支撑。建议迅速补齐 AIGC 提示词及主流大模型产品能力链条。',
+                    recs: [
+                        {
+                            title: 'AI 产品经理 (AIGC 方向)',
+                            tag: '热门高薪方向',
+                            desc: '负责将大模型技术与具体行业场景结合，进行产品功能定义与落地。',
+                            q: '非技术背景的产品运营，如何转型为 AI 产品经理？有哪些必备的技术常识 and 业务框架需要学习？'
+                        },
+                        {
+                            title: '数据运营与分析专家',
+                            tag: '复合岗位推荐',
+                            desc: '利用数据驱动业务决策，掌握 SQL 与可视化工具。',
+                            q: '运营人员想要转型数据分析与数据运营方向，应该如何起步，学习路径是怎样的？'
+                        }
+                    ]
+                }
+            };
+            
+            // 切换画像函数
+            function switchPreset(presetName) {
+                const data = presetData[presetName];
+                if (!data) return;
+                
+                // 1. 给面板加个淡出微缩动效
+                simPanel.style.opacity = '0.5';
+                simPanel.style.transform = 'translateY(12px) scale(0.99)';
+                
+                setTimeout(() => {
+                    // 2. 更新文本
+                    simPanelTitle.textContent = data.title;
+                    simScoreDesc.textContent = data.desc;
+                    
+                    // 3. 重新渲染竞争力圆环动画
+                    simCircleFill.style.strokeDasharray = `0, 100`;
+                    simScoreText.textContent = `0%`;
+                    
+                    setTimeout(() => {
+                        simCircleFill.style.strokeDasharray = `${data.score}, 100`;
+                        // 动态跑表字
+                        let currentScore = 0;
+                        const scoreInterval = setInterval(() => {
+                            if (currentScore >= data.score) {
+                                clearInterval(scoreInterval);
+                            } else {
+                                currentScore++;
+                                simScoreText.textContent = `${currentScore}%`;
+                            }
+                        }, 12);
+                    }, 100);
+                    
+                    // 4. 更新推荐岗位卡片，带级联渐显时间延迟
+                    let html = '';
+                    data.recs.forEach((rec, idx) => {
+                        const hrefUrl = `/chat?q=${encodeURIComponent(rec.q)}`;
+                        html += `
+                            <a href="${hrefUrl}" class="sim-rec-card spotlight-card border-glow-card rendered" style="animation-delay: ${0.1 * (idx + 1)}s">
+                                <div class="sim-rec-info">
+                                    <div class="sim-rec-title-row">
+                                        <span class="sim-rec-title">${rec.title}</span>
+                                        <span class="sim-rec-tag">${rec.tag}</span>
+                                    </div>
+                                    <span class="sim-rec-desc">${rec.desc}</span>
+                                </div>
+                                <span class="sim-rec-link">
+                                    咨询 AI
+                                    <span class="material-symbols-rounded" style="font-size: 14px;">chevron_right</span>
+                                </span>
+                            </a>
+                        `;
+                    });
+                    simRecContainer.innerHTML = html;
+                    
+                    // 5. 面板重回展示
+                    simPanel.style.opacity = '1';
+                    simPanel.style.transform = 'translateY(0) scale(1)';
+                }, 300);
+            }
+            
+            // 给预设角色按钮挂载点击事件
+            presetBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    // 移除所有的激活状态
+                    presetBtns.forEach(b => b.classList.remove('active'));
+                    
+                    // 给当前按钮加激活状态
+                    btn.classList.add('active');
+                    
+                    // 执行切换
+                    const preset = btn.getAttribute('data-preset');
+                    switchPreset(preset);
+                });
+            });
+            
+            // 初始化激活 Python 角色
+            setTimeout(() => {
+                switchPreset('python-dev');
+            }, 600);
         });
-        numObserver.observe(el);
-    });
-});
-</script>
-{% endblock %}
+    </script>
+</body>
+</html>

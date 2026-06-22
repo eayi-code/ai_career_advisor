@@ -5,7 +5,7 @@ from flask_limiter.util import get_remote_address
 # 创建限流器实例
 limiter = Limiter(
     key_func=get_remote_address,
-    default_limits=["200 per day", "50 per hour"],
+    default_limits=["2000 per day", "500 per hour"],
     storage_uri="memory://"
 )
 
@@ -24,6 +24,9 @@ RATE_LIMITS = {
     
     # 普通API - 宽松限流
     "api_default": "60 per minute",
+    
+    # 任务状态轮询 - 宽松限流（允许频繁轮询）
+    "task_status": "120 per minute",
     
     # 历史记录 - 宽松限流
     "history_list": "30 per minute",

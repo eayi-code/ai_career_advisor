@@ -366,6 +366,10 @@ async function loadConversation(id) {
         const res = await fetch('/api/history/' + id);
         const data = await res.json();
         if (data.code === 200 && data.data.messages && data.data.messages.length > 0) {
+            // 清空已有消息，防止多次调用导致重复渲染
+            if (chatMessages) {
+                chatMessages.innerHTML = '';
+            }
             document.getElementById('welcomeMessage')?.remove();
             data.data.messages.forEach((msg, idx) => {
                 const steps = msg.steps || msg.execution_steps || [];
@@ -432,7 +436,7 @@ function setProcessingState(processing) {
             glowEl.classList.remove('glow-active');
         }
         
-        // 第一次提问已经完成，之后便不再是“新对话”状态
+        // 第一次提问已经完成，之后便不再是”新对话”状态
         if (isNewConversation) {
             isNewConversation = false;
         }
@@ -448,6 +452,7 @@ function setProcessingState(processing) {
         currentAbortController = null;
         activeLoadingBubble = null;
         currentTaskId = null;
+        currentStreamedText = '';
     }
 }
 
@@ -1948,8 +1953,7 @@ async function sendMessage() {
     setProcessingState(true);
     currentStreamedText = '';
     
-    // 显示浮动任务状态栏
-    showTaskStatusBar('任务正在后台执行中...');
+
     
     // 清空右侧侧边栏推理步骤面板的旧内容
     const stepsPanel = document.getElementById('executionStepsPanel');
@@ -2173,16 +2177,41 @@ function appendStreamContent(token) {
 // 任务完成处理
 async function handleTaskCompleted(result, originalMessage) {
     const doneEl = activeLoadingBubble || document.getElementById('loading');
-    if (!doneEl) return;
     
-    setProcessingState(false);
+    // 防御性处理：确保清理状态
+    const cleanup = () => {
+        setProcessingState(false);
+        clearTaskFromStorage();
+        hideTaskStatusBar();
+        activeLoadingBubble = null;
+        currentTaskId = null;
+    };
+    
+    if (!doneEl) {
+        cleanup();
+        return;
+    }
+    
+    // 立即清理加载状态
     doneEl.removeAttribute('id');
+    const indicator = doneEl.querySelector('.progress-indicator');
+    if (indicator) indicator.remove();
     
     // 清除localStorage中的任务状态
     clearTaskFromStorage();
     
     // 隐藏浮动任务状态栏
     hideTaskStatusBar();
+    
+    // 防御性处理：result可能为空或格式不符
+    if (!result || typeof result !== 'object') {
+        console.warn('[TaskCompleted] result为空或格式不符，尝试加载对话');
+        cleanup();
+        if (currentConversationId && typeof window.loadConversation === 'function') {
+            await window.loadConversation(currentConversationId);
+        }
+        return;
+    }
     
     const executionSteps = result.steps || result.execution_steps || [];
     const intermediateSteps = result.intermediate_steps || [];
@@ -2198,6 +2227,17 @@ async function handleTaskCompleted(result, originalMessage) {
     
     // 使用result.output或currentStreamedText（流式输出的内容）
     const fullContent = result.output || currentStreamedText || '';
+    
+    // 如果内容为空，可能是任务已完成但结果未正确保存
+    if (!fullContent && !result.output) {
+        console.warn('[TaskCompleted] 内容为空，尝试加载对话');
+        cleanup();
+        if (currentConversationId && typeof window.loadConversation === 'function') {
+            await window.loadConversation(currentConversationId);
+        }
+        return;
+    }
+    
     const isResume = detectResumeContent(fullContent, agentUsed);
     
     if (isResume) {
@@ -2221,6 +2261,9 @@ async function handleTaskCompleted(result, originalMessage) {
         addConversationToList(currentConversationId, title);
         document.getElementById('chatTitle').textContent = title;
     }
+    
+    // 最终清理
+    cleanup();
 }
 
 function askQuestion(q) { chatInput.value = q; sendMessage(); }
@@ -2418,97 +2461,201 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // ==================== 任务持久化和恢复 ====================
 
-/**
- * 保存任务信息到localStorage
- */
-function saveTaskToStorage(taskId, conversationId) {
-    try {
-        const taskData = {
-            taskId: taskId,
-            conversationId: conversationId,
-            timestamp: Date.now()
-        };
-        localStorage.setItem(TASK_STORAGE_KEY, JSON.stringify(taskData));
-        console.log('[TaskPersistence] 任务已保存到localStorage:', taskId);
-    } catch (e) {
-        console.error('[TaskPersistence] 保存任务失败:', e);
-    }
-}
+// 对接全局 currentConversationId，使全局管理器能感知当前活跃的对话 ID
+Object.defineProperty(window, 'currentConversationId', {
+    get: function() { return currentConversationId; },
+    set: function(val) { currentConversationId = val; },
+    configurable: true
+});
+
+// 对接全局 isProcessing，使全局管理器能感知当前是否在处理流
+Object.defineProperty(window, 'isProcessing', {
+    get: function() { return isProcessing; },
+    set: function(val) { isProcessing = val; },
+    configurable: true
+});
 
 /**
- * 从localStorage清除任务信息
+ * 恢复正在运行的任务流并接管 UI 更新
  */
-function clearTaskFromStorage() {
-    try {
-        localStorage.removeItem(TASK_STORAGE_KEY);
-        console.log('[TaskPersistence] 任务已从localStorage清除');
-    } catch (e) {
-        console.error('[TaskPersistence] 清除任务失败:', e);
+window.restoreRunningTask = async function(taskId, conversationId) {
+    if (isProcessing) return; // 已经在处理中，避免重复触发
+    
+    console.log('[TaskRestore] 正在为任务恢复 SSE 流:', taskId);
+    setProcessingState(true);
+    
+    // 标记在此会话中用户已在此页面
+    sessionStorage.setItem('ai_career_task_left_' + taskId, 'false');
+    
+    // 如果聊天界面中没有加载中的气泡，则新建一个
+    let load = document.getElementById('loading');
+    if (!load) {
+        load = document.createElement('div');
+        load.className = 'message message-agent';
+        load.id = 'loading';
+        load.innerHTML = '<div class="message-avatar">AI</div><div class="message-bubble">' +
+            '<div class="message-content" id="loadingContent">' +
+                '<div class="progress-indicator">' +
+                    '<div class="loading-dots"><span></span><span></span><span></span></div>' +
+                    '<span class="progress-text" id="progressText">正在恢复后台任务进度...</span>' +
+                '</div>' +
+            '</div>' +
+        '</div>';
+        chatMessages.appendChild(load);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+        activeLoadingBubble = load;
     }
-}
-
-/**
- * 从localStorage获取任务信息
- */
-function getTaskFromStorage() {
+    
+    currentTaskId = taskId;
+    currentStreamedText = '';
+    currentAbortController = new AbortController();
+    
     try {
-        const data = localStorage.getItem(TASK_STORAGE_KEY);
-        if (data) {
-            return JSON.parse(data);
+        const response = await fetch('/api/agent/task/restore/' + taskId, {
+            method: 'GET',
+            signal: currentAbortController.signal
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        let finalResult = null;
+        let allSteps = [];
+        let shouldBreak = false;
+        
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\n');
+            buffer = lines.pop();
+            
+            let eventType = null;
+            for (const line of lines) {
+                if (line.startsWith('event: ')) {
+                    eventType = line.slice(7).trim();
+                } else if (line.startsWith('data: ')) {
+                    const data = line.slice(6);
+                    try {
+                        const parsed = JSON.parse(data);
+                        handleSSEEvent(eventType, parsed, allSteps);
+                        
+                        if (eventType === 'done') {
+                            finalResult = parsed;
+                            shouldBreak = true;
+                        } else if (eventType === 'error') {
+                            throw new Error(parsed.error || '执行失败');
+                        }
+                    } catch (e) {
+                        if (eventType === 'error') throw e;
+                        console.error('解析SSE数据失败:', e);
+                    }
+                    eventType = null;
+                }
+            }
+            if (shouldBreak) break;
+        }
+        
+        // 处理完成结果
+        if (finalResult) {
+            await handleTaskCompleted(finalResult, '');
+        } else {
+            // 如果没有收到结果，可能是任务已完成但数据为空
+            // 尝试加载对话
+            console.log('[TaskRestore] 未收到结果，尝试加载对话:', conversationId);
+            cleanupLoadingState();
+            if (conversationId && typeof window.loadConversation === 'function') {
+                await window.loadConversation(conversationId);
+            }
         }
     } catch (e) {
-        console.error('[TaskPersistence] 读取任务失败:', e);
+        if (e.name === 'AbortError') {
+            console.log('Stream restore aborted');
+            cleanupLoadingState();
+            return;
+        }
+        console.error('Failed to restore task stream:', e);
+        // 显示错误并清理状态
+        showTaskError(e.message || '恢复进度失败');
+        cleanupLoadingState();
+        if (window.GlobalTaskManager) {
+            window.GlobalTaskManager.clearTaskFromStorage();
+        }
+    } finally {
+        // 确保无论如何都清理处理状态
+        setProcessingState(false);
+    }
+};
+
+/**
+ * 清理加载状态（防御性处理）
+ */
+function cleanupLoadingState() {
+    const loadingEl = activeLoadingBubble || document.getElementById('loading');
+    if (loadingEl) {
+        // 移除加载动画
+        const indicator = loadingEl.querySelector('.progress-indicator');
+        if (indicator) indicator.remove();
+        
+        const loadingDots = loadingEl.querySelector('.loading-dots');
+        if (loadingDots) loadingDots.remove();
+        
+        // 移除ID防止重复处理
+        loadingEl.removeAttribute('id');
+    }
+    activeLoadingBubble = null;
+    currentTaskId = null;
+}
+
+function saveTaskToStorage(taskId, conversationId) {
+    sessionStorage.setItem('ai_career_task_left_' + taskId, 'false');
+    if (window.GlobalTaskManager) {
+        window.GlobalTaskManager.saveTaskToStorage(taskId, conversationId);
+    }
+}
+
+function clearTaskFromStorage() {
+    if (window.GlobalTaskManager) {
+        window.GlobalTaskManager.clearTaskFromStorage();
+    }
+}
+
+function getTaskFromStorage() {
+    if (window.GlobalTaskManager) {
+        return window.GlobalTaskManager.getTaskFromStorage();
     }
     return null;
 }
 
-/**
- * 初始化任务持久化机制
- */
 function initTaskPersistence() {
-    // 检查是否有未完成的任务
-    checkAndRestoreTask();
+    // 这是 chat 页面上任务恢复的唯一可靠入口
+    // 此函数在 initChatPage 末尾调用，确保：
+    //   1. currentConversationId 已正确设置
+    //   2. loadConversation 已完成（历史消息已渲染）
+    //   3. 所有 DOM 元素已就绪
+    // 延迟 200ms 确保 DOM 完全稳定后再触发任务恢复
+    setTimeout(() => {
+        if (window.GlobalTaskManager) {
+            console.log('[TaskPersistence] 页面初始化完成，开始任务恢复检查');
+            window.GlobalTaskManager.checkTaskStatus();
+        }
+    }, 200);
     
     // 监听页面可见性变化
     document.addEventListener('visibilitychange', handleVisibilityChange);
 }
 
-/**
- * 检查并恢复未完成的任务
- */
 async function checkAndRestoreTask() {
-    const savedTask = getTaskFromStorage();
-    if (!savedTask) return;
-    
-    const { taskId, conversationId } = savedTask;
-    
-    // 如果当前正在处理中，不恢复
-    if (isProcessing) return;
-    
-    // 如果没有对话ID，直接清除
-    if (!conversationId) {
-        clearTaskFromStorage();
-        return;
+    if (window.GlobalTaskManager) {
+        window.GlobalTaskManager.checkTaskStatus();
     }
-    
-    console.log('[TaskPersistence] 发现任务，加载对话:', taskId);
-    
-    // 清除任务存储
-    clearTaskFromStorage();
-    
-    // 更新URL并加载对话历史
-    currentConversationId = conversationId;
-    try {
-        const url = new URL(window.location.href);
-        url.searchParams.set('id', currentConversationId);
-        window.history.replaceState(null, '', url.pathname + url.search);
-    } catch (e) {}
-    await loadConversation(currentConversationId);
 }
 
-/**
- * 显示任务错误
- */
 function showTaskError(errorMsg) {
     const errorEl = activeLoadingBubble || document.getElementById('loading');
     if (errorEl) {
@@ -2522,103 +2669,21 @@ function showTaskError(errorMsg) {
     }
 }
 
-/**
- * 处理页面可见性变化
- */
 function handleVisibilityChange() {
     if (document.visibilityState === 'visible') {
         console.log('[TaskPersistence] 页面变为可见，检查任务状态');
-        // 页面变为可见时，检查是否有未完成的任务
-        if (!isProcessing) {
-            checkAndRestoreTask();
-        }
+        // 无论是否在处理中，都要检查任务状态
+        // 因为手机端浏览器可能在后台暂停了JS执行
+        checkAndRestoreTask();
     }
 }
 
-// ==================== 浮动任务状态栏 ====================
+// ==================== 浮动任务状态栏 (兼容性空委托) ====================
 
-/**
- * 显示浮动任务状态栏
- * @param {string} text - 状态文本
- * @param {boolean} isCompleted - 是否已完成
- */
-function showTaskStatusBar(text, isCompleted = false) {
-    const statusBar = document.getElementById('taskStatusBar');
-    if (!statusBar) return;
-    
-    const textEl = statusBar.querySelector('.task-status-text');
-    const btnEl = statusBar.querySelector('.task-status-btn');
-    const iconEl = statusBar.querySelector('.task-status-icon');
-    
-    if (textEl) textEl.textContent = text;
-    
-    if (isCompleted) {
-        statusBar.classList.add('completed');
-        if (btnEl) btnEl.textContent = '查看结果';
-        // 移除旋转动画，显示完成图标
-        if (iconEl) {
-            iconEl.innerHTML = '<div class="task-status-spinner"></div>';
-        }
-    } else {
-        statusBar.classList.remove('completed');
-        if (btnEl) btnEl.textContent = '返回对话';
-        // 显示旋转动画
-        if (iconEl) {
-            iconEl.innerHTML = '<div class="task-status-spinner"></div>';
-        }
-    }
-    
-    statusBar.style.display = 'block';
-    taskStatusBarVisible = true;
-}
-
-/**
- * 隐藏浮动任务状态栏
- */
-function hideTaskStatusBar() {
-    const statusBar = document.getElementById('taskStatusBar');
-    if (statusBar) {
-        statusBar.style.display = 'none';
-        statusBar.classList.remove('completed');
-    }
-    taskStatusBarVisible = false;
-}
-
-/**
- * 处理浮动状态栏点击事件
- */
-function handleTaskStatusBarClick() {
-    const savedTask = getTaskFromStorage();
-    
-    // 如果有保存的任务，加载对应的对话
-    if (savedTask && savedTask.conversationId) {
-        const conversationId = savedTask.conversationId;
-        clearTaskFromStorage();
-        
-        // 更新URL并加载对话
-        currentConversationId = conversationId;
-        try {
-            const url = new URL(window.location.href);
-            url.searchParams.set('id', currentConversationId);
-            window.history.replaceState(null, '', url.pathname + url.search);
-        } catch (e) {}
-        
-        loadConversation(currentConversationId);
-    }
-    
-    // 隐藏状态栏
-    hideTaskStatusBar();
-}
-
-/**
- * 更新浮动状态栏为任务完成状态
- */
-function updateStatusBarToCompleted() {
-    const statusBar = document.getElementById('taskStatusBar');
-    if (statusBar && taskStatusBarVisible) {
-        showTaskStatusBar('任务已完成', true);
-    }
-}
+function showTaskStatusBar(text, isCompleted = false) {}
+function hideTaskStatusBar() {}
+function handleTaskStatusBarClick() {}
+function updateStatusBarToCompleted() {}
 
 // ==================== 图片预览模态框 ====================
 

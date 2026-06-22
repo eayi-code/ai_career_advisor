@@ -420,6 +420,7 @@ def update_profile():
 # ==================== 任务持久化接口 ====================
 
 @api_bp.route('/agent/task/detail/<task_id>', methods=['GET'])
+@limiter.limit(RATE_LIMITS["task_status"])
 @login_required
 def get_task_detail(task_id):
     """获取任务详情（支持用户验证）"""
@@ -430,6 +431,7 @@ def get_task_detail(task_id):
 
 
 @api_bp.route('/agent/task/active', methods=['GET'])
+@limiter.limit(RATE_LIMITS["task_status"])
 @login_required
 def get_user_active_task():
     """获取当前活跃任务"""
@@ -441,6 +443,7 @@ def get_user_active_task():
 
 
 @api_bp.route('/agent/task/pending', methods=['GET'])
+@limiter.limit(RATE_LIMITS["task_status"])
 @login_required
 def get_user_pending_tasks():
     """获取所有待处理任务"""
@@ -449,6 +452,7 @@ def get_user_pending_tasks():
 
 
 @api_bp.route('/agent/task/restore/<task_id>', methods=['GET'])
+@limiter.limit(RATE_LIMITS["task_status"])
 @login_required
 def restore_task_stream(task_id):
     """恢复任务流（用于断线重连）"""

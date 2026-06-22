@@ -36,6 +36,12 @@
         </div>
         
         <div class="sidebar-footer">
+            {% if current_user.is_admin %}
+            <a href="{{ url_for('admin.dashboard') }}" class="sidebar-link" style="color: #ea4335; font-weight: 500;">
+                <span class="material-symbols-rounded" style="color: #ea4335;">admin_panel_settings</span>
+                管理后台
+            </a>
+            {% endif %}
             <a href="{{ url_for('career.profile') }}" class="sidebar-link active">
                 <span class="material-symbols-rounded">account_circle</span>
                 用户中心
@@ -147,59 +153,73 @@
                     </div>
                 </div>
                 
-                <!-- 决策锚点 -->
+                <!-- 职业竞争力评估 -->
                 <div class="dashboard-card">
                     <div class="dashboard-card-header">
                         <span class="dashboard-card-title">
-                            <span class="material-symbols-rounded">explore</span>
-                            决策锚点
+                            <span class="material-symbols-rounded">analytics</span>
+                            职业竞争力评估
                         </span>
                     </div>
                     <div class="dashboard-card-body">
-                        <div class="anchor-cards">
-                            <div class="anchor-card" onclick="editAnchor('target_job_title')">
-                                <span class="anchor-label">目标岗位</span>
-                                <span class="anchor-value">{{ current_user.profile.target_job_title or '未设定' }}</span>
-                                <span class="anchor-hint">点击修改</span>
+                        <div class="competitiveness-container">
+                            <div class="score-ring-wrapper">
+                                <div class="score-ring" id="completenessRing">
+                                    <svg viewBox="0 0 36 36" class="circular-chart blue">
+                                        <path class="circle-bg"
+                                          d="M18 2.0845
+                                            a 15.9155 15.9155 0 0 1 0 31.831
+                                            a 15.9155 15.9155 0 0 1 0 -31.831"
+                                        />
+                                        <path class="circle"
+                                          stroke-dasharray="0, 100"
+                                          id="completenessCircle"
+                                          d="M18 2.0845
+                                            a 15.9155 15.9155 0 0 1 0 31.831
+                                            a 15.9155 15.9155 0 0 1 0 -31.831"
+                                        />
+                                        <text x="18" y="20.35" class="percentage" id="completenessText">0%</text>
+                                    </svg>
+                                </div>
+                                <div class="score-info">
+                                    <span class="score-label">AI 竞争力评分</span>
+                                    <span class="score-desc" id="completenessDesc">请完善档案以获得精确评估</span>
+                                </div>
                             </div>
-                            <div class="anchor-card" onclick="editAnchor('salary')">
-                                <span class="anchor-label">期望薪资</span>
-                                <span class="anchor-value">{% if current_user.profile and current_user.profile.target_salary_min %}{{ current_user.profile.target_salary_min|int }}-{{ current_user.profile.target_salary_max|int }}K{% else %}未设定{% endif %}</span>
-                                <span class="anchor-hint">点击修改</span>
-                            </div>
-                            <div class="anchor-card" onclick="editAnchor('location')">
-                                <span class="anchor-label">意向城市</span>
-                                <span class="anchor-value">{{ current_user.profile.location_preference or '不限' }}</span>
-                                <span class="anchor-hint">点击修改</span>
-                            </div>
-                            <div class="anchor-card" onclick="editAnchor('work_pref')">
-                                <span class="anchor-label">工作方式</span>
-                                <span class="anchor-value">{% if current_user.profile %}{% if current_user.profile.work_preference == 'remote' %}远程{% elif current_user.profile.work_preference == 'onsite' %}坐班{% elif current_user.profile.work_preference == 'hybrid' %}混合{% else %}不限{% endif %}{% else %}不限{% endif %}</span>
-                                <span class="anchor-hint">点击修改</span>
+                            <div class="competitiveness-details">
+                                <div class="comp-detail-item">
+                                    <span class="comp-label">技能储备</span>
+                                    <div class="comp-bar-wrapper">
+                                        <div class="comp-bar" id="skillThicknessBar" style="width: 0%;"></div>
+                                    </div>
+                                    <span class="comp-value" id="skillThicknessVal">0%</span>
+                                </div>
+                                <div class="comp-detail-item">
+                                    <span class="comp-label">项目经验</span>
+                                    <div class="comp-bar-wrapper">
+                                        <div class="comp-bar" id="projectExpBar" style="width: 0%;"></div>
+                                    </div>
+                                    <span class="comp-value" id="projectExpVal">0%</span>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
                 
-                <!-- 决策里程碑 -->
+                <!-- AI 推荐求职方向 -->
                 <div class="dashboard-card">
                     <div class="dashboard-card-header">
                         <span class="dashboard-card-title">
-                            <span class="material-symbols-rounded">check_circle</span>
-                            决策里程碑
+                            <span class="material-symbols-rounded">psychology</span>
+                            AI 推荐求职方向
                         </span>
                     </div>
                     <div class="dashboard-card-body">
-                        <div class="milestones" id="milestones">
-                            {% for h in histories[:10] %}
-                            <div class="milestone" onclick="location.href='/chat?id={{ h.conversation_id }}'">
-                                <span class="milestone-date">{{ h.updated_at.strftime('%m-%d') if h.updated_at else h.created_at.strftime('%m-%d') }}</span>
-                                <span class="milestone-icon" style="display: flex; align-items: center; justify-content: center;">
-                                    <span class="material-symbols-rounded" style="font-size: 14px;">chat_bubble</span>
-                                </span>
-                                <span class="milestone-title">{{ h.title or '进行了对话' }}</span>
+                        <div class="recommendations-container" id="aiRecommendations">
+                            <div class="next-action-loading">
+                                <div class="loading-spinner"></div>
+                                <span>分析推荐中...</span>
                             </div>
-                            {% endfor %}
                         </div>
                     </div>
                 </div>
