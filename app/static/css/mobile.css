@@ -46,9 +46,6 @@
     }
 
     /* Show mobile elements */
-    .mobile-plus-btn {
-        display: flex !important;
-    }
 
     /* ===== Layout ===== */
     .app-layout {
@@ -512,41 +509,7 @@
         box-shadow: 0 0 0 2px var(--m-accent-light);
     }
 
-    /* Mobile Plus Button */
-    .mobile-plus-btn {
-        width: 36px;
-        height: 36px;
-        padding: 0;
-        background: none;
-        border: none;
-        border-radius: 50%;
-        color: var(--m-text-secondary);
-        cursor: pointer;
-        flex-shrink: 0;
-        display: flex !important;
-        align-items: center;
-        justify-content: center;
-        transition: background 0.15s, transform 0.1s;
-    }
-
-    .mobile-plus-btn:active {
-        background: var(--m-border);
-        transform: scale(0.9);
-    }
-
-    .mobile-plus-btn.active {
-        color: var(--m-accent);
-    }
-
-    .mobile-plus-btn.active svg {
-        transform: rotate(45deg);
-    }
-
-    .mobile-plus-btn svg {
-        width: 22px;
-        height: 22px;
-        transition: transform 0.2s var(--m-transition);
-    }
+    /* Mobile Plus Button — removed (replaced by inline upload button) */
 
     /* Textarea */
     .chat-input {
@@ -569,14 +532,14 @@
         color: var(--m-text-tertiary);
     }
 
-    /* Send Button */
+    /* Send Button — hide Material icon, use ::after arrow only */
     .chat-input-wrapper #sendBtn,
     .chat-input-wrapper .btn-primary {
         width: 36px !important;
         height: 36px !important;
         padding: 0 !important;
         background: var(--m-accent) !important;
-        color: white !important;
+        color: transparent !important;
         border: none !important;
         border-radius: 50% !important;
         font-size: 0 !important;
@@ -586,6 +549,11 @@
         justify-content: center !important;
         cursor: pointer;
         transition: background 0.15s, transform 0.1s;
+        position: relative;
+    }
+
+    .chat-input-wrapper #sendBtn .material-symbols-rounded {
+        display: none !important;
     }
 
     .chat-input-wrapper #sendBtn:active,
@@ -593,12 +561,11 @@
         transform: scale(0.9);
     }
 
-    /* 发送按钮：用 SVG 箭头图标替代文字，清晰且与桌面图标风格一致 */
     .chat-input-wrapper #sendBtn::after {
         content: '';
         width: 16px;
         height: 16px;
-        margin-left: 0;
+        position: absolute;
         border: none;
         background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><line x1='12' y1='19' x2='12' y2='5'/><polyline points='5 12 12 5 19 12'/></svg>");
         background-repeat: no-repeat;
@@ -606,35 +573,23 @@
         background-size: contain;
     }
 
-    /* Plus Menu */
-    .mobile-plus-menu {
-        display: none;
-        position: absolute;
-        bottom: calc(100% + 8px);
-        left: 12px;
-        background: var(--m-bg);
-        border: 1px solid var(--m-border);
-        border-radius: var(--m-radius-lg);
-        box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12);
-        padding: 8px;
-        min-width: 180px;
-        z-index: 30;
-        animation: menuUp 0.2s var(--m-transition);
+    /* Upload Button (mobile) */
+    .chat-input-wrapper #uploadBtn {
+        width: 36px !important;
+        height: 36px !important;
+        padding: 0 !important;
+        background: none !important;
+        border: none !important;
+        color: var(--m-text-secondary) !important;
+        flex-shrink: 0 !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        cursor: pointer;
     }
 
-    .mobile-plus-menu.show {
-        display: block !important;
-    }
-
-    @keyframes menuUp {
-        from {
-            opacity: 0;
-            transform: translateY(8px) scale(0.95);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0) scale(1);
-        }
+    .chat-input-wrapper #uploadBtn:active {
+        opacity: 0.6;
     }
 
     .mobile-menu-item {
@@ -1195,7 +1150,7 @@
 
     /* 圆形/方形图标按钮保证宽度也达标 */
     .chat-input-wrapper #sendBtn,
-    .mobile-plus-btn,
+    .chat-input-wrapper #uploadBtn,
     .mobile-topbar .hamburger-btn,
     .resume-modal-close {
         min-width: 44px;
@@ -1228,7 +1183,6 @@
     .sidebar-overlay,
     .chat-side-panel,
     .message,
-    .mobile-plus-btn svg,
     .mobile-agent-sheet,
     .mobile-agent-modal,
     .toast,
