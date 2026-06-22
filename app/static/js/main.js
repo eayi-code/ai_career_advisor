@@ -676,3 +676,38 @@ window.GlobalTaskManager = {
 document.addEventListener('DOMContentLoaded', () => {
     window.GlobalTaskManager.init();
 });
+
+// ===== Mobile Sidebar Toggle (shared across all pages) =====
+function toggleSidebar() {
+    const sidebar = document.querySelector('.sidebar');
+    const overlay = document.getElementById('sidebarOverlay');
+    const hamburger = document.getElementById('hamburgerBtn');
+
+    if (!sidebar || !overlay) return;
+
+    const isActive = sidebar.classList.contains('active');
+
+    if (isActive) {
+        sidebar.classList.remove('active');
+        overlay.classList.remove('active');
+        if (hamburger) hamburger.classList.remove('active');
+        document.body.style.overflow = '';
+    } else {
+        sidebar.classList.add('active');
+        overlay.classList.add('active');
+        if (hamburger) hamburger.classList.add('active');
+        document.body.style.overflow = 'hidden';
+    }
+}
+
+// Close sidebar when clicking links (mobile)
+document.addEventListener('DOMContentLoaded', function() {
+    const sidebarLinks = document.querySelectorAll('.sidebar-link, .chat-history-link');
+    sidebarLinks.forEach(link => {
+        link.addEventListener('click', function() {
+            if (window.innerWidth <= 768) {
+                setTimeout(() => toggleSidebar(), 100);
+            }
+        });
+    });
+});
