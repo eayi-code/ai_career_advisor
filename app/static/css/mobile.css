@@ -58,6 +58,7 @@
         margin-left: 0 !important;
         width: 100%;
         height: 100%;
+        overflow: visible !important;
     }
 
     /* profile 页重置 padding，避免 .profile-header 负 margin 导致横向溢出 */
@@ -299,18 +300,17 @@
         height: 20px;
     }
 
-    /* ===== Chat Messages ===== */
+    /* ===== Chat Container (scroll host) ===== */
     .chat-container {
         height: 100%;
-        display: flex;
-        flex-direction: column;
-    }
-
-    .chat-messages {
-        flex: 1;
         overflow-y: auto;
         -webkit-overflow-scrolling: touch;
+    }
+
+    /* ===== Chat Messages ===== */
+    .chat-messages {
         padding: 16px;
+        /* topbar(52px) already in flow, only need bottom space for fixed input */
         padding-bottom: calc(var(--m-input-height) + 24px + var(--m-safe-bottom));
     }
 
