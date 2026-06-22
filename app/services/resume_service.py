@@ -136,7 +136,11 @@ class ResumeService:
             elif ext == '.pdf':
                 from pypdf import PdfReader
                 reader = PdfReader(io.BytesIO(file_bytes))
-                
+
+                # 安全限制：PDF 最多 50 页，防止 DoS
+                if len(reader.pages) > 50:
+                    return {"success": False, "error": "PDF 文件页数过多（最多支持50页）"}
+
                 # 1. 尝试标准文本提取
                 for page in reader.pages:
                     page_text = page.extract_text()

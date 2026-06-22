@@ -66,7 +66,8 @@ def agent_chat_async():
         )
         return jsonify({"code": 200, "data": result})
     except Exception as e:
-        return jsonify({"code": 500, "error": str(e)}), 500
+        current_app.logger.error(f"API error: {e}", exc_info=True)
+        return jsonify({"code": 500, "error": "服务器内部错误，请稍后重试"}), 500
 
 
 @api_bp.route('/agent/task/<task_id>', methods=['GET'])
@@ -122,7 +123,8 @@ def agent_chat():
         )
         return jsonify({"code": 200, "data": result})
     except Exception as e:
-        return jsonify({"code": 500, "error": str(e)}), 500
+        current_app.logger.error(f"API error: {e}", exc_info=True)
+        return jsonify({"code": 500, "error": "服务器内部错误，请稍后重试"}), 500
 
 
 @api_bp.route('/agent/chat/stream', methods=['POST'])
@@ -162,7 +164,8 @@ def agent_chat_stream():
             }
         )
     except Exception as e:
-        return jsonify({"code": 500, "error": str(e)}), 500
+        current_app.logger.error(f"API error: {e}", exc_info=True)
+        return jsonify({"code": 500, "error": "服务器内部错误，请稍后重试"}), 500
 
 
 @api_bp.route('/agent/tools', methods=['GET'])
@@ -211,7 +214,8 @@ def delete_conversation(conversation_id):
         count = HistoryService.delete_conversation(conversation_id, current_user.id)
         return jsonify({"code": 200, "message": "已删除", "count": count})
     except Exception as e:
-        return jsonify({"code": 500, "error": str(e)}), 500
+        current_app.logger.error(f"API error: {e}", exc_info=True)
+        return jsonify({"code": 500, "error": "服务器内部错误，请稍后重试"}), 500
 
 
 @api_bp.route('/history/save', methods=['POST'])
@@ -235,7 +239,8 @@ def save_conversation():
         )
         return jsonify({"code": 200, "message": "保存成功"})
     except Exception as e:
-        return jsonify({"code": 500, "error": str(e)}), 500
+        current_app.logger.error(f"API error: {e}", exc_info=True)
+        return jsonify({"code": 500, "error": "服务器内部错误，请稍后重试"}), 500
 
 
 @api_bp.route('/export/conversation/<conversation_id>', methods=['GET'])
@@ -250,7 +255,8 @@ def export_conversation(conversation_id):
         
         return jsonify({"code": 200, "data": result})
     except Exception as e:
-        return jsonify({"code": 500, "error": str(e)}), 500
+        current_app.logger.error(f"API error: {e}", exc_info=True)
+        return jsonify({"code": 500, "error": "服务器内部错误，请稍后重试"}), 500
 
 
 # ==================== 用户管理接口 ====================
@@ -323,7 +329,8 @@ def user_stats():
         stats = UserService.get_user_stats(current_user.id)
         return jsonify({"code": 200, "data": stats})
     except Exception as e:
-        return jsonify({"code": 500, "error": str(e)}), 500
+        current_app.logger.error(f"API error: {e}", exc_info=True)
+        return jsonify({"code": 500, "error": "服务器内部错误，请稍后重试"}), 500
 
 
 # ==================== 简历相关接口 ====================
@@ -375,7 +382,8 @@ def get_profile_completion():
         result = ProfileService.get_profile_completion(current_user.id)
         return jsonify({"code": 200, "data": result})
     except Exception as e:
-        return jsonify({"code": 500, "error": str(e)}), 500
+        current_app.logger.error(f"API error: {e}", exc_info=True)
+        return jsonify({"code": 500, "error": "服务器内部错误，请稍后重试"}), 500
 
 
 @api_bp.route('/profile/milestones', methods=['GET'])
@@ -386,7 +394,8 @@ def get_milestones():
         milestones = ProfileService.get_milestones(current_user.id)
         return jsonify({"code": 200, "data": milestones})
     except Exception as e:
-        return jsonify({"code": 500, "error": str(e)}), 500
+        current_app.logger.error(f"API error: {e}", exc_info=True)
+        return jsonify({"code": 500, "error": "服务器内部错误，请稍后重试"}), 500
 
 
 @api_bp.route('/profile/next-actions', methods=['GET'])
@@ -397,7 +406,8 @@ def get_next_actions():
         actions = ProfileService.get_next_actions(current_user.id)
         return jsonify({"code": 200, "data": actions})
     except Exception as e:
-        return jsonify({"code": 500, "error": str(e)}), 500
+        current_app.logger.error(f"API error: {e}", exc_info=True)
+        return jsonify({"code": 500, "error": "服务器内部错误，请稍后重试"}), 500
 
 
 @api_bp.route('/profile/update', methods=['POST'])

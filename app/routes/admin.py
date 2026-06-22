@@ -4,6 +4,7 @@ from app import db
 from app.models.user import User
 from app.models.history import AnalysisHistory
 from app.models.task import AgentTask
+from app.ratelimit import limiter, RATE_LIMITS
 from functools import wraps
 from datetime import datetime, timedelta
 
@@ -22,7 +23,7 @@ def admin_required(f):
         if not current_user.is_authenticated or not getattr(current_user, 'is_admin', False):
             if request.path.startswith('/admin/api/'):
                 return jsonify({
-                    'error': 'Forbidden', 
+                    'error': 'Forbidden',
                     'message': '需要管理员权限，您无权访问此接口。'
                 }), 403
             abort(403)
@@ -41,6 +42,7 @@ def dashboard():
 @admin_bp.route('/api/stats')
 @login_required
 @admin_required
+@limiter.limit(RATE_LIMITS["admin_api"])
 def get_stats():
     """获取看板数据和用户列表统计信息"""
     try:
@@ -48,53 +50,50 @@ def get_stats():
         total_users = User.query.count()
         today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
         users_today = User.query.filter(User.created_at >= today_start).count()
-        
+
         total_analyses = AnalysisHistory.query.count()
         analyses_today = AnalysisHistory.query.filter(AnalysisHistory.created_at >= today_start).count()
-        
+
         active_tasks = AgentTask.query.filter(AgentTask.status.in_(['pending', 'running'])).count()
         failed_tasks = AgentTask.query.filter(AgentTask.status == 'failed').count()
-        
+
         # 2. 7日趋势数据统计（双折线图）
         dates = []
         user_growth = []
         analysis_volume = []
-        
+
         for i in range(6, -1, -1):
             day_date = datetime.utcnow().date() - timedelta(days=i)
             day_start = datetime.combine(day_date, datetime.min.time())
             day_end = datetime.combine(day_date, datetime.max.time())
-            
+
             dates.append(day_date.strftime('%m-%d'))
-            
-            # 单日新增用户数
+
             u_count = User.query.filter(
-                User.created_at >= day_start, 
+                User.created_at >= day_start,
                 User.created_at <= day_end
             ).count()
             user_growth.append(u_count)
-            
-            # 单日新增分析数
+
             a_count = AnalysisHistory.query.filter(
-                AnalysisHistory.created_at >= day_start, 
+                AnalysisHistory.created_at >= day_start,
                 AnalysisHistory.created_at <= day_end
             ).count()
             analysis_volume.append(a_count)
-            
+
         # 3. 智能体分配占比统计（环形图）
         agent_counts = db.session.query(
-            AnalysisHistory.agent_used, 
+            AnalysisHistory.agent_used,
             db.func.count(AnalysisHistory.id)
         ).group_by(AnalysisHistory.agent_used).all()
-        
-        # 汉化智能体名称映射以便前端阅读
+
         agent_mapping = {
             'career_planner': '职业规划顾问',
             'resume_advisor': '简历修改顾问',
             'side_job_advisor': '副业分析师',
             'skill_advisor': '技能分析师'
         }
-        
+
         agent_distribution = {}
         for agent, count in agent_counts:
             if not agent:
@@ -114,7 +113,7 @@ def get_stats():
                 'is_active': u.is_active,
                 'is_admin': u.is_admin
             })
-            
+
         # 5. 最近分析日志列表
         recent_analyses_query = db.session.query(
             AnalysisHistory.id,
@@ -124,10 +123,10 @@ def get_stats():
             AnalysisHistory.created_at,
             User.username
         ).join(
-            User, 
+            User,
             AnalysisHistory.user_id == User.id
         ).order_by(AnalysisHistory.created_at.desc(), AnalysisHistory.id.desc()).limit(15).all()
-        
+
         recent_analyses = []
         for a in recent_analyses_query:
             friendly_agent = agent_mapping.get(a.agent_used, a.agent_used)
@@ -139,7 +138,7 @@ def get_stats():
                 'created_at': a.created_at.strftime('%Y-%m-%d %H:%M:%S') if a.created_at else '',
                 'username': a.username
             })
-            
+
         return jsonify({
             'success': True,
             'kpis': {
@@ -160,32 +159,34 @@ def get_stats():
             'recent_analyses': recent_analyses
         })
     except Exception as e:
+        # 生产环境不暴露内部错误详情
         import traceback
         traceback.print_exc()
         return jsonify({
             'success': False,
             'error': 'Internal Server Error',
-            'message': str(e)
+            'message': '服务器内部错误，请稍后重试'
         }), 500
 
 
 @admin_bp.route('/api/users/<int:user_id>/toggle_status', methods=['POST'])
 @login_required
 @admin_required
+@limiter.limit(RATE_LIMITS["admin_api"])
 def toggle_user_status(user_id):
     """启用或拉黑特定用户账号"""
     user = User.query.get_or_404(user_id)
-    
+
     # 安全保护：管理员无法禁用自身账号，防锁死
     if user.id == current_user.id:
         return jsonify({
-            'success': False, 
+            'success': False,
             'message': '操作失败：不能停用您自己的管理员账号！'
         }), 400
-        
+
     user.is_active = not user.is_active
     db.session.commit()
-    
+
     return jsonify({
         'success': True,
         'message': f"用户 {user.username} 已成功{'启用' if user.is_active else '禁用拉黑'}。",
@@ -196,20 +197,21 @@ def toggle_user_status(user_id):
 @admin_bp.route('/api/users/<int:user_id>/toggle_admin', methods=['POST'])
 @login_required
 @admin_required
+@limiter.limit(RATE_LIMITS["admin_api"])
 def toggle_user_admin(user_id):
     """提升用户为管理员或降级为普通用户"""
     user = User.query.get_or_404(user_id)
-    
+
     # 安全保护：管理员无法降级自身，防锁死
     if user.id == current_user.id:
         return jsonify({
-            'success': False, 
+            'success': False,
             'message': '操作失败：不能取消您自己的管理员身份！'
         }), 400
-        
+
     user.is_admin = not user.is_admin
     db.session.commit()
-    
+
     return jsonify({
         'success': True,
         'message': f"已将用户 {user.username} {'设置为管理员' if user.is_admin else '降级为普通用户'}。",

@@ -255,39 +255,61 @@ def fetch_job_from_url(url: str) -> str:
     try:
         import requests
         from bs4 import BeautifulSoup
-        
+        from urllib.parse import urlparse
+        import ipaddress
+        import socket
+
+        # ── SSRF 防护：验证目标地址不是内网 ──
+        parsed = urlparse(url)
+        if parsed.scheme not in ('http', 'https'):
+            return "抓取失败：仅支持 http 和 https 协议"
+
+        hostname = parsed.hostname
+        if not hostname:
+            return "抓取失败：无效的URL地址"
+
+        # 解析主机名对应的IP地址
+        try:
+            resolved_ips = socket.getaddrinfo(hostname, None, socket.AF_UNSPEC, socket.SOCK_STREAM)
+            for family, _, _, _, sockaddr in resolved_ips:
+                ip = ipaddress.ip_address(sockaddr[0])
+                if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved:
+                    return "抓取失败：不允许访问内部网络地址"
+        except (socket.gaierror, ValueError):
+            return "抓取失败：无法解析目标地址"
+
         # 设置请求头，模拟浏览器访问
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
             'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
         }
-        
-        # 发送请求
-        response = requests.get(url, headers=headers, timeout=10)
+
+        # 发送请求（禁止重定向到内网）
+        response = requests.get(url, headers=headers, timeout=10, allow_redirects=False)
         response.encoding = response.apparent_encoding
-        
+
         # 解析HTML
         soup = BeautifulSoup(response.text, 'html.parser')
-        
+
         # 移除script和style标签
         for script in soup(["script", "style"]):
             script.decompose()
-        
+
         # 获取文本内容
         text = soup.get_text()
-        
+
         # 清理文本
         lines = (line.strip() for line in text.splitlines())
         chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
         text = '\n'.join(chunk for chunk in chunks if chunk)
-        
+
         # 限制长度
         if len(text) > 5000:
             text = text[:5000] + "..."
-        
+
         return f"页面内容:\n{text}"
-        
+
     except requests.exceptions.Timeout:
         return "抓取失败：请求超时，请检查网络连接或稍后重试"
     except requests.exceptions.RequestException as e:

@@ -1,11 +1,52 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, request
+from flask import Blueprint, render_template, redirect, url_for, flash, request, session
 from flask_login import login_user, logout_user, login_required, current_user
 from app import db
 from app.models.user import User
 from app.ratelimit import limiter, RATE_LIMITS
 import re
+import time
 
 auth_bp = Blueprint('auth', __name__)
+
+# 登录失败锁定配置
+MAX_LOGIN_ATTEMPTS = 5
+LOCKOUT_DURATION = 900  # 15 分钟（秒）
+
+
+def _get_login_attempts(username):
+    """获取当前用户名的登录失败次数和最后失败时间"""
+    attempts = session.get('login_attempts', {})
+    return attempts.get(username, {'count': 0, 'last_attempt': 0})
+
+
+def _record_login_failure(username):
+    """记录一次登录失败"""
+    attempts = session.get('login_attempts', {})
+    entry = attempts.get(username, {'count': 0, 'last_attempt': 0})
+    entry['count'] = entry['count'] + 1
+    entry['last_attempt'] = time.time()
+    attempts[username] = entry
+    session['login_attempts'] = attempts
+
+
+def _clear_login_attempts(username):
+    """清除指定用户名的登录失败记录"""
+    attempts = session.get('login_attempts', {})
+    attempts.pop(username, None)
+    session['login_attempts'] = attempts
+
+
+def _is_locked_out(username):
+    """检查指定用户名是否处于锁定状态"""
+    entry = _get_login_attempts(username)
+    if entry['count'] >= MAX_LOGIN_ATTEMPTS:
+        elapsed = time.time() - entry['last_attempt']
+        if elapsed < LOCKOUT_DURATION:
+            return True, int(LOCKOUT_DURATION - elapsed)
+        else:
+            # 锁定时间已过，自动清除
+            _clear_login_attempts(username)
+    return False, 0
 
 
 @auth_bp.route('/')
@@ -47,12 +88,12 @@ def register():
             flash('密码长度至少6个字符', 'danger')
             return render_template('auth/register.html')
 
-        if User.query.filter_by(username=username).first():
-            flash('用户名已存在', 'danger')
-            return render_template('auth/register.html')
-
-        if User.query.filter_by(email=email).first():
-            flash('邮箱已注册', 'danger')
+        # 统一错误消息，防止用户名/邮箱枚举
+        existing_user = User.query.filter(
+            (User.username == username) | (User.email == email)
+        ).first()
+        if existing_user:
+            flash('该用户名或邮箱已被注册', 'danger')
             return render_template('auth/register.html')
 
         user = User(username=username, email=email)
@@ -75,17 +116,34 @@ def login():
         return redirect(url_for('career.chat'))
 
     if request.method == 'POST':
-        username = request.form.get('username')
-        password = request.form.get('password')
+        username = request.form.get('username', '').strip()
+        password = request.form.get('password', '')
+
+        # 检查账号锁定
+        locked, remaining = _is_locked_out(username)
+        if locked:
+            flash(f'登录失败次数过多，请在 {remaining} 秒后重试', 'danger')
+            return render_template('auth/login.html')
+
         user = User.query.filter_by(username=username).first()
 
         if user and user.check_password(password):
+            # 登录成功，清除失败记录
+            _clear_login_attempts(username)
             login_user(user)
             if user.is_admin:
                 return redirect(url_for('admin.dashboard'))
             return redirect(url_for('career.chat'))
 
-        flash('用户名或密码错误', 'danger')
+        # 登录失败，记录并统一错误消息
+        _record_login_failure(username)
+        entry = _get_login_attempts(username)
+        remaining_attempts = MAX_LOGIN_ATTEMPTS - entry['count']
+
+        if remaining_attempts > 0:
+            flash(f'用户名或密码错误（还剩 {remaining_attempts} 次机会）', 'danger')
+        else:
+            flash(f'登录失败次数过多，账号已锁定 {LOCKOUT_DURATION // 60} 分钟', 'danger')
 
     return render_template('auth/login.html')
 

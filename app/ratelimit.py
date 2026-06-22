@@ -31,4 +31,7 @@ RATE_LIMITS = {
     # 历史记录 - 宽松限流
     "history_list": "30 per minute",
     "history_get": "60 per minute",
+
+    # 管理端 - 中等限流
+    "admin_api": "60 per minute",
 }

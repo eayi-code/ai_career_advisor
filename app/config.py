@@ -20,10 +20,18 @@ if _ssl_cert and not os.path.isfile(_ssl_cert):
 
 
 class Config:
-    SECRET_KEY = os.getenv('SECRET_KEY') or secrets.token_hex(32)
+    # SECRET_KEY：必须通过环境变量设置；未设置时自动生成并警告（不阻断启动）
+    _env_secret = os.getenv('SECRET_KEY')
+    if _env_secret:
+        SECRET_KEY = _env_secret
+    else:
+        SECRET_KEY = secrets.token_hex(32)
+        print("[WARN] SECRET_KEY 未通过环境变量设置，已自动生成临时密钥。"
+              "请在 .env 中配置 SECRET_KEY 以确保重启后 session 一致性。")
+
     SQLALCHEMY_DATABASE_URI = os.getenv('DATABASE_URL', 'mysql+pymysql://root:password@localhost/career_advisor')
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-    
+
     # 数据库连接池配置
     SQLALCHEMY_ENGINE_OPTIONS = {
         'pool_size': 10,
@@ -41,19 +49,32 @@ class Config:
     VISION_MODEL = os.getenv('VISION_MODEL') or os.getenv('OPENAI_MODEL', 'gpt-3.5-turbo')
 
     CHROMA_PERSIST_DIR = os.getenv('CHROMA_PERSIST_DIR', './chroma_data')
-    
+
     # 安全配置
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = 'Lax'
+    SESSION_COOKIE_SECURE = os.getenv('SESSION_COOKIE_SECURE', 'false').lower() == 'true'
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB max upload
-    
+
+    # CSRF 保护
+    WTF_CSRF_TIME_LIMIT = 3600  # CSRF token 有效期 1 小时
+    WTF_CSRF_SSL_STRICT = False  # 允许 HTTP（开发环境）
+
     # 业务配置
     MAX_MESSAGE_LENGTH = 10000  # 最大消息长度
-    
+
     # 缓存配置
     CACHE_TYPE = 'simple'
     CACHE_DEFAULT_TIMEOUT = 300  # 5分钟
-    
+
     # 日志配置
     LOG_LEVEL = os.getenv('LOG_LEVEL', 'INFO')
     LOG_FILE = os.getenv('LOG_FILE', 'app.log')
+
+    # 安全头配置
+    SECURITY_HEADERS = {
+        'X-Content-Type-Options': 'nosniff',
+        'X-Frame-Options': 'SAMEORIGIN',
+        'X-XSS-Protection': '1; mode=block',
+        'Referrer-Policy': 'strict-origin-when-cross-origin',
+    }

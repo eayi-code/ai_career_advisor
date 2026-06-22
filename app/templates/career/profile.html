@@ -47,6 +47,7 @@
                 用户中心
             </a>
             <form method="POST" action="{{ url_for('auth.logout') }}" style="margin: 0;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button type="submit" class="sidebar-link" style="border: none; background: none; cursor: pointer; width: 100%; text-align: left;">
                     <span class="material-symbols-rounded">logout</span>
                     退出登录

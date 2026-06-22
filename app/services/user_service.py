@@ -61,38 +61,90 @@ class UserService:
     
     @staticmethod
     def update_avatar(user, avatar_data):
-        """更新头像"""
+        """更新头像（带图片格式验证和大小限制）"""
         if not avatar_data:
             return {"success": False, "error": "请选择头像"}
-        
+
         try:
-            if avatar_data.startswith('data:image'):
+            if not avatar_data.startswith('data:image'):
+                return {"success": False, "error": "无效的图片数据"}
+
+            # 解析 data URI
+            try:
                 header, encoded = avatar_data.split(',', 1)
+            except ValueError:
+                return {"success": False, "error": "图片数据格式错误"}
+
+            # 验证 MIME 类型
+            allowed_mimes = {'image/png', 'image/jpeg', 'image/webp', 'image/gif'}
+            mime = header.split(';')[0].replace('data:', '')
+            if mime not in allowed_mimes:
+                return {"success": False, "error": "仅支持 PNG、JPEG、WebP、GIF 格式"}
+
+            try:
                 image_data = base64.b64decode(encoded)
-                
-                upload_dir = os.path.join('app', 'static', 'uploads', 'avatars')
-                os.makedirs(upload_dir, exist_ok=True)
-                
-                filename = f"avatar_{user.id}.png"
-                filepath = os.path.join(upload_dir, filename)
-                
-                with open(filepath, 'wb') as f:
-                    f.write(image_data)
-                
-                user.avatar = f"/static/uploads/avatars/{filename}"
-                db.session.commit()
-                
-                return {
-                    "success": True, 
-                    "message": "头像更新成功", 
-                    "avatar_url": user.avatar
-                }
-            
-            return {"success": False, "error": "无效的图片数据"}
-            
+            except Exception:
+                return {"success": False, "error": "图片数据解码失败"}
+
+            # 大小限制：2MB
+            max_size = 2 * 1024 * 1024
+            if len(image_data) > max_size:
+                return {"success": False, "error": "头像大小不能超过 2MB"}
+
+            # 用 Pillow 验证图片格式并重新编码（防止伪装文件）
+            try:
+                from PIL import Image
+                import io
+
+                img = Image.open(io.BytesIO(image_data))
+                img.verify()  # 验证图片完整性
+
+                # 重新打开（verify 后需要重新打开）
+                img = Image.open(io.BytesIO(image_data))
+
+                # 转换为 RGBA 或 RGB
+                if img.mode in ('RGBA', 'P'):
+                    img = img.convert('RGBA')
+                else:
+                    img = img.convert('RGB')
+
+                # 限制尺寸
+                if max(img.size) > 1024:
+                    img.thumbnail((1024, 1024), Image.Resampling.LANCZOS)
+
+                # 重新编码为 PNG
+                output = io.BytesIO()
+                img.save(output, format='PNG', optimize=True)
+                image_data = output.getvalue()
+            except ImportError:
+                # Pillow 未安装，跳过验证（降级行为）
+                pass
+            except Exception:
+                return {"success": False, "error": "图片文件损坏或格式不支持"}
+
+            upload_dir = os.path.join('app', 'static', 'uploads', 'avatars')
+            os.makedirs(upload_dir, exist_ok=True)
+
+            # 使用安全文件名
+            from werkzeug.utils import secure_filename
+            filename = f"avatar_{user.id}.png"
+            filepath = os.path.join(upload_dir, secure_filename(filename))
+
+            with open(filepath, 'wb') as f:
+                f.write(image_data)
+
+            user.avatar = f"/static/uploads/avatars/{filename}"
+            db.session.commit()
+
+            return {
+                "success": True,
+                "message": "头像更新成功",
+                "avatar_url": user.avatar
+            }
+
         except Exception as e:
             db.session.rollback()
-            return {"success": False, "error": str(e)}
+            return {"success": False, "error": "头像上传失败，请重试"}
     
     @staticmethod
     def get_user_stats(user_id):
