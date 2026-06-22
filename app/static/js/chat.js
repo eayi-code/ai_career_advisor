@@ -68,22 +68,42 @@ function copyCodeBlock(button) {
     if (!wrapper) return;
     const codeEl = wrapper.querySelector('pre code');
     if (!codeEl) return;
-    
+
     const textToCopy = codeEl.textContent;
-    
-    navigator.clipboard.writeText(textToCopy).then(() => {
+
+    function showCopied() {
         const textSpan = button.querySelector('span');
         const originalText = textSpan.textContent;
         textSpan.textContent = '已复制！';
         button.classList.add('copied');
-        
         setTimeout(() => {
             textSpan.textContent = originalText;
             button.classList.remove('copied');
         }, 2000);
-    }).catch(err => {
-        console.error('无法复制代码: ', err);
-    });
+    }
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(textToCopy).then(showCopied).catch(() => {
+            fallbackCopy(textToCopy);
+        });
+    } else {
+        fallbackCopy(textToCopy);
+    }
+
+    function fallbackCopy(text) {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.cssText = 'position:fixed;left:-9999px;top:-9999px;opacity:0;';
+        document.body.appendChild(ta);
+        ta.select();
+        try {
+            document.execCommand('copy');
+            showCopied();
+        } catch (e) {
+            console.error('复制失败:', e);
+        }
+        document.body.removeChild(ta);
+    }
 }
 
 // 初始化函数
@@ -1573,14 +1593,40 @@ async function downloadResume(contentId, format = 'html') {
 // 复制消息
 function copyMessage(btn) {
     const content = btn.parentElement.querySelector('.message-content').innerText;
-    navigator.clipboard.writeText(content).then(() => {
+
+    function showCopied() {
         btn.classList.add('copied');
         btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
         setTimeout(() => {
             btn.classList.remove('copied');
             btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>';
         }, 2000);
-    });
+    }
+
+    // 优先使用 Clipboard API（需要 HTTPS 或 localhost）
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(content).then(showCopied).catch(() => {
+            fallbackCopy(content);
+        });
+    } else {
+        fallbackCopy(content);
+    }
+
+    function fallbackCopy(text) {
+        // 兼容 HTTP + 移动端：用临时 textarea + execCommand
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.cssText = 'position:fixed;left:-9999px;top:-9999px;opacity:0;';
+        document.body.appendChild(ta);
+        ta.select();
+        try {
+            document.execCommand('copy');
+            showCopied();
+        } catch (e) {
+            console.error('复制失败:', e);
+        }
+        document.body.removeChild(ta);
+    }
 }
 
 // 推理时间线构建
