@@ -2492,3 +2492,89 @@ sudo docker exec ai_career_advisor-db-1 mysqldump -u root -p career_advisor > ba
 | `scripts/setup_admin.py` [NEW] | 数据库迁移辅助脚本，完成 MySQL 中 `is_admin` 的平滑升级并播种系统首个管理员账号 |
 | `tests/test_admin.py` [NEW] | 单元测试，覆盖匿名阻断、越权403、管理员登录重定向与自锁死防护等验证 |
 
+---
+
+## 二十六、安全审计与全面修复
+
+### 2026-06-22 安全审计 + SSE修复 + 移动端全面优化
+
+**目标**：以攻击者视角审计项目安全性，修复21个漏洞，并修复SSE流式响应和移动端交互问题。
+
+#### 26.1 安全审计与修复（21个漏洞）
+
+**严重漏洞（3个）**：
+1. **SSRF — fetch_job_from_url**：添加DNS解析 + 内网IP黑名单（127.0.0.0/8、10.0.0.0/8、169.254.0.0/16等）+ 协议白名单（仅http/https）+ 禁止重定向
+2. **硬编码管理员密码**：`setup_admin.py` 改为从 `ADMIN_PASSWORD` 环境变量读取，未设置则报错退出
+3. **Avatar任意文件写入**：用Pillow验证图片格式 + 2MB限制 + MIME白名单 + 重新编码PNG + `secure_filename()`
+
+**高危漏洞（6个）**：
+4. **CSRF防护缺失**：引入Flask-WTF `CSRFProtect` 全局保护，API蓝图豁免（使用 `@login_required` + 限流）
+5. **用户名枚举**：注册统一返回"该用户名或邮箱已被注册"
+6. **登录暴力破解**：5次失败锁定15分钟，session级追踪，显示剩余次数
+7. **错误信息泄露**：所有API端点返回通用错误消息，详情写入日志
+8. **管理员API无限流**：新增 `admin_api: 60/min` 限流规则
+9. **PDF解析DoS**：限制最多50页
+
+**中危漏洞（7个）**：
+10. **SECRET_KEY回退**：启动时打印WARN提示
+11. **安全响应头**：添加 `X-Content-Type-Options`、`X-Frame-Options`、`X-XSS-Protection`、`Referrer-Policy`
+12. **Session Cookie安全**：通过 `SESSION_COOKIE_SECURE` 环境变量控制Secure标志
+13. **CSRF token**：5个POST表单（login/register/3×logout）全部添加 `csrf_token()`
+14. **`.env.example`**：添加管理员凭据和安全配置文档
+15. **`requirements.txt`**：添加 `flask-wtf`、`Pillow` 依赖
+
+**低危漏洞（5个）**：密码策略、localStorage、日志敏感信息等保持现状
+
+#### 26.2 SSE流式响应修复（3个bug）
+
+1. **`_safe_json_dumps` 方法作用域错误**：从方法内部的局部函数改为类级别的 `@staticmethod`，修复 `AttributeError` 导致SSE流崩溃
+2. **`done` 事件丢失**：SSE reader 关闭时 `buffer` 中可能还有最后一个 chunk 的数据未处理。修复：`done:true` 时先处理剩余 buffer 再退出循环
+3. **前端SSE解析器跨chunk丢失事件类型**：`event: done` 和 `data: {...}` 分在两个chunk时，事件类型被重置为null。修复：用 `pendingEventType` 跨chunk保留
+
+**影响**：之前需要刷新页面才能看到AI回复，现在实时显示。
+
+#### 26.3 移动端UI修复（7项）
+
+| 问题 | 修复 |
+|------|------|
+| 加号菜单"上传文件"点击穿透到欢迎卡片 | 移除加号菜单，改为输入框内联上传按钮 |
+| "切换智能体"无反应 | 移除移动端智能体选择器（保留桌面端下拉菜单） |
+| 发送按钮两个元素重叠（箭头+三角） | 隐藏Material Symbols图标，只显示 `::after` SVG箭头 |
+| 消息复制按钮无效（HTTP环境） | 添加 `execCommand('copy')` 兜底方案 |
+| 汉堡菜单栏滚动消失 | 改为 `position: fixed; top: 0` |
+| 输入栏只显示一半 | 消息区增加 `padding-top` 和 `padding-bottom` |
+| 汉堡菜单在用户中心无效 | `toggleSidebar` 从 `chat.js` 移到 `main.js`（全局加载） |
+| 顶部欢迎头像被菜单栏遮挡 | 欢迎容器改为 `justify-content: flex-start` |
+
+#### 26.4 移动端视觉优化
+
+- **汉堡菜单栏毛玻璃效果**：`backdrop-filter: blur(16px) saturate(180%)` + 半透明白色背景
+- **输入栏毛玻璃效果**：同上
+- **停止按钮**：`stop-btn` 类时显示Material Symbols图标，隐藏 `::after` 箭头
+- **文件预览状态**：上传时显示"解析中..."（蓝色），完成后显示"解析完成"（绿色）
+- **图片上传文案**：图片显示"已上传图片"，文档显示"已上传简历文件"
+
+#### 26.5 提交记录
+
+| Commit | 内容 |
+|--------|------|
+| `d32a5d9` | 管理员后台、安全加固、移动端修复、用户中心重构 |
+| `99ed7bd` | 安全审计：修复21个漏洞（CSRF/SSRF/锁定/脱敏等） |
+| `8c487d0` | SSE done事件未到达前端（JSON序列化+跨chunk） |
+| `61d0dc4` | 移动端加号菜单触摸穿透+智能体选择器 |
+| `df169d0` | 复制按钮HTTP环境兜底 |
+| `9a5036a` | 移除加号菜单，内联上传按钮，修复发送按钮重叠 |
+| `216b4f3` | 顶栏sticky定位 |
+| `10800e3` | 顶栏+输入栏fixed布局 |
+| `db74284` | 顶栏fixed+输入栏fixed，仅消息滚动 |
+| `4f73820` | 汉堡按钮在profile页失效 |
+| `0cf3d8d` | 文件预览状态+停止按钮 |
+| `6ba4f6f` | 欢迎头像被顶栏遮挡 |
+| `4c44e4c` | 顶栏毛玻璃效果+消息区padding |
+| `3042ee9` | reader关闭时buffer中done事件丢失 |
+| `a686b08` | _safe_json_dumps作用域+图片上传文案 |
+
+**最后更新**: 2026-06-22
+**当前状态**: 安全审计完成，21个漏洞修复，SSE实时响应修复，移动端UI全面优化，14/14单元测试通过
+**测试账号**: testuser2026 / test123456
+
