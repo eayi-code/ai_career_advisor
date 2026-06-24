@@ -460,6 +460,51 @@ def init_jobs():
             "skills": ["Python", "LLM", "Prompt工程", "LangChain", "RAG", "Fine-tuning"]
         },
         {
+            "title": "LLM应用开发工程师", "industry": "人工智能", "city": "北京",
+            "description": "负责大语言模型应用开发，包括RAG知识库搭建、Agent系统设计、Prompt工程优化",
+            "responsibilities": ["RAG知识库搭建", "Agent系统开发", "Prompt工程", "模型API集成", "性能优化"],
+            "salary_min": 25000, "salary_max": 55000, "salary_avg": 40000,
+            "experience_years": 2, "education_requirement": "本科",
+            "is_hot": True, "growth_potential": "极高", "difficulty_level": 4,
+            "skills": ["Python", "LangChain", "RAG", "Prompt工程", "向量数据库", "LLM"]
+        },
+        {
+            "title": "大模型应用开发工程师", "industry": "人工智能", "city": "上海",
+            "description": "负责大模型应用层开发，构建企业级AI解决方案",
+            "responsibilities": ["大模型应用架构设计", "RAG系统开发", "Agent框架搭建", "模型评估优化"],
+            "salary_min": 30000, "salary_max": 60000, "salary_avg": 45000,
+            "experience_years": 3, "education_requirement": "本科",
+            "is_hot": True, "growth_potential": "极高", "difficulty_level": 5,
+            "skills": ["Python", "LangChain", "RAG", "向量数据库", "LLM微调", "Docker"]
+        },
+        {
+            "title": "RAG工程师", "industry": "人工智能", "city": "深圳",
+            "description": "专注于RAG（检索增强生成）系统开发，搭建企业级知识库",
+            "responsibilities": ["知识库搭建", "文档解析处理", "向量化索引", "检索策略优化", "生成质量提升"],
+            "salary_min": 25000, "salary_max": 50000, "salary_avg": 37500,
+            "experience_years": 2, "education_requirement": "本科",
+            "is_hot": True, "growth_potential": "高", "difficulty_level": 4,
+            "skills": ["Python", "RAG", "向量数据库", "LangChain", "Embedding", "文档处理"]
+        },
+        {
+            "title": "AI Agent开发工程师", "industry": "人工智能", "city": "杭州",
+            "description": "负责AI Agent系统开发，构建智能对话和任务执行系统",
+            "responsibilities": ["Agent架构设计", "工具链开发", "记忆系统设计", "多Agent协作", "ReAct模式实现"],
+            "salary_min": 28000, "salary_max": 55000, "salary_avg": 41500,
+            "experience_years": 2, "education_requirement": "本科",
+            "is_hot": True, "growth_potential": "极高", "difficulty_level": 4,
+            "skills": ["Python", "LangChain", "LangGraph", "Agent设计", "Prompt工程", "LLM"]
+        },
+        {
+            "title": "Prompt工程师", "industry": "人工智能", "city": "北京",
+            "description": "专注于Prompt设计与优化，提升大模型输出质量",
+            "responsibilities": ["Prompt设计优化", "Few-shot示例编写", "模型效果评估", "应用场景适配"],
+            "salary_min": 20000, "salary_max": 45000, "salary_avg": 32500,
+            "experience_years": 1, "education_requirement": "本科",
+            "is_hot": True, "growth_potential": "高", "difficulty_level": 3,
+            "skills": ["Prompt工程", "LLM", "Python", "数据分析", "文案写作", "逻辑思维"]
+        },
+        {
             "title": "数据标注师", "industry": "人工智能", "city": "成都",
             "description": "负责数据标注和质量控制",
             "responsibilities": ["数据标注", "质量检查", "标注规范制定", "工具使用"],
